@@ -125,6 +125,8 @@ char* to_str(BitArray *self)
 void resize(BitArray* self, int new_size)
 {
     int new_memsize = byte_size(new_size);
+    if(!new_memsize)
+        new_memsize = 1;
     uint8_t* new = (uint8_t*) realloc(self->data, new_memsize);
     if(new == NULL)
     {

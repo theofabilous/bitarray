@@ -103,6 +103,67 @@ void run_manipulation_tests(BitArray *bits)
     printf("\n ** FINISHED **\n\n");
 }
 
+void readme_get_started()
+{
+    BitArray *bits = new_BitArray(12); // Initiliaze with 12 bits (all zero by default)
+    bits->set(bits, true, 0); // set first bit to 1
+    bits->set(bits, true, 5);
+
+    char *str = bits->to_str(bits);
+    printf("%s\n", str); // prints 0b100001000000
+    free(str);
+
+    bits->resize(bits, 6);
+
+    str = bits->to_str(bits);
+    printf("%s\n", str); // prints 0b100001
+    free(str);
+
+    bits->append(bits, 0b1101);
+    str = bits->to_str(bits);
+    printf("%s\n", str); // prints 0b1000011101
+    free(str);
+
+    del_BitArray(bits);
+}
+
+size_t _counter;
+
+void count_bits(bool bit)
+{
+    _counter += bit;
+}
+
+void print_bits(bool bit)
+{
+    printf("%d", bit);
+}
+
+bool flip_bits(bool bit)
+{
+    return !bit;
+}
+
+void readme_iter_simple()
+{
+    BitArray *bits = new_BitArray(0);
+    bits->append(bits, 0b100000010101111000011);
+    
+    _counter = 0;
+    bits->for_each(bits, count_bits, -1); // second arg is the function, third is max
+                                          // (where -1 means size of bitarray)
+    printf("counter: %d\n", _counter); // prints 9
+    
+    bits->for_each(bits, print_bits, -1); // prints each bit
+    printf("\n"); 
+
+    bits->transform(bits, flip_bits, -1);
+    bits->for_each(bits, print_bits, -1); // prints each bit
+    printf("\n"); 
+
+    del_BitArray(bits);
+}
+
 int main()
 {
     BitArray *bits = new_BitArray(12);
@@ -111,5 +172,8 @@ int main()
     // custom_iter_test(bits);
     custom_iter_test_alloc(bits);
     del_BitArray(bits);
+
+    readme_get_started();
+    readme_iter_simple();
     return 0;
 }
