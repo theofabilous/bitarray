@@ -12,15 +12,15 @@
 
 typedef struct _BitArray
 {
-    int num_bits;
-    int memsize;
+    size_t num_bits;
+    size_t memsize;
     uint8_t *data;
-    void (*set)(struct _BitArray *self, bool bit, int index);
-    void (*append)(struct _BitArray *self, int val);
-    uint8_t (*get)(struct _BitArray *self, int i);
+    void (*set)(struct _BitArray *self, bool bit, size_t index);
+    void (*append)(struct _BitArray *self, size_t val);
+    uint8_t (*get)(struct _BitArray *self, size_t i);
     size_t (*slice)(struct _BitArray *self, size_t i, size_t j);
     char* (*to_str)(struct _BitArray *self);
-    void (*resize)(struct _BitArray *self, int n);
+    void (*resize)(struct _BitArray *self, size_t n);
     void (*for_each)(struct _BitArray *self, void (*f)(bool), int m);
     void (*transform)(struct _BitArray *self, bool (*f)(bool), int m);
     void (*iterate)(struct _BitArray *self, Biterator *iter);
@@ -34,7 +34,7 @@ void del_BitArray(BitArray* obj)
 }
 
 
-void set(BitArray *self, bool bit, int i)
+void set(BitArray *self, bool bit, size_t i)
 {
     if(i >= self->num_bits)
     {
@@ -42,8 +42,8 @@ void set(BitArray *self, bool bit, int i)
         del_BitArray(self);
         exit(1);
     }
-    int byte_index = i / 8;
-    int bit_index = i % 8;
+    size_t byte_index = i / 8;
+    uint8_t bit_index = i % 8;
     uint8_t masker;
     if(bit)
     {
@@ -58,7 +58,7 @@ void set(BitArray *self, bool bit, int i)
 }
 
 
-uint8_t get(BitArray *self, int i)
+uint8_t get(BitArray *self, size_t i)
 {
     if(i >= self->num_bits)
     {
@@ -66,8 +66,8 @@ uint8_t get(BitArray *self, int i)
         del_BitArray(self);
         exit(1);
     }
-    int byte_index = i / 8;
-    int bit_index = i % 8;
+    size_t byte_index = i / 8;
+    uint8_t bit_index = i % 8;
     uint8_t masker = 1 << (7-bit_index);
     masker = (self->data[byte_index] & masker) >> (7-bit_index);
     return masker;
@@ -105,7 +105,7 @@ char* to_str(BitArray *self)
     uint8_t curr;
     repr[0] = '0';
     repr[1] = 'b';
-    for(int i=0; i<self->num_bits; i++)
+    for(size_t i=0; i<self->num_bits; i++)
     {
         curr = self->get(self, i);
         if(curr)
@@ -122,9 +122,9 @@ char* to_str(BitArray *self)
 
 
 
-void resize(BitArray* self, int new_size)
+void resize(BitArray* self, size_t new_size)
 {
-    int new_memsize = byte_size(new_size);
+    size_t new_memsize = byte_size(new_size);
     if(!new_memsize)
         new_memsize = 1;
     uint8_t* new = (uint8_t*) realloc(self->data, new_memsize);
@@ -140,7 +140,7 @@ void resize(BitArray* self, int new_size)
         uint8_t mask = ~((1 << (8-diff)) - 1);
         new[new_memsize-1] &= mask;
     }
-    for(int i=self->memsize; i<new_memsize; i++)
+    for(size_t i=self->memsize; i<new_memsize; i++)
     {
         new[i] = '\0';
     }
@@ -149,10 +149,10 @@ void resize(BitArray* self, int new_size)
     self->data = new;
 }
 
-void append(BitArray *self, int val)
+void append(BitArray *self, size_t val)
 {
-    int w = bit_width(val);
-    int byte_w = byte_size(w);
+    size_t w = bit_width(val);
+    unsigned int byte_w = byte_size(w);
     uint8_t fill = self->num_bits % 8;
     uint8_t remaining = 8-fill;
     if(fill && w <= remaining)
@@ -176,7 +176,7 @@ void append(BitArray *self, int val)
         bool bit;
         uint8_t prev_num_bits = self->num_bits;
         self->resize(self, self->num_bits+w);
-        for(int i=0; i<w; i++)
+        for(size_t i=0; i<w; i++)
         {
             bit = (val & (1 << (w-i-1))) >> (w-i-1);
             self->set(self, bit, i+prev_num_bits);
@@ -190,7 +190,7 @@ void for_each(BitArray *self, void (*func)(bool), int max)
 {
 	if(max < 0)
 		max = self->num_bits+1+max;
-	for(int i=0; i<max; i++)
+	for(size_t i=0; i<max; i++)
 	{
 		(*func)(self->get(self, i));
 	}
@@ -201,7 +201,7 @@ void transform(BitArray *self, bool(*func)(bool), int max)
 	if(max < 0)
 		max = self->num_bits+1+max;
 	bool result;
-	for(int i=0; i<max; i++)
+	for(size_t i=0; i<max; i++)
 	{
 		result = (*func)(self->get(self, i));
 		self->set(self, result, i);
@@ -286,9 +286,9 @@ void iterate(BitArray *self, Biterator *iter)
 
 
 
-BitArray* new_BitArray(int size)
+BitArray* new_BitArray(size_t size)
 {
-    int num_bytes = size / 8;
+    size_t num_bytes = size / 8;
     if(num_bytes * 8 < size)
     {
         num_bytes++;
@@ -306,7 +306,7 @@ BitArray* new_BitArray(int size)
         free(new);
         exit(1);
     }
-    for(int i=0; i<num_bytes; i++)
+    for(size_t i=0; i<num_bytes; i++)
     {
         data[i] = 0;
     }

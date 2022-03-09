@@ -39,17 +39,17 @@ typedef union _Function
 	void *raw;
 	void (*void_int_f)(size_t bit);
 	size_t (*int_int_f)(size_t bit);
-	void (*void_int_idx_f)(size_t bit, int index);
+	void (*void_int_idx_f)(size_t bit, size_t index);
 	void (*void_iter_f)(struct _Biterator*);
 } Function;
 
 
 typedef struct _Biterator
 {
-	int increment;
+	size_t increment;
 	size_t curr;
-	int max;
-	int sig;
+	long long int max;
+	uint8_t sig;
 	Function *function;
 	struct _BitArray *parent;
 	size_t (*read)(struct _Biterator* self, size_t n);
@@ -114,7 +114,7 @@ size_t read_Biterator(Biterator *it, size_t n)
 }
 
 
-Biterator *new_Biterator(int increment, int max, int sig, void* f)
+Biterator *new_Biterator(int increment, long long int max, uint8_t sig, void* f)
 {
 	Biterator *it = (Biterator *) malloc(sizeof(Biterator));
 	if(it == NULL)
