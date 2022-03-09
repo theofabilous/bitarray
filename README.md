@@ -1,13 +1,15 @@
 # bitarray
-A small, header-only C library for dynamic bitfield manipulations.
+A small C library for dynamic bitfield manipulations, iterations & procedures.
 
 ## Overview
 
 *Please note that this library is a work in progress and is most definitely not complete.*
 
-*bitarray* was designed to imitate C++ dynamic bit vector implementations such as [std::vector\<bool\>](https://en.cppreference.com/w/cpp/container/vector_bool) and [boost::dynamic_bitset\<\>](https://www.boost.org/doc/libs/1_36_0/libs/dynamic_bitset/dynamic_bitset.html) in pure C. Unfortunately, most implementations do not guarantee space efficiency (in both C++ and C), since memory addresses cannot be subdivided beyond their absolute unit: the **byte**. Further, when a bit vector *is* designed in a space efficient manner, manipulating it like a regular container type is complex. Often, only one of these two features can be chosen.
+<!-- *bitarray* was designed to imitate C++ dynamic bit vector implementations such as [std::vector\<bool\>](https://en.cppreference.com/w/cpp/container/vector_bool) and [boost::dynamic_bitset\<\>](https://www.boost.org/doc/libs/1_36_0/libs/dynamic_bitset/dynamic_bitset.html) in pure C, while keeping memory usage at a minimum and  -->
 
-*bitarray* provides space efficient tools for bit vectors and binary data operations. The `BitArray` struct can be used very much like [std::vector\<bool\>](https://en.cppreference.com/w/cpp/container/vector_bool) and guarantees that one bit takes up exactly one bit of data. [^1] 
+<!-- Unfortunately, most implementations do not guarantee space efficiency (in both C++ and C), since memory addresses cannot be subdivided beyond their absolute unit: the **byte**. Further, when a bit vector *is* designed in a space efficient manner, manipulating it like a regular container type is complex. Often, only one of these two features can be chosen. -->
+
+*bitarray* provides space efficient tools for bit vectors and binary data operations. The `BitArray` struct can be used very much like [std::vector\<bool\>](https://en.cppreference.com/w/cpp/container/vector_bool) and guarantees that one bit takes up exactly one bit of data. [^1] This library was designed to facilitate looping over large binary buffers and to make such programs more declarative/functional. The end goal is to yield a lightweight yet complete binary parsing library.  
 
 Features include (but are not limited to):
   - Resizing
@@ -16,13 +18,40 @@ Features include (but are not limited to):
   - Appending single bits
   - Appending any type of integral value (`int`, `char`, `float`, `unsigned long long`, `size_t`, ...)
   - String representation
+  - Iterative/functional tools
 
 <!-- Arbitary sized (up to `sizeof(size_t)`) integral values can be appended to it dynamically.  -->
 <!-- It can be resized, sliced, indexed, accessed, modified, converted to a binary string... -->
 
 `BitArray` structs provide basic functional tools like `for_each` and `transform`. These tools are useful for simple iterative procedures. However, the library also provides the `Biterator` struct which allows for complex functional binary operations on bit vectors.
 
+*bitarray* is built and reasoned about in a way that would allow it to be eventually extended to a python module. The end goal is to have a library wherein the user can declaratively create a complex set of rules for binary parsing through the python interface, and then apply the constructed "procedure" to all sorts of binary formats. The procedure, although constructed in python, would have all of its functionality in C. The end result should more or less resemble [Construct](https://construct.readthedocs.io/en/latest/index.html#), with the key difference that its functionality will remain in C while offering complex conditional rules and callbacks.
+
+<!-- This library was created with the intention of being extended to python bindings for declarative, complex parsing of binary formatings at the level of individual bits, while keeping most computational logi -->
+
 [^1]: Of course, memory must be allocated byte-wise. However, the maximum extra "useless" size (in bits) of the internal buffer is 8. So, the actual size in memory of the buffer is always within \[num_of_bits, num_of_bits+8].
+
+## The BitArray Struct
+
+```C
+typedef struct _BitArray
+{
+    size_t num_bits;
+    size_t memsize;
+    uint8_t *data;
+    void (*set)(struct _BitArray *self, bool bit, size_t index);
+    void (*append)(struct _BitArray *self, size_t val);
+    uint8_t (*get)(struct _BitArray *self, size_t i);
+    size_t (*slice)(struct _BitArray *self, size_t i, size_t j);
+    char* (*to_str)(struct _BitArray *self);
+    void (*resize)(struct _BitArray *self, size_t n);
+    void (*for_each)(struct _BitArray *self, void (*f)(bool), int m);
+    void (*transform)(struct _BitArray *self, bool (*f)(bool), int m);
+    void (*iterate)(struct _BitArray *self, Biterator *iter);
+} BitArray;
+```
+
+Clearly, `BitArray` objects have many function pointers. This makes having many *small* `BitArray`s very inefficient. However, when large binary formats are taken into consideration, the function pointers have negligible effects on memory and yield prettier, OOP-like code. (Of course, this may not always be what is desired. Updates coming soon).
 
 ## Examples
 
@@ -106,7 +135,16 @@ int main()
 *Coming soon*  
 However, some examples can be found in `tests/bitarray_tests.c`
 
-## To-Do
+## Coming Soon
+
+- The `BitStream` struct
+- Macros to optionally include/exclude the function pointers in the `BitArray` struct
+- Custom allocators/deallocators
+- More "slicing" functions
+- The `ComplexBiterator` struct (with C++ like custom iterators)
+- Implement `new_BitArray_from_file()`
+
+<!-- ## To-Do
 
 - [ ] Don't force exit when memory error occurs
 - [ ] Add scanf-like function to get string repr instead of always allocating buffer
@@ -118,7 +156,7 @@ However, some examples can be found in `tests/bitarray_tests.c`
 - [ ] Add void* user_data field to iterator and add signature that takes it in (??)
 - [ ] Trash CallbackSig (or at least not exposed to user), use binary flags and OR operators instead
 - [ ] Implement even more versatile iterator struct where next index/next value/continue condition are user functions
-- [ ] Add BitStream
+- [ ] Add BitStream -->
 
 
 <!-- If bit-level packing is to be used so as to optimize memory usage, loweach data quantum must itself hold   -->
