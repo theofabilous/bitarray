@@ -2,6 +2,9 @@
 A small, header-only C library for dynamic bitfield manipulations.
 
 ## Overview
+
+*Please note that this library is a work in progress and is most definitely not complete.*
+
 *bitarray* was designed to imitate C++ dynamic bit vector implementations such as [std::vector\<bool\>](https://en.cppreference.com/w/cpp/container/vector_bool) and [boost::dynamic_bitset\<\>](https://www.boost.org/doc/libs/1_36_0/libs/dynamic_bitset/dynamic_bitset.html) in pure C. Unfortunately, most implementations do not guarantee space efficiency (in both C++ and C), since memory addresses cannot be subdivided beyond their absolute unit: the **byte**. Further, when a bit vector *is* designed in a space efficient manner, manipulating it like a regular container type is complex. Often, only one of these two features can be chosen.
 
 *bitarray* provides space efficient tools for bit vectors and binary data operations. The `BitArray` struct can be used very much like [std::vector\<bool\>](https://en.cppreference.com/w/cpp/container/vector_bool) and guarantees that one bit takes up exactly one bit of data. [^1] 
@@ -45,7 +48,13 @@ str = bits->to_str(bits);
 printf("%s\n", str); // prints 0b100001
 free(str);
 
+/* append */
 bits->append(bits, 0b1101);
+/* currently, append forces the size in bits of the appended
+value to its exact bit width (i.e. no leading zeros). thus
+zeros cannot yet be appended */
+   
+                            
 str = bits->to_str(bits);
 printf("%s\n", str); // prints 0b1000011101
 free(str);
@@ -91,5 +100,25 @@ int main()
     return 0;
 }
 ```
+
+### Complex Iterators
+
+*Coming soon*  
+However, some examples can be found in `tests/bitarray_tests.c`
+
+## To-Do
+
+- [ ] Don't force exit when memory error occurs
+- [ ] Add scanf-like function to get string repr instead of always allocating buffer
+- [ ] Add slice-wise editing ( !! also needed for iterators that read more than 1 bit at a time)
+- [ ] Add complex iterator examples in README
+- [ ] Add callback function signature that takes in the iterator itself
+- [ ] Implement iterator read()
+- [ ] Implement iterator options to break iterations
+- [ ] Add void* user_data field to iterator and add signature that takes it in (??)
+- [ ] Trash CallbackSig (or at least not exposed to user), use binary flags and OR operators instead
+- [ ] Implement even more versatile iterator struct where next index/next value/continue condition are user functions
+- [ ] Add BitStream
+
 
 <!-- If bit-level packing is to be used so as to optimize memory usage, loweach data quantum must itself hold   -->
