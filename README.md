@@ -39,6 +39,8 @@ typedef struct _BitArray
     size_t num_bits;
     size_t memsize;
     uint8_t *data;
+    
+    // if BITARRAY_OOP is defined && BITARRAY_OOP > 0...
     void (*set)(struct _BitArray *self, bool bit, size_t index);
     void (*append)(struct _BitArray *self, size_t val);
     uint8_t (*get)(struct _BitArray *self, size_t i);
@@ -48,16 +50,55 @@ typedef struct _BitArray
     void (*for_each)(struct _BitArray *self, void (*f)(bool), int m);
     void (*transform)(struct _BitArray *self, bool (*f)(bool), int m);
     void (*iterate)(struct _BitArray *self, Biterator *iter);
+
 } BitArray;
 ```
 
-Clearly, `BitArray` objects have many function pointers. This makes having many *small* `BitArray`s very inefficient. However, when large binary formats are taken into consideration, the function pointers have negligible effects on memory and yield prettier, OOP-like code. (Of course, this may not always be what is desired. Updates coming soon).
+Two macros are available to control how the various functions are used.
+
+**No macros**
+```C
+#include "bitarray.h"
+/* ... */
+BitArray *bits = new_BitArray(0);
+bitarray_resize(bits, 12); // same names as in function pointers,
+                     // but with bitarray_ prefix
+/* ... */
+```
+
+**BITARRAY_OOP macro**
+```C
+#define BITARRAY_OOP 1
+#include "bitarray.h"
+/* ... */
+BitArray *bits = new_BitArray(0);
+bits->resize(bits, 12);
+/* ... */
+```
+This macro should not be defined if many small `BitArray`s are created, as they grow the size of such objects
+by `num_of_functions * sizeof(void *)`. For projects that use few, large bit vectors, this shouldn't make much of
+a difference and may yield more readable code.
+
+**BITARRAY_MODULE macro**
+```C
+#define BITARRAY_MODULE Bin // or any other name
+#include "bitarray.h"
+/* ... */
+BitArray *bits = new_BitArray(0);
+Bin.resize(bits, 12);
+/* ... */
+```
+Defining the module macro is useful in that it reduces the character length of functional calls (one can 
+omit the `bitarray_` prefix) while avoiding possible name clashes (for example, another function 
+named `resize` may already have been defined). However, this introduces a global struct that holds all the
+function pointers. 
 
 ## Examples
 
 ### Getting started
 ```C
 #include <stdbool.h>
+#define BITARRAY_OOP 1 // adds function pointers to BitArray struct
 #include "bitarray.h"
 
 /* ... */
@@ -95,6 +136,7 @@ del_BitArray(bits);
 ### Iterators
 ```C
 
+#define BITARRAY_MODULE Bin
 /* ... */
 
 size_t counter;
@@ -110,17 +152,17 @@ bool flip_bits(bool bit) { return !bit;  }
 int main()
 {
     BitArray *bits = new_BitArray(0);
-    bits->append(bits, 0b100000010101111000011);
+    Bin.append(bits, 0b100000010101111000011);
     
     counter = 0;
-    bits->for_each(bits, count_bits, -1); // second arg is the function, third is max
+    Bin.for_each(bits, count_bits, -1); // second arg is the function, third is max
                                           // (where -1 means size of bitarray)
     printf("counter: %d\n", counter); // prints 9
     
-    bits->for_each(bits, print_bits, -1); // prints each bit
+    Bin.for_each(bits, print_bits, -1); // prints each bit
     printf("\n"); 
     
-    bits->transform(bits, flip_bits, -1); // flips each bit
+    Bin.transform(bits, flip_bits, -1); // flips each bit
     // bitarray now looks like:
     // 011111101010000111100
     
@@ -138,7 +180,6 @@ However, some examples can be found in `tests/bitarray_tests.c`
 ## Coming Soon
 
 - The `BitStream` struct
-- Macros to optionally include/exclude the function pointers in the `BitArray` struct
 - Custom allocators/deallocators
 - More "slicing" functions
 - The `ComplexBiterator` struct (with C++ like custom iterators)
