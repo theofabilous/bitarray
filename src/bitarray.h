@@ -9,6 +9,14 @@
 #include "bit_util.h"
 #include "biterator.h"
 
+#ifdef BITARRAY_OOP
+    #if BITARRAY_OOP > 0
+        #define __BITARRAY_USE_OOP 1
+    #endif
+#endif
+
+
+#ifdef __BITARRAY_USE_OOP
 
 typedef struct _BitArray
 {
@@ -26,6 +34,19 @@ typedef struct _BitArray
     void (*iterate)(struct _BitArray *self, Biterator *iter);
 } BitArray;
 
+#else
+
+typedef struct _BitArray
+{
+    size_t num_bits;
+    size_t memsize;
+    uint8_t *data;
+} BitArray;
+
+#endif
+
+
+
 
 void del_BitArray(BitArray* obj)
 {
@@ -34,7 +55,7 @@ void del_BitArray(BitArray* obj)
 }
 
 
-void set(BitArray *self, bool bit, size_t i)
+void bitarray_set(BitArray *self, bool bit, size_t i)
 {
     if(i >= self->num_bits)
     {
@@ -58,7 +79,7 @@ void set(BitArray *self, bool bit, size_t i)
 }
 
 
-uint8_t get(BitArray *self, size_t i)
+uint8_t bitarray_get(BitArray *self, size_t i)
 {
     if(i >= self->num_bits)
     {
@@ -74,7 +95,7 @@ uint8_t get(BitArray *self, size_t i)
 }
 
 
-size_t slice(BitArray *self, size_t i, size_t j)
+size_t bitarray_slice(BitArray *self, size_t i, size_t j)
 {
     unsigned int diff = j - i - 1;
     unsigned int mask = 1 << diff;
@@ -82,7 +103,7 @@ size_t slice(BitArray *self, size_t i, size_t j)
     // Start at j-1, end at i ?? (less shifting idk)
     while(i < j)
     {
-        if(self->get(self, i))
+        if(bitarray_get(self, i))
         {
             val |= mask;
         }
@@ -93,7 +114,7 @@ size_t slice(BitArray *self, size_t i, size_t j)
 }
 
 
-char* to_str(BitArray *self)
+char* bitarray_to_str(BitArray *self)
 {
     char* repr = (char *) calloc(self->num_bits+3, sizeof(char));
     if(repr == NULL)
@@ -107,7 +128,7 @@ char* to_str(BitArray *self)
     repr[1] = 'b';
     for(size_t i=0; i<self->num_bits; i++)
     {
-        curr = self->get(self, i);
+        curr = bitarray_get(self, i);
         if(curr)
         {
             repr[i+2] = '1';
@@ -122,7 +143,7 @@ char* to_str(BitArray *self)
 
 
 
-void resize(BitArray* self, size_t new_size)
+void bitarray_resize(BitArray* self, size_t new_size)
 {
     size_t new_memsize = byte_size(new_size);
     if(!new_memsize)
@@ -149,7 +170,7 @@ void resize(BitArray* self, size_t new_size)
     self->data = new;
 }
 
-void append(BitArray *self, size_t val)
+void bitarray_append(BitArray *self, size_t val)
 {
     size_t w = bit_width(val);
     unsigned int byte_w = byte_size(w);
@@ -175,41 +196,41 @@ void append(BitArray *self, size_t val)
         }
         bool bit;
         uint8_t prev_num_bits = self->num_bits;
-        self->resize(self, self->num_bits+w);
+        bitarray_resize(self, self->num_bits+w);
         for(size_t i=0; i<w; i++)
         {
             bit = (val & (1 << (w-i-1))) >> (w-i-1);
-            self->set(self, bit, i+prev_num_bits);
+            bitarray_set(self, bit, i+prev_num_bits);
         }
     }
 
 }
 
 
-void for_each(BitArray *self, void (*func)(bool), int max)
+void bitarray_for_each(BitArray *self, void (*func)(bool), int max)
 {
 	if(max < 0)
 		max = self->num_bits+1+max;
 	for(size_t i=0; i<max; i++)
 	{
-		(*func)(self->get(self, i));
+		(*func)(bitarray_get(self, i));
 	}
 }
 
-void transform(BitArray *self, bool(*func)(bool), int max)
+void bitarray_transform(BitArray *self, bool(*func)(bool), int max)
 {
 	if(max < 0)
 		max = self->num_bits+1+max;
 	bool result;
 	for(size_t i=0; i<max; i++)
 	{
-		result = (*func)(self->get(self, i));
-		self->set(self, result, i);
+		result = (*func)(bitarray_get(self, i));
+		bitarray_set(self, result, i);
 	}
 }
 
 
-void iterate(BitArray *self, Biterator *iter)
+void bitarray_iterate(BitArray *self, Biterator *iter)
 {
     iter->parent = self;
     Function *cont = (Function*) iter->function;
@@ -223,7 +244,7 @@ void iterate(BitArray *self, Biterator *iter)
         case VOID_INT:
             while(iter->curr <= max)
             {
-                (*(cont->void_int_f))(self->slice(self, 
+                (*(cont->void_int_f))(bitarray_slice(self, 
                                                   iter->curr, 
                                                   iter->curr+iter->increment));
                 iter->curr += iter->increment;
@@ -231,7 +252,7 @@ void iterate(BitArray *self, Biterator *iter)
             if(iter->curr <= max+iter->increment)
             {
                 unsigned int diff = max+iter->increment - iter->curr;
-                (*(cont->void_int_f))(self->slice(self, 
+                (*(cont->void_int_f))(bitarray_slice(self, 
                                                   iter->curr, 
                                                   iter->curr+diff));
                 iter->curr += diff;
@@ -240,10 +261,10 @@ void iterate(BitArray *self, Biterator *iter)
         case INT_INT:
             while(iter->curr <= max)
             {
-                curr = (*(cont->int_int_f))(self->slice(self, 
+                curr = (*(cont->int_int_f))(bitarray_slice(self, 
                                                         iter->curr, 
                                                         iter->curr+iter->increment));
-                self->set(self, curr, iter->curr);
+                bitarray_set(self, curr, iter->curr);
                 iter->curr += iter->increment;
             }
             /* ----- NEEDS FIX ------- */
@@ -251,17 +272,17 @@ void iterate(BitArray *self, Biterator *iter)
             if(iter->curr < max+iter->increment)
             {
                 unsigned int diff = max+iter->increment - iter->curr;
-                curr = (*(cont->int_int_f))(self->slice(self, 
+                curr = (*(cont->int_int_f))(bitarray_slice(self, 
                                                   iter->curr, 
                                                   iter->curr+diff));
-                self->set(self, curr, iter->curr);
+                bitarray_set(self, curr, iter->curr);
                 iter->curr += diff;
             }
             break;
         case VOID_INT_IDX:
             while(iter->curr <= max)
             {
-                (*(cont->void_int_idx_f))(self->slice(self, 
+                (*(cont->void_int_idx_f))(bitarray_slice(self, 
                                                         iter->curr, 
                                                         iter->curr+iter->increment), 
                                             iter->curr);
@@ -270,7 +291,7 @@ void iterate(BitArray *self, Biterator *iter)
             if(iter->curr <= max+iter->increment)
             {
                 unsigned int diff = max+iter->increment - iter->curr;
-                (*(cont->void_int_idx_f))(self->slice(self, 
+                (*(cont->void_int_idx_f))(bitarray_slice(self, 
                                                   iter->curr, 
                                                   iter->curr+diff),
                                             iter->curr);
@@ -283,7 +304,34 @@ void iterate(BitArray *self, Biterator *iter)
     }
 };
 
+#ifdef BITARRAY_MODULE
 
+typedef struct _BitArrayModule
+{
+    void (*set)(BitArray *self, bool bit, size_t index);
+    void (*append)(BitArray *self, size_t val);
+    uint8_t (*get)(BitArray *self, size_t i);
+    size_t (*slice)(BitArray *self, size_t i, size_t j);
+    char* (*to_str)(BitArray *self);
+    void (*resize)(BitArray *self, size_t n);
+    void (*for_each)(BitArray *self, void (*f)(bool), int m);
+    void (*transform)(BitArray *self, bool (*f)(bool), int m);
+    void (*iterate)(BitArray *self, Biterator *iter);
+} BitArrayModule;
+
+BitArrayModule BITARRAY_MODULE = {
+    .set = &bitarray_set,
+    .append = &bitarray_append,
+    .get = &bitarray_get,
+    .slice = &bitarray_slice,
+    .to_str = &bitarray_to_str,
+    .resize = &bitarray_resize,
+    .for_each = &bitarray_for_each,
+    .transform = &bitarray_transform,
+    .iterate = &bitarray_iterate
+};
+
+#endif
 
 
 BitArray* new_BitArray(size_t size)
@@ -313,15 +361,21 @@ BitArray* new_BitArray(size_t size)
     new->memsize = num_bytes;
     new->num_bits = size;
     new->data = data;
-    new->set = set;
-    new->get = get;
-    new->slice = slice;
-    new->append = append;
-    new->resize = resize;
-    new->to_str = to_str;
-    new->for_each = for_each;
-    new->transform = transform;
-    new->iterate = iterate;
+
+    #ifdef __BITARRAY_USE_OOP
+
+    new->set = bitarray_set;
+    new->get = bitarray_get;
+    new->slice = bitarray_slice;
+    new->append = bitarray_append;
+    new->resize = bitarray_resize;
+    new->to_str = bitarray_to_str;
+    new->for_each = bitarray_for_each;
+    new->transform = bitarray_transform;
+    new->iterate = bitarray_iterate;
+
+    #endif
+
     return new;
 }
 

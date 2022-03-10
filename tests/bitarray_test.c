@@ -1,3 +1,5 @@
+#define BITARRAY_OOP 1
+
 #include "../src/bitarray.h"
 
 
