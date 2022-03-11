@@ -5,39 +5,53 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <limits.h>
 
-int bit_width(int num)
+// uint8_t BIT_WIDTH_TABLE[] =
+// {
+
+// };
+
+size_t bit_width(size_t num)
 {
-	if(num)
-		return 1 + (int) floor(log2(num));
+	if(num > (size_t) INT_MAX)
+		{
+            size_t sum = 0;
+            size_t curr;
+			for(;num>=(size_t) INT_MAX; num>>=16)
+                sum+=16;
+			return sum + bit_width(num);
+		}
+	else if(num)
+		return 1 + (size_t) floor(log2(num));
 	else
 		return 0;
 }
 
-int byte_size(int bitsize)
+// should this return 1 if bitsize is zero?
+size_t byte_size(size_t bitsize)
 {
-	int num_bytes = bitsize / 8;
-	if(num_bytes * 8 < bitsize)
-	{
-		num_bytes++;
-	}
-	return num_bytes;
+	size_t num_bytes = bitsize >> 3;
+	if(bitsize & 0b111)
+		return num_bytes+1;
+	else
+		return num_bytes;
 }
 
 char* bit_repr(size_t num)
 {
-	int w = bit_width(num);
+    size_t w = bit_width(num);
 	char* bits = (char *) calloc(w+1, sizeof(char));
 	if(bits == NULL)
 	{
 		printf("Memory could not be allocated\n");
 		exit(1);
 	}
-	unsigned int mask = 1 << (w-1);
+    size_t mask = 1 << (w-1);
+
 	for(size_t i = 0; i<w; i++, mask >>= 1)
-	{
 		bits[i] = (num & mask) ? '1' : '0';
-	}
+	
 	bits[w] = '\0';
 	return bits;
 }
@@ -50,8 +64,8 @@ void print_bit_repr(size_t num)
 		printf("0\n");
 		return;
 	}
-	int w = bit_width(num);
-	unsigned int mask = 1 << (w-1);
+    size_t w = bit_width(num);
+	size_t mask = ((size_t)1) << (w-1);
 	char curr;
 	for(size_t i = 0; i<w; i++, mask >>= 1)
 	{

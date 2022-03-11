@@ -5,9 +5,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <assert.h>
 
 #include "bit_util.h"
 #include "biterator.h"
+
+
+
+#define __PASS ((void) 0)
+
+#define __BITARCH for(;false;)
 
 #ifdef BITARRAY_OOP
     #if BITARRAY_OOP > 0
@@ -15,13 +22,35 @@
     #endif
 #endif
 
+#ifndef BITARRAY_SIZE_T
+#define BITARRAY_SIZE_T size_t
+#endif
+
+typedef BITARRAY_SIZE_T bitarray_size_t;
+
+uint8_t _bitarray_ssize_t = sizeof(bitarray_size_t);
+uint8_t _bitarray_ssize_t_bits = sizeof(bitarray_size_t)*8;
+
+
+
+/* ---------------------------------------- */
+
+// MACROS TO LATER IMPLEMENT FLAGS ON 4 MSBs
+bitarray_size_t bitarray_umask = ((bitarray_size_t)0xF) << ((sizeof(bitarray_size_t)*8)-4);
+uint8_t bitarray_umask_amt = (sizeof(bitarray_size_t)*8)-4;
+bitarray_size_t bitarray_lmask = ~(((bitarray_size_t)0xF) << ((sizeof(bitarray_size_t)*8)-4));
+bitarray_size_t bitarray_max_bytes = (~(((bitarray_size_t)0xF) << ((sizeof(bitarray_size_t)*8)-4))) >> 3;
+
+/* ---------------------------------------- */
+
+
+
 
 #ifdef __BITARRAY_USE_OOP
 
 typedef struct _BitArray
 {
-    size_t num_bits;
-    size_t memsize;
+    bitarray_size_t size;
     uint8_t *data;
     void (*set)(struct _BitArray *self, bool bit, size_t index);
     void (*append)(struct _BitArray *self, size_t val);
@@ -38,12 +67,43 @@ typedef struct _BitArray
 
 typedef struct _BitArray
 {
-    size_t num_bits;
-    size_t memsize;
+    bitarray_size_t size;
     uint8_t *data;
 } BitArray;
 
 #endif
+
+
+static bitarray_size_t inline bitarray_num_bytes(BitArray *self)
+{
+    if(self->size & 0b111)
+        return (self->size >> 3)+1;
+    else
+        return self->size >> 3;
+}
+
+// SHOULD BE CHECKED ONLY WHEN ABOUT TO APPEND
+static bool inline bitarray_needs_new_byte(BitArray *self)
+{
+    return !(self->size & 0b111);
+}
+
+
+
+
+/* ----------------------- */
+
+static bitarray_size_t inline _byte_part(bitarray_size_t n)
+{
+    return n >> 3;
+}
+
+static uint8_t inline _bit_part(bitarray_size_t n)
+{
+    return n & 0b111;
+}
+
+/* ----------------------- */
 
 
 
@@ -55,16 +115,16 @@ void del_BitArray(BitArray* obj)
 }
 
 
-void bitarray_set(BitArray *self, bool bit, size_t i)
+void bitarray_set(BitArray *self, bool bit, bitarray_size_t i)
 {
-    if(i >= self->num_bits)
+    if(i >= self->size)
     {
         printf("Index out of bounds\n");
         del_BitArray(self);
         exit(1);
     }
-    size_t byte_index = i / 8;
-    uint8_t bit_index = i % 8;
+    bitarray_size_t byte_index = _byte_part(i);
+    uint8_t bit_index = _bit_part(i);
     uint8_t masker;
     if(bit)
     {
@@ -79,26 +139,26 @@ void bitarray_set(BitArray *self, bool bit, size_t i)
 }
 
 
-uint8_t bitarray_get(BitArray *self, size_t i)
+uint8_t bitarray_get(BitArray *self, bitarray_size_t i)
 {
-    if(i >= self->num_bits)
+    if(i >= self->size)
     {
         printf("Index out of bounds\n");
         del_BitArray(self);
         exit(1);
     }
-    size_t byte_index = i / 8;
-    uint8_t bit_index = i % 8;
+    bitarray_size_t byte_index = _byte_part(i);
+    uint8_t bit_index = _bit_part(i);
     uint8_t masker = 1 << (7-bit_index);
     masker = (self->data[byte_index] & masker) >> (7-bit_index);
     return masker;
 }
 
 
-size_t bitarray_slice(BitArray *self, size_t i, size_t j)
+size_t bitarray_slice(BitArray *self, bitarray_size_t i, bitarray_size_t j)
 {
-    unsigned int diff = j - i - 1;
-    unsigned int mask = 1 << diff;
+    size_t diff = j - i - 1;
+    size_t mask = 1 << diff;
     size_t val = 0;
     // Start at j-1, end at i ?? (less shifting idk)
     while(i < j)
@@ -116,7 +176,7 @@ size_t bitarray_slice(BitArray *self, size_t i, size_t j)
 
 char* bitarray_to_str(BitArray *self)
 {
-    char* repr = (char *) calloc(self->num_bits+3, sizeof(char));
+    char* repr = (char *) calloc((self->size)+3, sizeof(char));
     if(repr == NULL)
     {
         printf("Memory could not be allocated\n");
@@ -126,7 +186,7 @@ char* bitarray_to_str(BitArray *self)
     uint8_t curr;
     repr[0] = '0';
     repr[1] = 'b';
-    for(size_t i=0; i<self->num_bits; i++)
+    for(size_t i=0; i<self->size; i++)
     {
         curr = bitarray_get(self, i);
         if(curr)
@@ -137,17 +197,20 @@ char* bitarray_to_str(BitArray *self)
             repr[i+2] = '0';
         }
     }
-    repr[self->num_bits+2] = '\0';
+    repr[self->size+2] = '\0';
     return repr;
 }
 
 
 
-void bitarray_resize(BitArray* self, size_t new_size)
+void bitarray_resize(BitArray* self, bitarray_size_t new_size)
 {
-    size_t new_memsize = byte_size(new_size);
-    if(!new_memsize)
+    bitarray_size_t new_memsize; 
+    if(new_size)
+        new_memsize = byte_size(new_size);
+    else
         new_memsize = 1;
+
     uint8_t* new = (uint8_t*) realloc(self->data, new_memsize);
     if(new == NULL)
     {
@@ -155,53 +218,61 @@ void bitarray_resize(BitArray* self, size_t new_size)
         del_BitArray(self);
         exit(1);
     }
-    uint8_t diff = new_size % 8;
-    if(diff)
+    uint8_t diff = _bit_part(new_size);
+    bitarray_size_t n_bytes = bitarray_num_bytes(self);
+
+    if(new_memsize > n_bytes)
+        memset(&new[n_bytes], 0, new_memsize-n_bytes);
+    else if(diff)
     {
         uint8_t mask = ~((1 << (8-diff)) - 1);
         new[new_memsize-1] &= mask;
     }
-    for(size_t i=self->memsize; i<new_memsize; i++)
-    {
-        new[i] = '\0';
-    }
-    self->num_bits = new_size;
-    self->memsize = new_memsize;
+
+    self->size = new_size;
     self->data = new;
 }
 
 void bitarray_append(BitArray *self, size_t val)
 {
     size_t w = bit_width(val);
-    unsigned int byte_w = byte_size(w);
-    uint8_t fill = self->num_bits % 8;
+    size_t byte_w = byte_size(w);
+    bitarray_size_t n_bytes = bitarray_num_bytes(self);
+    uint8_t fill = _bit_part(self->size);
     uint8_t remaining = 8-fill;
     if(fill && w <= remaining)
     {
-        self->data[self->memsize-1] |= val << (remaining - w);
-        self->num_bits += w;
+        self->data[n_bytes-1] |= val << (remaining - w);
+        self->size += w;
     }
     else
     {
         if(fill)
         {
-            uint8_t amt = (byte_w-1)*8;
+            uint8_t amt = (byte_w-1)>>3; // *8
             uint8_t bits_in_sh = w - amt;
+
             amt += bits_in_sh - remaining;
             uint8_t shifted_val = val >> amt;
-            self->data[self->memsize-1] |= shifted_val;
-            self->num_bits += remaining;
+            self->data[n_bytes-1] |= shifted_val;
+
+            self->size += w;
+
             w -= remaining;
             val &= ((1 << w) - 1);
         }
-        bool bit;
-        uint8_t prev_num_bits = self->num_bits;
-        bitarray_resize(self, self->num_bits+w);
-        for(size_t i=0; i<w; i++)
+
+        bitarray_size_t prev_num_bits = self->size;
+        bitarray_resize(self, prev_num_bits+w);
+        size_t mask = 1 << (w-1);
+        w += prev_num_bits;
+        for(size_t i=prev_num_bits;i<w;i+=1)
         {
-            bit = (val & (1 << (w-i-1))) >> (w-i-1);
-            bitarray_set(self, bit, i+prev_num_bits);
+            if(val & mask)
+                bitarray_set(self, true, i);
+            mask >>= 1;
         }
+
     }
 
 }
@@ -210,7 +281,7 @@ void bitarray_append(BitArray *self, size_t val)
 void bitarray_for_each(BitArray *self, void (*func)(bool), int max)
 {
 	if(max < 0)
-		max = self->num_bits+1+max;
+		max = self->size+1+max;
 	for(size_t i=0; i<max; i++)
 	{
 		(*func)(bitarray_get(self, i));
@@ -220,7 +291,7 @@ void bitarray_for_each(BitArray *self, void (*func)(bool), int max)
 void bitarray_transform(BitArray *self, bool(*func)(bool), int max)
 {
 	if(max < 0)
-		max = self->num_bits+1+max;
+		max = self->size+1+max;
 	bool result;
 	for(size_t i=0; i<max; i++)
 	{
@@ -236,7 +307,7 @@ void bitarray_iterate(BitArray *self, Biterator *iter)
     Function *cont = (Function*) iter->function;
     int max = iter->max;
     if(max < 0)
-        max = self->num_bits+1+max;
+        max = self->size+1+max;
     max -= iter->increment;
     bool curr;
     switch(iter->sig)
@@ -334,13 +405,10 @@ BitArrayModule BITARRAY_MODULE = {
 #endif
 
 
-BitArray* new_BitArray(size_t size)
+BitArray* new_BitArray(bitarray_size_t size)
 {
-    size_t num_bytes = size / 8;
-    if(num_bytes * 8 < size)
-    {
-        num_bytes++;
-    }
+    bitarray_size_t num_bytes = byte_size(size);
+    
     BitArray* new = (BitArray *) malloc(sizeof(BitArray));
     if(new == NULL)
     {
@@ -354,12 +422,9 @@ BitArray* new_BitArray(size_t size)
         free(new);
         exit(1);
     }
-    for(size_t i=0; i<num_bytes; i++)
-    {
-        data[i] = 0;
-    }
-    new->memsize = num_bytes;
-    new->num_bits = size;
+
+    memset(data, 0, num_bytes);
+    new->size = size;
     new->data = data;
 
     #ifdef __BITARRAY_USE_OOP

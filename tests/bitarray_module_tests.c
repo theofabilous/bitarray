@@ -10,5 +10,12 @@ int main()
 	printf("%s\n", repr);
 	free(repr);
 	del_BitArray(obj);
+
+	printf("%zu\n", bitarray_umask);
+	printf("%u\n", bitarray_umask_amt);
+	printf("%zu\n", bitarray_lmask);
+
+	print_bit_repr(bitarray_umask);
+	print_bit_repr(bitarray_lmask);
 	return 0;
 }

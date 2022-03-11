@@ -1,6 +1,8 @@
-
+cmake-build-debug/*
+CMakeLists.txt
 bitarray.sublime-project
 bitarray.sublime-workspace
 tests/bitarray_test
 backup/*
 tests/bitarray_module_tests
+.idea/*

@@ -6,7 +6,7 @@
 void display_bits(BitArray *obj)
 {
     char *brepr = obj->to_str(obj);
-    printf("%s  (size: %d)\n", brepr, obj->num_bits);
+    printf("%s  (size: %d)\n", brepr, obj->size);
     free(brepr);
 }
 
