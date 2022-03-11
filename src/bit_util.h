@@ -15,13 +15,13 @@
 size_t bit_width(size_t num)
 {
 	if(num > (size_t) INT_MAX)
-		{
-            size_t sum = 0;
-            size_t curr;
-			for(;num>=(size_t) INT_MAX; num>>=16)
-                sum+=16;
-			return sum + bit_width(num);
-		}
+	{
+		size_t sum = 0;
+		size_t curr;
+		for(;num>=(size_t) INT_MAX; num>>=16)
+			sum+=16;
+		return sum + bit_width(num);
+	}
 	else if(num)
 		return 1 + (size_t) floor(log2(num));
 	else
