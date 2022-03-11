@@ -36,22 +36,12 @@ Features include (but are not limited to):
 ```C
 typedef struct _BitArray
 {
-    size_t num_bits;
-    size_t memsize;
+    bitarray_size_t size;
     uint8_t *data;
-    
-    // if BITARRAY_OOP is defined && BITARRAY_OOP > 0...
-    void (*set)(struct _BitArray *self, bool bit, size_t index);
-    void (*append)(struct _BitArray *self, size_t val);
-    uint8_t (*get)(struct _BitArray *self, size_t i);
-    size_t (*slice)(struct _BitArray *self, size_t i, size_t j);
-    char* (*to_str)(struct _BitArray *self);
-    void (*resize)(struct _BitArray *self, size_t n);
-    void (*for_each)(struct _BitArray *self, void (*f)(bool), int m);
-    void (*transform)(struct _BitArray *self, bool (*f)(bool), int m);
-    void (*iterate)(struct _BitArray *self, Biterator *iter);
-
 } BitArray;
+
+// if BITARRAY_OOP defined > 0, the struct has
+// many function pointers (increasing its size)
 ```
 
 Two macros are available to control how the various functions are used.
@@ -61,8 +51,7 @@ Two macros are available to control how the various functions are used.
 #include "bitarray.h"
 /* ... */
 BitArray *bits = new_BitArray(0);
-bitarray_resize(bits, 12); // same names as in function pointers,
-                     // but with bitarray_ prefix
+bitarray_resize(bits, 12); // bitarray_ prefix for struct "methods"
 /* ... */
 ```
 
