@@ -62,7 +62,7 @@ Function *new_Function(void *f)
 	if(func == NULL)
 	{
 		printf("Memory could not be allocated\n");
-        exit(1);
+		exit(1);
 	}
 	func->raw = f;
 	return func;
@@ -90,27 +90,27 @@ void detach_Biterator(Biterator *it)
 
 size_t read_Biterator(Biterator *it, size_t n)
 {
-    if(it->parent == NULL)
-    {
-        printf("Cannot read from biterator without parent array\n");
-        return -1;
-    }
-    long int diff = it->curr - it->max;
-    size_t ret;
-    if(diff > 0 && diff < it->increment)
-    {
-        ret = bitarray_slice(it->parent, it->curr, it->curr + diff);
-        it->curr += diff;
-        return ret;
-    }
-    else if(diff > 0)
-    {
-        ret = bitarray_slice(it->parent, it->curr, it->curr + it->increment);
-        it->curr += it->increment;
-        return ret;
-    }
-    else
-        return -1;
+	if(it->parent == NULL)
+	{
+		printf("Cannot read from biterator without parent array\n");
+		return -1;
+	}
+	long int diff = it->curr - it->max;
+	size_t ret;
+	if(diff > 0 && diff < it->increment)
+	{
+		ret = bitarray_slice(it->parent, it->curr, it->curr + diff);
+		it->curr += diff;
+		return ret;
+	}
+	else if(diff > 0)
+	{
+		ret = bitarray_slice(it->parent, it->curr, it->curr + it->increment);
+		it->curr += it->increment;
+		return ret;
+	}
+	else
+		return -1;
 }
 
 
@@ -120,14 +120,14 @@ Biterator *new_Biterator(int increment, long long int max, uint8_t sig, void* f)
 	if(it == NULL)
 	{
 		printf("Memory could not be allocated\n");
-        exit(1);
+		exit(1);
 	}
 	Function *func = new_Function(f);
 	if(func == NULL)
 	{
 		printf("Memory could not be allocated\n");
 		free(it);
-        exit(1);
+		exit(1);
 	}
 	it->increment = increment;
 	it->max = max;
