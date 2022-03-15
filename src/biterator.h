@@ -156,7 +156,7 @@ typedef struct _ContextNode
 	uint8_t flags;
 	union _data {
 		struct _ContextNode* children[2];
-		Biterator iters[2];
+		Biterator* iters[2];
 		void (*funcs[2])(void);
 	} data;
 	
