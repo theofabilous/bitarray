@@ -68,10 +68,10 @@ This macro should not be defined if many small `BitArray`s are created, as they 
 by `num_of_functions * sizeof(void *)`. For projects that use few, large bit vectors, this shouldn't make much of
 a difference and may yield more readable code.
 
-**BITARRAY_MODULE macro**
+**IMPORT_BITARRAY_MODULE_AS macro**
 ```C
-#define BITARRAY_MODULE Bin // or any other name
 #include "bitarray.h"
+IMPORT_BITARRAY_MODULE_AS(Bin);
 /* ... */
 BitArray *bits = new_BitArray(0);
 Bin.resize(bits, 12);
