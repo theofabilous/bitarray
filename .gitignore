@@ -6,3 +6,6 @@ tests/bitarray_test
 backup/*
 tests/bitarray_module_tests
 .idea/*
+build/*
+.vscode/*
+misc/*

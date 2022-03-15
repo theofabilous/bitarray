@@ -1,6 +1,7 @@
-#define BITARRAY_MODULE Bits
-
 #include "../src/bitarray.h"
+
+
+IMPORT_BITARRAY_MODULE_AS(Bits);
 
 int main()
 {
@@ -9,13 +10,10 @@ int main()
 	char *repr = Bits.to_str(obj);
 	printf("%s\n", repr);
 	free(repr);
+	Bits.set_slice(obj, 0, 5, 0b10101);
+	repr = Bits.to_str(obj);
+	printf("%s\n", repr);
+	free(repr);
 	del_BitArray(obj);
-
-	printf("%zu\n", bitarray_umask);
-	printf("%u\n", bitarray_umask_amt);
-	printf("%zu\n", bitarray_lmask);
-
-	print_bit_repr(bitarray_umask);
-	print_bit_repr(bitarray_lmask);
 	return 0;
 }

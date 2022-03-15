@@ -7,10 +7,44 @@
 #include <math.h>
 #include <limits.h>
 
-// uint8_t BIT_WIDTH_TABLE[] =
-// {
+// :D
+#define bit_cast_voidify(t, x) *((t*)((void *)(&x)))
+#define bit_cast(t, x) *((t *)&x)
 
-// };
+const uint8_t LEFT_MOST_MASKS[9] = 
+{
+	0, 0b10000000, 0b11000000, 0b11100000,
+	0b11110000, 0b11111000, 0b11111100, 0b11111110,
+	0xFF
+};
+
+const uint8_t RIGHT_MOST_MASKS[9] = 
+{
+	0, 1, 0b11, (1 << 4)-1, (1 << 5)-1,
+	(1 << 6)-1, (1 << 7)-1, 0b01111111, 0xFF
+};
+
+
+
+/* ----------------------- */
+
+static size_t inline _byte_part(size_t n)
+{
+	return n >> 3;
+}
+
+static uint8_t inline _bit_part(size_t n)
+{
+	return n & 0b111;
+}
+
+static uint8_t inline get_lr_mask(uint8_t i, uint8_t j)
+{
+	return LEFT_MOST_MASKS[i] | RIGHT_MOST_MASKS[j];
+}
+
+/* ----------------------- */
+
 
 size_t bit_width(size_t num)
 {
@@ -43,10 +77,7 @@ char* bit_repr(size_t num)
     size_t w = bit_width(num);
 	char* bits = (char *) calloc(w+1, sizeof(char));
 	if(bits == NULL)
-	{
-		printf("Memory could not be allocated\n");
-		exit(1);
-	}
+		return NULL;
     size_t mask = 1 << (w-1);
 
 	for(size_t i = 0; i<w; i++, mask >>= 1)

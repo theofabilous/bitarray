@@ -177,5 +177,9 @@ int main()
 
 	readme_get_started();
 	readme_iter_simple();
+
+
+	printf("About to raise an err\n");
+	// raise(3);
 	return 0;
 }

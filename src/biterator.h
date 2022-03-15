@@ -8,6 +8,15 @@
 #include <stdbool.h>
 
 
+/* ! ! ! ! */
+/* ! ! ! ! */
+/*   WIP   */
+/* ! ! ! ! */
+/* ! ! ! ! */
+
+
+
+
 /* Defined in bitarray.h */
 
 struct _BitArray;
@@ -61,11 +70,15 @@ Function *new_Function(void *f)
 	Function *func = (Function *) malloc(sizeof(Function));
 	if(func == NULL)
 	{
-		printf("Memory could not be allocated\n");
-		exit(1);
+		return NULL;
 	}
 	func->raw = f;
 	return func;
+}
+
+void init_Function(void *f, Function* cont)
+{
+	cont->raw = f;
 }
 
 void del_Function(Function *func)
