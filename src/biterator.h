@@ -94,11 +94,7 @@ bool biterator_read_bit(Biterator *it)
 	// handle errors needed....
 	if(biterator_finished(it))
 		return false;
-
-	// prob could optimize
-	bool read = bitarray_get(it->parent, it->curr);
-	it->curr++;
-	return read;
+	return bitarray_get(it->parent, (it->curr)++);
 }
 
 bool biterator_expect_bit(Biterator* self, bool bit)
@@ -110,15 +106,6 @@ bool biterator_expect_bit(Biterator* self, bool bit)
 		self->curr--;
 		return false;
 	}
-	// switch(bit | (biterator_read_bit(self) << 1))
-	// {
-	// 	case 0b10:
-	// 	case 0b01:
-	// 		self->curr--;
-	// 		return false;
-	// 	default:
-	// 		return true;
-	// }
 }
 
 size_t biterator_read(Biterator *it, size_t n)
