@@ -54,6 +54,11 @@ typedef struct _ConstBitStream
 
 /* ------------------------------------------------------------ */
 
+// for pointer reference
+bitarray_size_t _bitarray_size(BitArray *self)
+{
+	return bitarray_lmask & self->size;
+}
 
 static inline bitarray_size_t bitarray_size(BitArray *self)
 {
@@ -224,8 +229,9 @@ void bitarray_memcpy(BitArray* self, size_t i, size_t len, uint8_t* buffer)
 	memcpy(buffer, &(self->data[i]), len);
 }
 
-void bitarray_bit_strcpy(BitArray* self, size_t i, size_t len, char* buffer)
+void bitarray_bit_strcpy(BitArray* self, size_t i, int64_t len, char* buffer)
 {
+	len = (len < 0) ? (bitarray_size(self)+1+len) : len;
 	if(i >= bitarray_size(self) || (i+len-1) >= bitarray_size(self) >> 3)
 	{
 		bitarray_set_err(self, BITARRAY_ILL_ERR_FLAG);
@@ -233,20 +239,19 @@ void bitarray_bit_strcpy(BitArray* self, size_t i, size_t len, char* buffer)
 	}
 	uint8_t mask = 1 << (i & 0b111);
 	size_t j;
-	for(j=0;len-1;j++, i++, len--)
+	for(j=0;len;j++, i++, len--)
 	{
 		buffer[j] = (self->data[i >> 3] & mask) ? '1' : '0';
 		mask = (mask & 0b10000000) ? 1 : (mask << 1);
 	}
-	buffer[j] = 0;
+	buffer[j+1] = 0;
 }
 
-void bitarray_print_bits(BitArray* self, size_t i, size_t len)
+void bitarray_print_bits(BitArray* self, size_t i, int64_t len)
 {
-	char c;
 	size_t max = bitarray_size(self);
-	unsigned int num = (len < 0) ? (max+1+len) : len;
-	for(;i<max && num; i++, num--)
+	len = (len < 0) ? (max+1+len) : len;
+	for(;i<max && len; i++, len--)
 		putchar(bitarray_get(self, i) ? '1' : '0');
 	printf("\n");
 }
@@ -547,6 +552,7 @@ void bitarray_iterate(BitArray *self, Biterator *iter)
 
 typedef struct _BitArrayModule
 {
+	bitarray_size_t (*size)(BitArray *self);
 	void (*set)(BitArray *self, bool bit, size_t index);
 	void (*unset)(BitArray *self, size_t i);
 	bool (*append)(BitArray *self, size_t val);
@@ -554,6 +560,10 @@ typedef struct _BitArrayModule
 	size_t (*slice)(BitArray *self, size_t i, size_t j);
 	void (*set_slice)(BitArray *self, size_t i, size_t j, size_t val);
 	void (*fill_slice)(BitArray *self, size_t i, size_t j, bool bit);
+	void (*memcpy)(BitArray* self, size_t i, size_t len, uint8_t* buffer);
+	void (*bit_strcpy)(BitArray* self, size_t i, int64_t len, char* buffer);
+	void (*print_bits)(BitArray* self, size_t i, int64_t len);
+	void (*print_bytes)(BitArray* self, size_t i, int len);
 	char* (*to_str)(BitArray *self);
 	bool (*resize)(BitArray *self, size_t n);
 	void (*for_each)(BitArray *self, void (*f)(bool), int m);
@@ -563,6 +573,7 @@ typedef struct _BitArrayModule
 
 #define IMPORT_BITARRAY_MODULE_AS(m) \
 BitArrayModule m = { \
+	.size = &_bitarray_size, \
 	.set = &bitarray_set, \
 	.unset = &bitarray_unset, \
 	.append = &bitarray_append, \
@@ -570,6 +581,10 @@ BitArrayModule m = { \
 	.slice = &bitarray_slice, \
 	.set_slice = &bitarray_set_slice, \
 	.fill_slice = &bitarray_fill_slice, \
+	.memcpy = &bitarray_memcpy, \
+	.bit_strcpy = &bitarray_bit_strcpy, \
+	.print_bits = &bitarray_print_bits, \
+	.print_bytes = &bitarray_print_bytes, \
 	.to_str = &bitarray_to_str, \
 	.resize = &bitarray_resize, \
 	.for_each = &bitarray_for_each, \

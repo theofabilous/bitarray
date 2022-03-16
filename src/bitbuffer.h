@@ -196,7 +196,7 @@ uint16_t bitbuffer_read_uint16(BitBuffer* self)
         return false;
     }
     uint16_t val;
-    memcpy(&val, self->buffer[self->pos >> 3], 2);
+    memcpy(&val, &(self->buffer[self->pos >> 3]), 2);
     self->pos +=16;
     return val;
 }
@@ -211,7 +211,7 @@ uint32_t bitbuffer_read_uint32(BitBuffer* self)
         return false;
     }
     uint32_t val;
-    memcpy(&val, self->buffer[self->pos >> 3], 4);
+    memcpy(&val, &(self->buffer[self->pos >> 3]), 4);
     self->pos +=32;
     return val;
 }
@@ -226,7 +226,7 @@ uint64_t bitbuffer_read_uint64(BitBuffer* self)
         return false;
     }
     uint64_t val;
-    memcpy(&val, self->buffer[self->pos >> 3], 8);
+    memcpy(&val, &(self->buffer[self->pos >> 3]), 8);
     self->pos += 64;
     return val;  
 }
@@ -243,7 +243,7 @@ size_t bitbuffer_read(BitBuffer* self, unsigned int num)
     size_t val = 0;
 
     /* to-do */
-    
+
     return val;
 
 }
@@ -275,7 +275,7 @@ BitBuffer* new_BitBuffer_from_file(const char *path, bool write)
 		file_no = open(path, O_RDWR, S_IRUSR | S_IWUSR);
 	else
 		file_no = open(path, O_RDONLY, S_IRUSR);
-	BitBuffer* obj = malloc(sizeof(BitBuffer));
+	BitBuffer* obj = (BitBuffer*) malloc(sizeof(BitBuffer));
     obj->flags = 0;
 	if(obj == NULL)
 	{
