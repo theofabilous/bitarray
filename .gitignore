@@ -9,3 +9,4 @@ tests/bitarray_module_tests
 build/*
 .vscode/*
 misc/*
+resources/*

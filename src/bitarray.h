@@ -8,9 +8,15 @@
 #include <assert.h>
 #include <signal.h>
 
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+
 #include "bit_util.h"
 #include "biterator.h"
 #include "bit_defs.h"
+#include "bitbuffer.h"
 
 
 
@@ -21,28 +27,32 @@ typedef struct _BitArray
 {
 	bitarray_size_t size;
 	uint8_t *data;
-
-	#ifdef __BITARRAY_USE_OOP
-	void (*set)(struct _BitArray *self, bool bit, size_t index);
-	void (*unset)(struct _BitArray *self, size_t i);
-	bool (*append)(struct _BitArray *self, size_t val);
-	uint8_t (*get)(struct _BitArray *self, size_t i);
-	size_t (*slice)(struct _BitArray *self, size_t i, size_t j);
-	void (*set_slice)(struct _BitArray *self, size_t i, size_t j, size_t val);
-	void (*fill_slice)(struct _BitArray *self, size_t i, size_t j, size_t val);
-	char* (*to_str)(struct _BitArray *self);
-	bool (*resize)(struct _BitArray *self, size_t n);
-	void (*for_each)(struct _BitArray *self, void (*f)(bool), int m);
-	void (*transform)(struct _BitArray *self, bool (*f)(bool), int m);
-	void (*iterate)(struct _BitArray *self, Biterator *iter);
-	#endif
-
 } BitArray;
+
+typedef struct _SlicedBitArray
+{
+	size_t start;
+	size_t end;
+	BitArray* ref;
+} SlicedBitArray;
+
+typedef struct _ConstBitStream
+{
+	size_t pos;
+	BitArray* ref;
+} ConstBitStream;
 
 
 /* ------------------------------------------------------------ */
 
 
+
+
+
+
+
+
+/* ------------------------------------------------------------ */
 
 
 static inline bitarray_size_t bitarray_size(BitArray *self)
@@ -112,14 +122,37 @@ bool bitarray_check_status(BitArray* self)
 
 
 
+void bitarray_set_byte(BitArray* self, uint8_t byte, size_t i)
+{
+	// i must be < floor(len(self)/8)
+	if(i >= (bitarray_size(self) >> 3))
+	{
+		bitarray_set_err(self, BITARRAY_ILL_ERR_FLAG);
+		return;
+	}
+	self->data[i] = byte;
+}
 
+uint8_t bitarray_get_byte(BitArray* self, size_t i)
+{
+	// i must be < floor(len(self)/8)
+	if(i >= (bitarray_size(self) >> 3))
+	{
+		bitarray_set_err(self, BITARRAY_ILL_ERR_FLAG);
+		return 0;
+	}
+	return self->data[i];
+}
 
 
 
 void bitarray_set(BitArray *self, bool bit, size_t i)
 {
 	if(i >= bitarray_size(self))
+	{
 		bitarray_set_err(self, BITARRAY_ILL_ERR_FLAG);
+		return;
+	}
 
 	bitarray_size_t byte_index = _byte_part(i);
 	uint8_t bit_index = _bit_part(i);
@@ -140,7 +173,10 @@ void bitarray_set(BitArray *self, bool bit, size_t i)
 void bitarray_unset(BitArray *self, size_t i)
 {
 	if(i >= bitarray_size(self))
+	{
 		bitarray_set_err(self, BITARRAY_ILL_ERR_FLAG);
+		return;
+	}
 
 	size_t byte_index = _byte_part(i);
 	uint8_t bit_index = _bit_part(i);
@@ -176,6 +212,56 @@ size_t bitarray_slice(BitArray *self, size_t i, size_t j)
 		i++;
 	}
 	return val;
+}
+
+void bitarray_memcpy(BitArray* self, size_t i, size_t len, uint8_t* buffer)
+{
+	if(i >= (bitarray_size(self) >> 3) || (i+len) >= (bitarray_size(self) >> 3))
+	{
+		bitarray_set_err(self, BITARRAY_ILL_ERR_FLAG);
+		return;
+	}
+	memcpy(buffer, &(self->data[i]), len);
+}
+
+void bitarray_bit_strcpy(BitArray* self, size_t i, size_t len, char* buffer)
+{
+	if(i >= bitarray_size(self) || (i+len-1) >= bitarray_size(self) >> 3)
+	{
+		bitarray_set_err(self, BITARRAY_ILL_ERR_FLAG);
+		return;
+	}
+	uint8_t mask = 1 << (i & 0b111);
+	size_t j;
+	for(j=0;len-1;j++, i++, len--)
+	{
+		buffer[j] = (self->data[i >> 3] & mask) ? '1' : '0';
+		mask = (mask & 0b10000000) ? 1 : (mask << 1);
+	}
+	buffer[j] = 0;
+}
+
+void bitarray_print_bits(BitArray* self, size_t i, size_t len)
+{
+	char c;
+	size_t max = bitarray_size(self);
+	unsigned int num = (len < 0) ? (max+1+len) : len;
+	for(;i<max && num; i++, num--)
+		putchar(bitarray_get(self, i) ? '1' : '0');
+	printf("\n");
+}
+
+void bitarray_print_bytes(BitArray* self, size_t i, int len)
+{
+	char c;
+	size_t max = bitarray_num_bytes(self);
+	unsigned int num = (len < 0) ? (max+1+len) : len;
+	for(;i<max && num; i++, num--)
+	{
+		c = bitarray_get_byte(self, i);
+		putchar( c ? c : ' ');
+	}
+	printf("\n");
 }
 
 void bitarray_set_slice(BitArray *self, size_t i, size_t j, size_t val)
@@ -237,24 +323,18 @@ void bitarray_fill_slice(BitArray *self, size_t i, size_t j, bool bit)
 	{
 		if(byte_i == byte_j)
 		{
-			switch(bit)
-			{
-				case 0:
-					self->data[byte_j] &= ~(((1 << bit_j - bit_i)-1) << bit_j);
-				case 1:
-					self->data[byte_j] |= ((1 << bit_j - bit_i)-1) << bit_j;
-			}
+			if(bit)
+				self->data[byte_j] |= ((1 << bit_j - bit_i)-1) << bit_j;
+			else
+				self->data[byte_j] &= ~(((1 << bit_j - bit_i)-1) << bit_j);
 			return;
 		}
 		else
 		{
-			switch(bit)
-			{
-				case 0:
-					self->data[byte_j] &= ~((1 << (7-bit_j))-1);
-				case 1:
-					self->data[byte_j] |= (1 << (7-bit_j))-1;
-			}
+			if(bit)
+				self->data[byte_j] |= (1 << (7-bit_j))-1;
+			else
+				self->data[byte_j] &= ~((1 << (7-bit_j))-1);
 			byte_j--;
 		}
 	}
@@ -265,13 +345,10 @@ void bitarray_fill_slice(BitArray *self, size_t i, size_t j, bool bit)
 		self->data[byte_j] = fill;
 		byte_j--;
 	}
-	switch(bit)
-	{
-		case 0:
-			self->data[byte_i] &= ~((1 << (7-bit_i)) - 1);
-		case 1:
-			self->data[byte_i] |= (1 << (7-bit_i)) - 1;
-	}
+	if(bit)
+		self->data[byte_i] |= (1 << (7-bit_i)) - 1;
+	else
+		self->data[byte_i] &= ~((1 << (7-bit_i)) - 1);
 }
 
 char* bitarray_to_str(BitArray *self)
@@ -308,8 +385,8 @@ bool bitarray_resize(BitArray* self, bitarray_size_t new_size)
 	if(!new_memsize)
 		new_memsize = 1;
 
-	uint8_t* new = (uint8_t*) realloc(self->data, new_memsize);
-	if(new == NULL)
+	uint8_t* new_data = (uint8_t*) realloc(self->data, new_memsize);
+	if(new_data == NULL)
 	{
 		free(self->data);
 		bitarray_set_err(self, BITARRAY_MEM_ERR_FLAG);
@@ -319,15 +396,15 @@ bool bitarray_resize(BitArray* self, bitarray_size_t new_size)
 	bitarray_size_t n_bytes = bitarray_num_bytes(self);
 
 	if(new_memsize > n_bytes)
-		memset(&new[n_bytes], 0, new_memsize-n_bytes);
+		memset(&new_data[n_bytes], 0, new_memsize-n_bytes);
 	else if(diff)
 	{
 		uint8_t mask = ~((1 << (8-diff)) - 1);
-		new[new_memsize-1] &= mask;
+		new_data[new_memsize-1] &= mask;
 	}
 
 	bitarray_set_size(self, new_size);
-	self->data = new;
+	self->data = new_data;
 	return true;
 }
 
@@ -377,9 +454,7 @@ void bitarray_for_each(BitArray *self, void (*func)(bool), int max)
 	if(max < 0)
 		max = bitarray_size(self)+1+max;
 	for(size_t i=0; i<max; i++)
-	{
 		(*func)(bitarray_get(self, i));
-	}
 }
 
 void bitarray_transform(BitArray *self, bool(*func)(bool), int max)
@@ -518,23 +593,6 @@ bool init_BitArray(BitArray* obj, bitarray_size_t size)
 	bitarray_set_size(obj, size);
 	obj->data = data;
 
-	#ifdef __BITARRAY_USE_OOP
-
-	obj->set = bitarray_set;
-	obj->unset = bitarray_unset;
-	obj->get = bitarray_get;
-	obj->slice = bitarray_slice;
-	obj->set_slice = bitarray_set_slice;
-	obj->fill_slice = bitarray_fill_slice;
-	obj->append = bitarray_append;
-	obj->resize = bitarray_resize;
-	obj->to_str = bitarray_to_str;
-	obj->for_each = bitarray_for_each;
-	obj->transform = bitarray_transform;
-	obj->iterate = bitarray_iterate;
-
-	#endif
-
 	return true;
 }
 
@@ -543,48 +601,79 @@ BitArray* new_BitArray(bitarray_size_t size)
 {
 	bitarray_size_t num_bytes = byte_size(size);
 	
-	BitArray* new = (BitArray *) malloc(sizeof(BitArray));
-	if(new == NULL)
+	BitArray* obj= (BitArray *) malloc(sizeof(BitArray));
+	if(obj== NULL)
 	{
 		return NULL;
 	}
 	uint8_t* data = (uint8_t *) calloc(num_bytes, sizeof(uint8_t));
 	if(data == NULL)
 	{
-		free(new);
+		free(obj);
 		return NULL;
 	}
 
 	memset(data, 0, num_bytes);
-	bitarray_set_size(new, size);
-	new->data = data;
+	bitarray_set_size(obj, size);
+	obj->data = data;
 
-	#ifdef __BITARRAY_USE_OOP
-
-	new->set = bitarray_set;
-	new->unset = bitarray_unset;
-	new->get = bitarray_get;
-	new->slice = bitarray_slice;
-	new->set_slice = bitarray_set_slice;
-	new->fill_slice = bitarray_fill_slice;
-	new->append = bitarray_append;
-	new->resize = bitarray_resize;
-	new->to_str = bitarray_to_str;
-	new->for_each = bitarray_for_each;
-	new->transform = bitarray_transform;
-	new->iterate = bitarray_iterate;
-
-	#endif
-
-	return new;
+	return obj;
 }
 
+bool init_Bitarray_from_file(BitArray* obj, const char* path)
+{
+	FILE *fptr = fopen(path, "rb");
+	if(fptr == NULL)
+		return false;
+	size_t file_size;
+	fseek(fptr, 0L, SEEK_END);
+	file_size = ftell(fptr);
+	rewind(fptr);
+	bitarray_resize(obj, (file_size << 3));
+	fread(obj->data, file_size, 1, fptr);
+	fclose(fptr);
+	return true;
+}
+
+BitArray* new_Bitarray_from_file(const char* path)
+{
+	BitArray* obj = (BitArray *) malloc(sizeof(BitArray));
+	if(obj == NULL)
+		return NULL;
+	FILE *fptr = fopen(path, "rb");
+	if(fptr == NULL)
+	{
+		free(obj);
+		return NULL;
+	}
+	size_t file_size;
+	fseek(fptr, 0L, SEEK_END);
+	file_size = ftell(fptr);
+	rewind(fptr);
+
+	uint8_t* data = (uint8_t *) calloc(file_size, sizeof(uint8_t));
+	if(data == NULL)
+	{
+		free(obj);
+		fclose(fptr);
+		return NULL;
+	}
+
+	fread(data, file_size, 1, fptr);
+	bitarray_set_size(obj, (file_size << 3));
+	obj->data = data;
+	return obj;
+}
 
 void del_BitArray(BitArray* obj)
 {
 	free(obj->data);
 	free(obj);
 }
+
+
+
+
 
 
 #endif /* _BITARRAY_H */

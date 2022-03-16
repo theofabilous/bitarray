@@ -103,15 +103,22 @@ bool biterator_read_bit(Biterator *it)
 
 bool biterator_expect_bit(Biterator* self, bool bit)
 {
-	switch(bit | (biterator_read_bit(self) << 1))
+	if(biterator_read_bit(self) == bit)
+		return true;
+	else
 	{
-		case 0b10:
-		case 0b01:
-			self->curr--;
-			return false;
-		default:
-			return true;
+		self->curr--;
+		return false;
 	}
+	// switch(bit | (biterator_read_bit(self) << 1))
+	// {
+	// 	case 0b10:
+	// 	case 0b01:
+	// 		self->curr--;
+	// 		return false;
+	// 	default:
+	// 		return true;
+	// }
 }
 
 size_t biterator_read(Biterator *it, size_t n)

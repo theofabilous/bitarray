@@ -7,17 +7,16 @@ Ugly macro definitions that pollute the main header file
 // Just so IDE/editor doesn't complain
 #include <stdlib.h>
 
+#if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__))
+#define __BITARRAY_MMAP__ 1
+#else
+#define __BITARRAY_MMAP__ 0
+#endif
+
 // Temporary empty instruction
 // to place in indented blocks, case statements,
 // goto labels, etc.
 #define __PASS__ ((void) 0)
-
-// Handle function pointer macro option
-#ifdef BITARRAY_OOP
-	#if BITARRAY_OOP > 0
-		#define __BITARRAY_USE_OOP 1
-	#endif
-#endif
 
 // Define type that holds the bitarray size
 #ifndef BITARRAY_SIZE_T
