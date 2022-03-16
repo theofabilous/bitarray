@@ -5,10 +5,6 @@ A small C library for dynamic bitfield manipulations, iterations & procedures.
 
 *Please note that this library is a work in progress and is most definitely not complete.*
 
-<!-- *bitarray* was designed to imitate C++ dynamic bit vector implementations such as [std::vector\<bool\>](https://en.cppreference.com/w/cpp/container/vector_bool) and [boost::dynamic_bitset\<\>](https://www.boost.org/doc/libs/1_36_0/libs/dynamic_bitset/dynamic_bitset.html) in pure C, while keeping memory usage at a minimum and  -->
-
-<!-- Unfortunately, most implementations do not guarantee space efficiency (in both C++ and C), since memory addresses cannot be subdivided beyond their absolute unit: the **byte**. Further, when a bit vector *is* designed in a space efficient manner, manipulating it like a regular container type is complex. Often, only one of these two features can be chosen. -->
-
 *bitarray* provides space efficient tools for bit vectors and binary data operations. The `BitArray` struct can be used very much like [std::vector\<bool\>](https://en.cppreference.com/w/cpp/container/vector_bool) and guarantees that one bit takes up exactly one bit of data. [^1] This library was designed to facilitate looping over large binary buffers and to make such programs more declarative/functional. The end goal is to yield a lightweight yet complete binary parsing library.  
 
 Features include (but are not limited to):
@@ -16,20 +12,19 @@ Features include (but are not limited to):
   - Indexing
   - Slicing
   - Appending single bits
-  - Appending any type of integral value (`int`, `char`, `float`, `unsigned long long`, `size_t`, ...)
+  - Appending any type of integral value (`int`, `char`, `float`, `unsigned long long`, ...)
   - String representation
   - Iterative/functional tools
 
-<!-- Arbitary sized (up to `sizeof(size_t)`) integral values can be appended to it dynamically.  -->
-<!-- It can be resized, sliced, indexed, accessed, modified, converted to a binary string... -->
-
 `BitArray` structs provide basic functional tools like `for_each` and `transform`. These tools are useful for simple iterative procedures. However, the library also provides the `Biterator` struct which allows for complex functional binary operations on bit vectors.
 
-*bitarray* is built and reasoned about in a way that would allow it to be eventually extended to a python module. The end goal is to have a library wherein the user can declaratively create a complex set of rules for binary parsing through the python interface, and then apply the constructed "procedure" to all sorts of binary formats. The procedure, although constructed in python, would have all of its functionality in C. The end result should more or less resemble [Construct](https://construct.readthedocs.io/en/latest/index.html#), with the key difference that its functionality will remain in C while offering complex conditional rules and callbacks.
+This library also includes the `BitBuffer` struct for binary file I/O. It is only defined for POSIX-compliant operating systems as the I/O operations are optimized with [<sys/mman.h>](https://www.gnu.org/software/libc/manual/html_node/Memory_002dmapped-I_002fO.html) for memory-mapping.
 
-<!-- This library was created with the intention of being extended to python bindings for declarative, complex parsing of binary formatings at the level of individual bits, while keeping most computational logi -->
+*bitarray* is built and reasoned about in a way that would allow it to be eventually extended to a python module. The end goal is to have a library wherein the user can declaratively create a complex set of rules for binary parsing through the python interface, and then apply the constructed "procedure" to all sorts of binary formats. The procedure, although constructed in python, would have all of its functionality in C. The end result should more or less resemble [Construct](https://construct.readthedocs.io/en/latest/index.html#), with the key difference that its functionality would remain in C while still offering complex conditional rules and callbacks.
 
 [^1]: Of course, memory must be allocated byte-wise. However, the maximum extra "useless" size (in bits) of the internal buffer is 8. So, the actual size in memory of the buffer is always within \[num_of_bits, num_of_bits+8].
+
+---
 
 ## The BitArray Struct
 
@@ -39,36 +34,59 @@ typedef struct _BitArray
     bitarray_size_t size;
     uint8_t *data;
 } BitArray;
-
-// if BITARRAY_OOP defined > 0, the struct has
-// many function pointers (increasing its size)
 ```
 
-Two macros are available to control how the various functions are used.
-
-**No macros**
+### Usage
+First, define any *bitarray*-specific macros (if needed). Then, `#include "/path/to/bitarray.h"`.  
+BitArray objects can be initialized dynamically with `new_Bitarray(size_t num_of_bits)`:
 ```C
-#include "bitarray.h"
-/* ... */
-BitArray *bits = new_BitArray(0);
-bitarray_resize(bits, 12); // bitarray_ prefix for struct "methods"
-/* ... */
+BitArray *bits = new_Bitarray(12);
+if(bits == NULL)
+    // handle memory error
 ```
-
-**BITARRAY_OOP macro**
+or initialized by reference with `init_Bitarray(BitArray* bitarray, size_t num_of_bits)`:
 ```C
-#define BITARRAY_OOP 1
-#include "bitarray.h"
+BitArray bits;
+if(!init_Bitarray(&bits, 12))
+    // false -> memory error, handle it
+```
+`BitArray`s can also be created from a file using a `const char*` to the file's path. For large files and complex parsing procedures, one should use `BitBuffer` instead of `BitArray` if the OS is POSIX-like, since the former takes advantage of memory mapping for read/write operations. It also behaves more like a `FILE*`/`std::iostream`, in that it allows reading and seeking the underlying file.
+
+Functions operating on `BitArray`s have the `bitarray_` prefix:
+```C
+// set a bit to true/1 or false/0
+void bitarray_set(BitArray *self, bool bit, size_t i);
+
+// get a bit
+uint8_t bitarray_get(BitArray *self, size_t i); 
+
+// get the unsigned integer value of a section of the bits
+size_t bitarray_slice(BitArray *self, size_t i, size_t j); 
+
+// set a section of the bits to a certain value
+void bitarray_set_slice(BitArray *self, size_t i, size_t j, size_t val);
+
+// set all the bits within a section to true/1 or false/0
+void bitarray_fill_slice(BitArray *self, size_t i, size_t j, bool bit);
+
 /* ... */
-BitArray *bits = new_BitArray(0);
-bits->resize(bits, 12);
+
+// append an integral value to the end of the array dynamically
+bool bitarray_append(BitArray *self, size_t val);
+
+/* ... */
+
+// do something for every bit with a (bit) -> (void) callback pointer
+void bitarray_for_each(BitArray *self, void (*func)(bool), int max);
+
+/* ... */
+
+// iterate over all the bits and do cool stuff with a Biterator
+void bitarray_iterate(BitArray *self, Biterator *iter);
+
 /* ... */
 ```
-This macro should not be defined if many small `BitArray`s are created, as they grow the size of such objects
-by `num_of_functions * sizeof(void *)`. For projects that use few, large bit vectors, this shouldn't make much of
-a difference and may yield more readable code.
-
-**IMPORT_BITARRAY_MODULE_AS macro**
+The same is true for the other defined structs. If one wants to omit the prefixes, the `IMPORT_BITARRAY_MODULE_AS(name)` macro can be used:
 ```C
 #include "bitarray.h"
 IMPORT_BITARRAY_MODULE_AS(Bin);
@@ -77,62 +95,52 @@ BitArray *bits = new_BitArray(0);
 Bin.resize(bits, 12);
 /* ... */
 ```
-Defining the module macro is useful in that it reduces the character length of functional calls (one can 
-omit the `bitarray_` prefix) while avoiding possible name clashes (for example, another function 
-named `resize` may already have been defined). However, this introduces a global struct that holds all the
-function pointers. 
+The macro essentially expands to instantiating a struct which holds all the libraries' functions as pointers whose names are identical to those referenced, but without their prefixes. Depending on the project, one may prefer making such a declaration in the outer-most scope such that the struct may be syntactically used like a Python/C++20 module import.
 
 ## Examples
 
 ### Getting started
 ```C
-#include <stdbool.h>
-#define BITARRAY_OOP 1 // adds function pointers to BitArray struct
+/* ... */
 #include "bitarray.h"
-
 /* ... */
 
-BitArray *bits = new_BitArray(12); // Initiliaze with 12 bits (all zero by default)
-bits->set(bits, true, 0); // set first bit to 1
-bits->set(bits, true, 5);
+IMPORT_BITARRAY_MODULE_AS(Bin);
 
-char *str = bits->to_str(bits);
-printf("%s\n", str); // prints 0b100001000000
-free(str); // to_str returns a stack-allocated char*
-           // a scanf-like function is coming soon...
+void get_started()
+{
+  BitArray *bits = new_BitArray(12); // Initiliaze with 12 bits (all zero by default)
+  Bin.set(bits, true, 0); // set first bit to 1
+  Bin.set(bits, true, 5); // set the 5-th bit to 1
+  Bin.resize(bits, 6); // resize the bitarray, defaulting all
+                       // extra bits to 0 (if new size is bigger)
+  Bin.append(bits, 0b1101); // append a value to the end
 
-bits->resize(bits, 6);
+  // get a slice of the bitarray as a bit string
+  char bit_str[11];
+  Bin.bit_strcpy(bits, 0, -1, bit_str);
+  printf("%s\n", bit_str);
 
-str = bits->to_str(bits);
-printf("%s\n", str); // prints 0b100001
-free(str);
+  // or just use the print function
+  Bin.print_bits(bits, 0, -1);
 
-/* append */
-bits->append(bits, 0b1101);
-/* currently, append forces the size in bits of the appended
-value to its exact bit width (i.e. no leading zeros). thus
-zeros cannot yet be appended */
-   
-                            
-str = bits->to_str(bits);
-printf("%s\n", str); // prints 0b1000011101
-free(str);
-
-del_BitArray(bits);
+  // free the bits if dynamically allocated
+  del_BitArray(bits);
+}
 ```
 
 
 ### Iterators
 ```C
 
-#define BITARRAY_MODULE Bin
+IMPORT_BITARRAY_MODULE_AS(Bin);
 /* ... */
 
 size_t counter;
 
 void count_bits(bool bit) { counter += bit; }
 
-void print_bits(bool bit) { printf("%d", bit); }
+void print_bits(bool bit) { putchar(bit ? '1' : '0'); }
 
 bool flip_bits(bool bit) { return !bit;  }
 
