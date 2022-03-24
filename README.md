@@ -3,7 +3,7 @@ A small C library for dynamic bitfield manipulations, iterations & procedures.
 
 ## Overview
 
-*Please note that this library is a work in progress and is most definitely not complete.*
+*Please note that this library is a work in progress and is most definitely not complete. Some features are currently useable but should not be considered stable, fully optimized or memory safe. The library's structure, usage and features may change drastically and spontaneously. For these reasons, the documentation is light and incomplete. It may contain errors, deprecated information and does not elucidate the full extent of bitarray's features. When in doubt, always refer to the source code.*
 
 *bitarray* provides space efficient tools for bit vectors and binary data operations. The `BitArray` struct can be used very much like [std::vector\<bool\>](https://en.cppreference.com/w/cpp/container/vector_bool) and guarantees that one bit takes up exactly one bit of data. [^1] This library was designed to facilitate looping over large binary buffers and to make such programs more declarative/functional. The end goal is to yield a lightweight yet complete binary parsing library.  
 
