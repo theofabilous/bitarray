@@ -114,9 +114,9 @@ void bitstream_read(BitStreamer* self, size_t size)
 	switch(self->flags & USE_BUFFER_SIZE_BREAK)
 	{
 		case USE_BUFFER_SIZE_BREAK:
-			if(self->pos + size <= bitarray_size(self->buffer))
+			if(self->pos + size <= _bitarray_size(self->buffer))
 			{
-				self->curr = bitarray_slice(self->buffer, self->pos, self->pos + size);
+				self->curr = bitarray_get_slice(self->buffer, self->pos, self->pos + size);
 				self->pos += size;
 			}
 			else
@@ -127,7 +127,7 @@ void bitstream_read(BitStreamer* self, size_t size)
 		default:
 			if(self->breaker(self))
 			{
-				self->curr = bitarray_slice(self->buffer, self->pos, self->pos + size);
+				self->curr = bitarray_get_slice(self->buffer, self->pos, self->pos + size);
 				self->pos += size;
 			}
 			else

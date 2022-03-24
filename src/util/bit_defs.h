@@ -6,6 +6,8 @@ Ugly macro definitions that pollute the main header file
 
 // Just so IDE/editor doesn't complain
 #include <stdlib.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 #if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__))
 #define __BITARRAY_MMAP__ 1

@@ -4,6 +4,11 @@
 
 #if __BITARRAY_MMAP__ == 1
 
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+
 const uint8_t BITBUFFER_WRITE =    0b00000001;
 const uint8_t BITBUFFER_OPENED =   0b00000010;
 const uint8_t BITBUFFER_EOF =      0b00100000;

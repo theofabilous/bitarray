@@ -6,6 +6,7 @@
 #include <string.h>
 #include <math.h>
 #include <limits.h>
+#include <stdint.h>
 
 // :D
 #define bit_cast_voidify(t, x) *((t*)((void *)(&x)))
@@ -46,7 +47,8 @@ static uint8_t inline get_lr_mask(uint8_t i, uint8_t j)
 /* ----------------------- */
 
 
-size_t bit_width(size_t num)
+static inline size_t 
+_bit_width(size_t num)
 {
 	if(num > (size_t) INT_MAX)
 	{
@@ -54,7 +56,7 @@ size_t bit_width(size_t num)
 		size_t curr;
 		for(;num>=(size_t) INT_MAX; num>>=16)
 			sum+=16;
-		return sum + bit_width(num);
+		return sum + _bit_width(num);
 	}
 	else if(num)
 		return 1 + (size_t) floor(log2(num));
@@ -62,8 +64,8 @@ size_t bit_width(size_t num)
 		return 0;
 }
 
-// should this return 1 if bitsize is zero?
-size_t byte_size(size_t bitsize)
+static inline size_t 
+_byte_size(size_t bitsize)
 {
 	size_t num_bytes = bitsize >> 3;
 	if(bitsize & 0b111)
@@ -72,9 +74,10 @@ size_t byte_size(size_t bitsize)
 		return num_bytes;
 }
 
+
 char* bit_repr(size_t num)
 {
-    size_t w = bit_width(num);
+    size_t w = _bit_width(num);
 	char* bits = (char *) calloc(w+1, sizeof(char));
 	if(bits == NULL)
 		return NULL;
@@ -95,7 +98,7 @@ void print_bit_repr(size_t num)
 		printf("0\n");
 		return;
 	}
-    size_t w = bit_width(num);
+    size_t w = _bit_width(num);
 	size_t mask = ((size_t)1) << (w-1);
 	char curr;
 	for(size_t i = 0; i<w; i++, mask >>= 1)
@@ -117,6 +120,5 @@ void print_bit_repr_size(size_t num, size_t w)
 	}
 	printf("\n");
 }
-
 
 #endif /* _BIT_UTIL_H */

@@ -21,7 +21,7 @@
 
 struct _BitArray;
 
-size_t bitarray_slice(struct _BitArray *self, size_t i, size_t j);
+size_t bitarray_get_slice(struct _BitArray *self, size_t i, size_t j);
 
 uint8_t bitarray_get(struct _BitArray *self, size_t i);
 
@@ -116,13 +116,13 @@ size_t biterator_read(Biterator *it, size_t n)
 	size_t ret;
 	if(diff > 0 && diff < it->increment)
 	{
-		ret = bitarray_slice(it->parent, it->curr, it->curr + diff);
+		ret = bitarray_get_slice(it->parent, it->curr, it->curr + diff);
 		it->curr += diff;
 		return ret;
 	}
 	else if(diff > 0)
 	{
-		ret = bitarray_slice(it->parent, it->curr, it->curr + it->increment);
+		ret = bitarray_get_slice(it->parent, it->curr, it->curr + it->increment);
 		it->curr += it->increment;
 		return ret;
 	}
