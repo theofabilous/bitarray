@@ -19,11 +19,11 @@
 
 /* Defined in bitarray.h */
 
-struct _BitArray;
+struct BitArray;
 
-size_t bitarray_get_slice(struct _BitArray *self, size_t i, size_t j);
+size_t bitarray_get_slice(struct BitArray *self, size_t i, size_t j);
 
-uint8_t bitarray_get(struct _BitArray *self, size_t i);
+uint8_t bitarray_get(struct BitArray *self, size_t i);
 
 /* --------------------- */
 
@@ -71,7 +71,7 @@ typedef struct _Biterator
 	size_t max;
 	uint8_t sig;
 	Function *function;
-	struct _BitArray *parent;
+	struct BitArray *parent;
 	size_t (*read)(struct _Biterator* self, size_t n);
 	size_t (*skip)(struct _Biterator* self, size_t n);
 	size_t (*peek)(struct _Biterator* self, size_t n);

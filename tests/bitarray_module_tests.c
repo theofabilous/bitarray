@@ -48,13 +48,73 @@ void map_test()
 	Bits.resize(&arr, 0);
 	Bits.append_str(&arr, "1001110100000");
 	Bits.map(&arr, 
-				bitarray_as_map(
-				{"1001", "0110"}, 
-				{"1101", "1010"},
-				{"00000", "11101"}) );
+		(BinaryMapEntry[]) 
+		{
+			{"1001", "0110"}, 
+			{"1101", "1010"},
+			{"00000", "11101"}
+		}, 3);
 	Bits.print_bits(&arr, 0, -1);
 
 	free_BitArray_buffer(&arr);
+}
+
+
+void mmap_test()
+{
+	const char* header_path = "../resources/avi_header.avi";
+	char fourcc[5];
+	BitBuffer* buff = new_BitBuffer_from_file(header_path, false);
+	bitbuffer_read_fourcc(buff, fourcc);
+	printf("%s\n", fourcc);
+	size_t fsize = bitbuffer_read_uint32(buff);
+	printf("%zu\n", fsize);
+	bitbuffer_read_fourcc(buff, fourcc);
+	printf("%s\n", fourcc);
+	bitbuffer_read_fourcc(buff, fourcc);
+	printf("%s\n", fourcc);
+
+	bitbuffer_skip(buff, 32);
+	bitbuffer_read_fourcc(buff, fourcc);
+	printf("%s\n", fourcc);
+
+	bitbuffer_skip(buff, -31);
+	bitbuffer_skip(buff, -1);
+	bitbuffer_read_fourcc(buff, fourcc);
+	printf("%s\n\n", fourcc);
+	del_BitBuffer(buff);
+
+	BitArray arr;
+	// init_BitArray(&arr, 0);
+	// Bits.append_str(&arr, "00000001000001111111");
+	// Bits.print_bits(&arr, 0, -1);
+	// free_BitArray_buffer(&arr);
+	if(!init_Bitarray_from_file(&arr, header_path))
+	{
+		printf("err\n");
+		return;
+	}
+	Bits.print_bytes(&arr, 0, 4);
+	
+
+	BitBuffer* _buff = new_BitBuffer_from_BitArray(&arr);
+	if(_buff == NULL)
+	{
+		printf("err\n");
+		return;		
+	}
+	bitbuffer_read_fourcc(_buff, fourcc);
+	printf("%s\n", fourcc);
+	fsize = bitbuffer_read_uint32(_buff);
+	printf("%zu\n", fsize);
+	bitbuffer_read_fourcc(_buff, fourcc);
+	printf("%s\n", fourcc);
+	bitbuffer_read_fourcc(_buff, fourcc);
+	printf("%s\n", fourcc);
+
+	del_BitBuffer(_buff);
+	free_BitArray_buffer(&arr);
+
 }
 
 void test_func(char arr[], int size)
@@ -66,7 +126,8 @@ void test_func(char arr[], int size)
 int main()
 {
 	map_test();
-	test_func( ((char[]){'a', 'b', 'c'}),  3);
+	// test_func( ((char[]){'a', 'b', 'c'}),  3);
+	// mmap_test();
 	// slice_test();
 	return 0;
 }

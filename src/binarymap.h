@@ -4,8 +4,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-const int BINARY_MAP_ENTRIES_MAX = 64;
-
 typedef struct _BinaryMapEntry
 {
 	const char* k;
@@ -141,7 +139,10 @@ bool del_MapTreeNav(MapTreeNav* tree)
 }
 
 
-MapTreeNav* build_binary_map(BinaryMapEntry entries[], int num_entries)
+MapTreeNav* 
+build_binary_map(
+	BinaryMapEntry entries[], 
+	size_t num_entries)
 {
 	MapTreeNav* tree = new_MapTreeNav();
 	if(tree == NULL) return tree;

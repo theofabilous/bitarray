@@ -1,36 +1,69 @@
 
 /* -------------- MMAPPED BITS (POSIX ONLY) ------------------- */
 
+#ifdef __has_include
+    #if __has_include (<unistd.h>)
+        #define __GNU_CHECK_INCLUDE_UNISTD__ 1
+    #else 
+        #define __GNU_CHECK_INCLUDE_UNISTD__ 0
+    #endif
+#else 
+        #define __GNU_CHECK_INCLUDE_UNISTD__ 0
+#endif
 
-#if __BITARRAY_MMAP__ == 1
+#if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__)) || \
+    defined (__gnu_linux__) || (__GNU_CHECK_INCLUDE_UNISTD__ == 1)
+
+#include "bitarray_header.h"
 
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <stdbool.h>
+#include <stdint.h>
+
 const uint8_t BITBUFFER_WRITE =    0b00000001;
 const uint8_t BITBUFFER_OPENED =   0b00000010;
+const uint8_t BITBUFFER_IS_MMAP =  0b00001000;
 const uint8_t BITBUFFER_EOF =      0b00100000;
 const uint8_t BITBUFFER_ILL_ERR =  0b01000000;
 const uint8_t BITBUFFER_MEM_ERR =  0b10000000;
 const uint8_t BITBUFFER_MASK_ERR = 0b11100000;
 
-const uint8_t BYTE_ALIGN_FLOOR = 1;
-const uint8_t BYTE_ALIGN_CEIL = 2;
+static const uint8_t BYTE_ALIGN_FLOOR = 1;
+static const uint8_t BYTE_ALIGN_CEIL = 2;
 
-typedef struct _BitBuffer
+typedef struct BitBuffer
 {
 	uint8_t flags;
     size_t pos;
-	int file_no;
-	struct stat file_info;
+    union
+    {
+        struct 
+        {
+            int file_no;
+	        struct stat file_info;
+        };
+        BitArray* source;
+    };
 	char* buffer;
 } BitBuffer;
+
+static inline void bitbuffer_set_flag(BitBuffer* self, uint8_t flag)
+{
+    self->flags |= flag;
+}
 
 static inline void bitbuffer_set_err(BitBuffer* self, uint8_t err)
 {
     self->flags |= err;
+}
+
+static inline bool bitbuffer_check_flag(BitBuffer* self, uint8_t flag)
+{
+    return self->flags & flag;
 }
 
 static inline bool bitbuffer_check_err(BitBuffer* self, uint8_t err)
@@ -43,6 +76,11 @@ static inline bool bitbuffer_check_status(BitBuffer* self)
     return !(self->flags & BITBUFFER_MASK_ERR);
 }
 
+static inline void bitbuffer_unset_flag(BitBuffer* self, uint8_t flag)
+{
+    self->flags &= ~flag;
+}
+
 static inline void bitbuffer_clear_err(BitBuffer* self, uint8_t err)
 {
     self->flags &= ~err;
@@ -50,12 +88,18 @@ static inline void bitbuffer_clear_err(BitBuffer* self, uint8_t err)
 
 static inline size_t bitbuffer_num_bytes(BitBuffer* self)
 {
-	return self->file_info.st_size;
+    if(bitbuffer_check_flag(self, BITBUFFER_IS_MMAP))
+	    return self->file_info.st_size;
+    else
+        return _bitarray_num_bytes(self->source);
 }
 
 static inline size_t bitbuffer_size(BitBuffer* self)
 {
-	return (self->file_info.st_size << 3);
+    if(bitbuffer_check_flag(self, BITBUFFER_IS_MMAP))
+	    return (self->file_info.st_size << 3);
+    else
+        return _bitarray_size(self->source);
 }
 
 static inline bool bitbuffer_aligned(BitBuffer* self)
@@ -69,6 +113,7 @@ bool bitbuffer_align(BitBuffer* self, uint8_t align)
         return true;
     switch(align)
     {
+        default:
         case BYTE_ALIGN_FLOOR:
             self->pos &= ~0b111;
             return true;
@@ -259,15 +304,17 @@ bool bitbuffer_read_fourcc(BitBuffer* self, char* dest)
         return false;
     else if(self->pos + 32 > bitbuffer_size(self))
     {
-        memcpy( dest, &(self->buffer[self->pos >> 3]), 
-            1 + (bitbuffer_num_bytes(self) - (self->pos >> 3)) );
+        int q = (bitbuffer_num_bytes(self) - (self->pos >> 3));
+        memcpy( dest, &(self->buffer[self->pos >> 3]), q);
         self->pos = bitbuffer_size(self);
         bitbuffer_set_err(self, BITBUFFER_EOF);
+        dest[q] = '\0';
         return false;
     }
     else
     {
-        memcpy(dest, &(self->buffer[self->pos >> 3]), 5);
+        memcpy(dest, &(self->buffer[self->pos >> 3]), 4);
+        dest[4] = '\0';
         self->pos += 32;
         return true;
     }
@@ -281,12 +328,12 @@ BitBuffer* new_BitBuffer_from_file(const char *path, bool write)
 	else
 		file_no = open(path, O_RDONLY, S_IRUSR);
 	BitBuffer* obj = (BitBuffer*) malloc(sizeof(BitBuffer));
-    obj->flags = 0;
 	if(obj == NULL)
 	{
 		close(file_no);
 		return NULL;
 	}
+    obj->flags = 0;
 	if(fstat(file_no, &(obj->file_info)) == -1)
 	{
 		free(obj);
@@ -296,12 +343,12 @@ BitBuffer* new_BitBuffer_from_file(const char *path, bool write)
 	obj->file_no = file_no;
 	if(write)
 	{
-		obj->buffer = mmap(NULL, &(obj->file_info), 
+		obj->buffer = mmap(NULL, obj->file_info.st_size, 
 			PROT_READ | PROT_WRITE, MAP_SHARED, obj->file_no, 0);
 		obj->flags = 1;
 	}
 	else
-		obj->buffer = mmap(NULL, &(obj->file_info), 
+		obj->buffer = mmap(NULL, obj->file_info.st_size, 
 			PROT_READ, MAP_PRIVATE, obj->file_no, 0);
 	if(obj->buffer == MAP_FAILED)
 	{
@@ -309,16 +356,30 @@ BitBuffer* new_BitBuffer_from_file(const char *path, bool write)
 		close(file_no);
 		return NULL;
 	}
-	obj->flags |= BITBUFFER_OPENED;
+    bitbuffer_set_flag(obj, BITBUFFER_OPENED);
+    bitbuffer_set_flag(obj, BITBUFFER_IS_MMAP);
     obj->pos = 0;
 	return obj;
 }
 
+BitBuffer* new_BitBuffer_from_BitArray(BitArray* source)
+{
+    BitBuffer* obj = (BitBuffer*) malloc(sizeof(BitBuffer));
+	if(obj == NULL)
+        return NULL;
+    obj->flags = 0;
+    obj->source = source;
+    obj->pos = 0;
+    obj->buffer = (char *) source->data;
+    return obj;
+}
+
 bool bitbuffer_flush(BitBuffer* self)
 {	
-	if(!(self->flags & 1))
+	if(!bitbuffer_check_flag(self, BITBUFFER_IS_MMAP) ||
+       !(self->flags & 1))
 		return false;
-	if(msync(self->buffer, self->file_info.st_size, MS_SYNC) == -1)
+	else if(msync(self->buffer, self->file_info.st_size, MS_SYNC) == -1)
 		return false;
 	else
 		return true;
@@ -326,18 +387,20 @@ bool bitbuffer_flush(BitBuffer* self)
 
 void bitbuffer_close(BitBuffer* self)
 {
-	if(self->flags & BITBUFFER_OPENED)
+	if(bitbuffer_check_flag(self, BITBUFFER_IS_MMAP) &&
+       bitbuffer_check_flag(self, BITBUFFER_OPENED))
 	{
 		munmap(self->buffer, self->file_info.st_size);
 		close(self->file_no);
-		self->flags &= ~BITBUFFER_OPENED;
+		bitbuffer_unset_flag(self, BITBUFFER_OPENED);
 	}
 }
 
 void del_BitBuffer(BitBuffer* self)
 {
 	bitbuffer_close(self);
-	free(self);
+    if(self != NULL)
+	    free(self);
 }
 
 #endif

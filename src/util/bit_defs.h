@@ -9,12 +9,6 @@ Ugly macro definitions that pollute the main header file
 #include <stdbool.h>
 #include <stdint.h>
 
-#if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__))
-#define __BITARRAY_MMAP__ 1
-#else
-#define __BITARRAY_MMAP__ 0
-#endif
-
 // Temporary empty instruction
 // to place in indented blocks, case statements,
 // goto labels, etc.
