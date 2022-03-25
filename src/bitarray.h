@@ -17,65 +17,416 @@
 #include "binarymap.h"
 
 typedef size_t bit_allocator_t;
+typedef struct BitArray BitArray;
+typedef struct BitArrayModule BitArrayModule;
 
-typedef struct _BitArray
+/* ---------------- CONSTANTS ---------------- */
+
+const bit_allocator_t BIT_ALLOC_SIZE_MASK = 0xFFFF0000;
+const bit_allocator_t BIT_ALLOC_EXTRA_MASK = 0xFFFF;
+const uint8_t STRIP_MSB = 0b0001;
+const uint8_t STRIP_LSB = 0b0000;
+
+/* ------------------------------------------- */
+
+
+/* ------------ PRIVATE FUNCTIONS ------------ */
+
+static inline void 
+_bitarray_set_extra_bytes(
+	BitArray* self, 
+	size_t extra_bytes);
+
+static inline size_t 
+_bitarray_get_extra_bytes(
+	BitArray* self);
+
+static inline size_t 
+_bitarray_get_alloc_size_bytes(
+	BitArray* self);
+
+static inline size_t 
+_bitarray_get_alloc_size_bits(
+	BitArray* self);
+
+static inline void 
+_bitarray_set_alloc_size_bytes(
+	BitArray* self,
+	size_t alloc_size);
+
+static inline void 
+_bitarray_set_on(
+	BitArray *self,
+	size_t i);
+
+static inline void 
+_bitarray_set_off(
+	BitArray *self,
+	size_t i);
+
+static inline bool 
+_bitarray_get(
+	BitArray *self,
+	size_t i);
+
+static inline bitarray_size_t 
+_bitarray_size(
+	BitArray *self);
+
+static inline bitarray_size_t 
+_bitarray_num_bytes(
+	BitArray *self);
+
+static inline bitarray_size_t 
+_bitarray_real_num_bytes(
+	BitArray *self);
+
+static inline bitarray_size_t 
+_bitarray_real_num_bits(
+	BitArray *self);
+
+static inline bool 
+_bitarray_actually_needs_resize_bits(
+	BitArray *self,
+	size_t num_bits);
+
+static inline bitarray_size_t 
+_bitarray_flags(
+	BitArray *self);
+
+static inline void 
+_bitarray_set_size(
+	BitArray *self,
+	bitarray_size_t size);
+
+static inline void 
+_bitarray_incr_size(
+	BitArray *self,
+	bitarray_size_t incr);
+
+static inline void 
+_bitarray_set_err(
+	BitArray* self,
+	bitarray_size_t err);
+
+static inline bool 
+_bitarray_reserve(
+	BitArray* self,
+	bitarray_size_t new_size);
+
+static inline void 
+_bitarray_resize_quick(
+	BitArray* self,
+	bitarray_size_t new_size);
+
+static inline bool 
+_bitarray_resize_and_reserve(
+	BitArray* self,
+	bitarray_size_t new_size);
+
+void 
+_bitarray_print_info(
+	BitArray* self);
+
+/* ------------------------------------------- */
+
+
+/* -------- INSTANTIATING / DELETING --------- */
+
+void 
+free_BitArray_buffer(
+	BitArray* obj);
+
+bool 
+init_BitArray(
+	BitArray* obj,
+	bitarray_size_t size);
+
+BitArray* 
+new_BitArray(
+	bitarray_size_t size);
+
+bool 
+init_Bitarray_from_file(
+	BitArray* obj,
+	const char* path);
+
+BitArray* 
+new_Bitarray_from_file(
+	const char* path);
+
+void 
+del_BitArray(
+	BitArray* obj);
+
+/* ------------------------------------------- */
+
+
+/* ------------------ SIZE ------------------- */
+
+void 
+bitarray_set_allocator_size(
+	BitArray* self,
+	size_t alloc_size);
+
+bitarray_size_t 
+bitarray_size(
+	BitArray *self);
+
+bool 
+bitarray_reserve(
+	BitArray* self,
+	bitarray_size_t new_size);
+
+bool 
+bitarray_resize(
+	BitArray* self,
+	bitarray_size_t new_size);
+
+/* ------------------------------------------- */
+
+/* ---------------- SETTING ------------------ */
+
+void 
+bitarray_set(
+	BitArray *self,
+	bool bit,
+	size_t i);
+
+void 
+bitarray_unset(
+	BitArray *self,
+	size_t i);
+
+void 
+bitarray_set_byte(
+	BitArray* self,
+	uint8_t byte,
+	size_t i);
+
+void 
+bitarray_set_slice(
+	BitArray *self, 
+	size_t i, 
+	size_t j, 
+	size_t val);
+
+void 
+bitarray_set_slice_str(
+	BitArray *self, 
+	size_t i, 
+	size_t j, 
+	uint8_t flags, 
+	const char* bits);
+
+void 
+bitarray_fill_slice(
+	BitArray *self, 
+	size_t i, 
+	size_t j, 
+	bool bit);
+
+bool 
+bitarray_append(
+	BitArray *self, 
+	size_t val);
+
+bool 
+bitarray_append_str(
+	BitArray *self, 
+	const char* bits);
+
+/* ------------------------------------------- */
+
+
+/* ---------------- GETTING ------------------ */
+
+uint8_t 
+bitarray_get(
+	BitArray *self,
+	size_t i);
+
+uint8_t 
+bitarray_get_byte(
+	BitArray* self, 
+	size_t i);
+
+size_t 
+bitarray_get_slice(
+	BitArray *self, 
+	size_t i, 
+	size_t j);
+
+void 
+bitarray_memcpy(
+	BitArray* self,
+	size_t i, 
+	size_t len, 
+	uint8_t* buffer);
+
+void 
+bitarray_bit_strcpy(
+	BitArray* self, 
+	size_t i, 
+	int64_t len, 
+	char* buffer);
+
+void 
+bitarray_print_bits(
+	BitArray* self, 
+	size_t i, 
+	int64_t len);
+
+void 
+bitarray_print_bytes(
+	BitArray* self, 
+	size_t i, 
+	int len);
+
+char* 
+bitarray_to_str(
+	BitArray *self);
+
+/* ------------------------------------------- */
+
+
+/* --------------- ITERATING ----------------- */
+
+void 
+bitarray_for_each(
+	BitArray *self,
+	void (*func)(bool),
+	int max);
+
+void 
+bitarray_transform(
+	BitArray *self, 
+	bool(*func)(bool), 
+	int max);
+
+void 
+bitarray_iterate(
+	BitArray *self,
+	Biterator *iter);
+
+void 
+bitarray_map(
+	BitArray* self,
+	int n,
+	BinaryMapEntry maps[]);
+
+/* ------------------------------------------- */
+
+
+/* ------------- ERROR HANDLING -------------- */
+
+void 
+bitarray_unset_err(
+	BitArray* self,
+	bitarray_size_t err);
+
+void 
+bitarray_clear_all_err(
+	BitArray* self);
+
+bool 
+bitarray_check_err(
+	BitArray* self,
+	bitarray_size_t err);
+
+bool 
+bitarray_check_status(
+	BitArray* self);
+
+/* ------------------------------------------- */
+
+
+/* ====================================================================== */
+/* ====================================================================== */
+
+
+struct BitArray
 {
 	bitarray_size_t size;
 	bit_allocator_t allocator;
 	uint8_t *data;
-} BitArray;
+};
+
+struct BitArrayModule
+{
+	bitarray_size_t (*size)(BitArray *self);
+	void (*set)(BitArray *self, bool bit, size_t index);
+	void (*unset)(BitArray *self, size_t i);
+	bool (*append)(BitArray *self, size_t val);
+	bool (*append_str)(BitArray *self, const char* bits);
+	uint8_t (*get)(BitArray *self, size_t i);
+	size_t (*get_slice)(BitArray *self, size_t i, size_t j);
+	void (*set_slice)(BitArray *self, size_t i, size_t j, size_t val);
+	void (*fill_slice)(BitArray *self, size_t i, size_t j, bool bit);
+	void (*set_slice_str)(BitArray *self, size_t i, size_t j, 
+						  uint8_t flags, const char* bits);
+	void (*memcpy)(BitArray* self, size_t i, size_t len, uint8_t* buffer);
+	void (*bit_strcpy)(BitArray* self, size_t i, int64_t len, char* buffer);
+	void (*print_bits)(BitArray* self, size_t i, int64_t len);
+	void (*print_bytes)(BitArray* self, size_t i, int len);
+	char* (*to_str)(BitArray *self);
+	bool (*resize)(BitArray *self, size_t n);
+	void (*set_allocator_size)(BitArray* self, size_t alloc_size);
+	void (*for_each)(BitArray *self, void (*f)(bool), int m);
+	void (*transform)(BitArray *self, bool (*f)(bool), int m);
+	void (*iterate)(BitArray *self, Biterator *iter);
+	void (*map)(BitArray *self, int n, BinaryMapEntry maps[]);
+};
+
+/* ------------------------------------------- */
 
 
-
-
-/* ====================================================================== */
-/* =======================[] PRIVATE FUNCTIONS []======================== */
-
-
-/* ------------------------[] ALLOCATOR STUFF []------------------------- */
-
-const bit_allocator_t BIT_ALLOC_SIZE_MASK = 0xFFFF0000;
-const bit_allocator_t BIT_ALLOC_EXTRA_MASK = 0xFFFF;
+/* ------------ PRIVATE FUNCTIONS ------------ */
 
 static inline void 
-_bitarray_set_extra_bytes(BitArray* self, size_t extra_bytes)
+_bitarray_set_extra_bytes(
+	BitArray* self, 
+	size_t extra_bytes)
 { 
 	self->allocator = ((self->allocator & BIT_ALLOC_SIZE_MASK) 
 						| (BIT_ALLOC_EXTRA_MASK & extra_bytes)); 
 }
 
 static inline size_t 
-_bitarray_get_extra_bytes(BitArray* self)
+_bitarray_get_extra_bytes(
+	BitArray* self)
 { 
 	return self->allocator & BIT_ALLOC_EXTRA_MASK;
 }
 
 static inline size_t 
-_bitarray_get_alloc_size_bytes(BitArray* self)
+_bitarray_get_alloc_size_bytes(
+	BitArray* self)
 { 
 	return (self->allocator & BIT_ALLOC_SIZE_MASK) >> 16; 
 }
 
 static inline size_t 
-_bitarray_get_alloc_size_bits(BitArray* self)
+_bitarray_get_alloc_size_bits(
+	BitArray* self)
 { 
 	return (self->allocator & BIT_ALLOC_SIZE_MASK) >> 13; 
 }
 
 static inline void 
-_bitarray_set_alloc_size_bytes(BitArray* self, size_t alloc_size)
+_bitarray_set_alloc_size_bytes(
+	BitArray* self, 
+	size_t alloc_size)
 { 
 	if(!alloc_size) alloc_size = 1;
 	self->allocator = (self->allocator & BIT_ALLOC_EXTRA_MASK) 
 						| ((0xFFFF & alloc_size) << 16);
 }
 
-
-/* <><><> ----- <><><> ----- <><><> ----- <><><> ----- <><><> ----- <><><> */
-
-
 static inline void 
-_bitarray_set_on(BitArray *self, size_t i)
+_bitarray_set_on(
+	BitArray *self, 
+	size_t i)
 {
 	bitarray_size_t byte_index = _byte_part(i);
 	uint8_t bit_index = _bit_part(i);
@@ -83,23 +434,34 @@ _bitarray_set_on(BitArray *self, size_t i)
 }
 
 static inline void 
-_bitarray_set_off(BitArray *self, size_t i)
+_bitarray_set_off(
+	BitArray *self, 
+	size_t i)
 {
 	bitarray_size_t byte_index = _byte_part(i);
 	uint8_t bit_index = _bit_part(i);
 	self->data[byte_index] &= ~(1 << (7-bit_index));
 }
 
+static inline bool 
+_bitarray_get(
+	BitArray *self,
+	size_t i)
+{
+	uint8_t r_bit_index = 7 - (i & 0b111);
+	return (self->data[i >> 3] & (1 << r_bit_index)) >> r_bit_index;
+}
 
 static inline bitarray_size_t 
-_bitarray_size(BitArray *self)
+_bitarray_size(
+	BitArray *self)
 {
 	return bitarray_lmask & self->size;
 }
 
-
 static inline bitarray_size_t 
-_bitarray_num_bytes(BitArray *self)
+_bitarray_num_bytes(
+	BitArray *self)
 {
 	if(self->size & 0b111)
 		return ((_bitarray_size(self) >> 3)+1);
@@ -107,58 +469,63 @@ _bitarray_num_bytes(BitArray *self)
 		return (_bitarray_size(self) >> 3);
 }
 
-
 static inline bitarray_size_t 
-_bitarray_real_num_bytes(BitArray *self)
+_bitarray_real_num_bytes(
+	BitArray *self)
 {
 	return _bitarray_num_bytes(self) + _bitarray_get_extra_bytes(self);
 }
 
 static inline bitarray_size_t 
-_bitarray_real_num_bits(BitArray *self)
+_bitarray_real_num_bits(
+	BitArray *self)
 {
 	return (_bitarray_num_bytes(self) + _bitarray_get_extra_bytes(self)) << 3;
 }
 
-
-
 static inline bool 
-_bitarray_actually_needs_resize_bits(BitArray *self, size_t num_bits)
+_bitarray_actually_needs_resize_bits(
+	BitArray *self, 
+	size_t num_bits)
 {
 	return _byte_size(num_bits) > _bitarray_real_num_bytes(self);
 }
 
-
 static inline bitarray_size_t 
-_bitarray_flags(BitArray *self)
+_bitarray_flags(
+	BitArray *self)
 {
 	return self->size & bitarray_umask;
 }
 
-
 static inline void 
-_bitarray_set_size(BitArray *self, bitarray_size_t size)
+_bitarray_set_size(
+	BitArray *self, 
+	bitarray_size_t size)
 {
 	self->size = (self->size & bitarray_umask) | size;
 }
 
-
 static inline void 
-_bitarray_incr_size(BitArray *self, bitarray_size_t incr)
+_bitarray_incr_size(
+	BitArray *self, 
+	bitarray_size_t incr)
 {
 	_bitarray_set_size(self, _bitarray_size(self) + incr);
 }
 
-
 static inline void 
-_bitarray_set_err(BitArray* self, bitarray_size_t err)
+_bitarray_set_err(
+	BitArray* self, 
+	bitarray_size_t err)
 {
 	self->size |= err;
 }
 
-
 static inline bool 
-_bitarray_reserve(BitArray* self, bitarray_size_t new_size)
+_bitarray_reserve(
+	BitArray* self, 
+	bitarray_size_t new_size)
 {
 	if(!_bitarray_actually_needs_resize_bits(self, new_size))
 		return true;
@@ -189,7 +556,9 @@ _bitarray_reserve(BitArray* self, bitarray_size_t new_size)
 }
 
 static inline void 
-_bitarray_resize_quick(BitArray* self, bitarray_size_t new_size)
+_bitarray_resize_quick(
+	BitArray* self, 
+	bitarray_size_t new_size)
 {
 	uint8_t bit_spill = new_size & 0b111;
 	size_t prev_real_bytes = _bitarray_real_num_bytes(self);
@@ -205,10 +574,10 @@ _bitarray_resize_quick(BitArray* self, bitarray_size_t new_size)
 	memset(&(self->data[num_bytes]), 0, extra_bytes*sizeof(uint8_t));
 }
 
-
 static inline bool 
-_bitarray_resize_and_reserve(BitArray* self, 
-								  bitarray_size_t new_size)
+_bitarray_resize_and_reserve(
+	BitArray* self, 
+	bitarray_size_t new_size)
 {
 	/*
 	Might *always* want (even when shrinking) precisely minimum
@@ -233,87 +602,207 @@ _bitarray_resize_and_reserve(BitArray* self,
 	return true;
 }
 
+/* ------------------------------------------- */
 
-/* ------------------------------------------------------------ */
 
+/* -------- INSTANTIATING / DELETING --------- */
+
+
+bool 
+init_BitArray(
+	BitArray* obj, 
+	bitarray_size_t size)
+{
+	bitarray_size_t num_bytes = _byte_size(size);
+	uint8_t* data = (uint8_t *) calloc(num_bytes, sizeof(uint8_t));
+	if(data == NULL)
+	{
+		_bitarray_set_err(obj, BITARRAY_MEM_ERR_FLAG);
+		return false;
+	}
+
+	memset(data, 0, num_bytes);
+	_bitarray_set_size(obj, size);
+	obj->data = data;
+
+	bitarray_set_allocator_size(obj, 16);
+
+	return true;
+}
+
+BitArray* 
+new_BitArray(
+	bitarray_size_t size)
+{
+	bitarray_size_t num_bytes = _byte_size(size);
+	
+	BitArray* obj= (BitArray *) malloc(sizeof(BitArray));
+	if(obj== NULL)
+	{
+		return NULL;
+	}
+	uint8_t* data = (uint8_t *) calloc(num_bytes, sizeof(uint8_t));
+	if(data == NULL)
+	{
+		free(obj);
+		return NULL;
+	}
+
+	memset(data, 0, num_bytes);
+	_bitarray_set_size(obj, size);
+	obj->data = data;
+
+	bitarray_set_allocator_size(obj, 16);
+
+	return obj;
+}
+
+bool 
+init_Bitarray_from_file(
+	BitArray* obj, 
+	const char* path)
+{
+	FILE *fptr = fopen(path, "rb");
+	if(fptr == NULL)
+		return false;
+	size_t file_size;
+	fseek(fptr, 0L, SEEK_END);
+	file_size = ftell(fptr);
+	rewind(fptr);
+	obj->data = (uint8_t*) calloc(file_size, sizeof(uint8_t));
+	if(obj->data == NULL)
+	{
+		fclose(fptr);
+		return false;
+	}
+	_bitarray_set_size(obj, file_size << 3);
+	fread(obj->data, file_size, 1, fptr);
+	fclose(fptr);
+
+	bitarray_set_allocator_size(obj, 128);
+	return true;
+}
+
+BitArray* 
+new_Bitarray_from_file(
+	const char* path)
+{
+	BitArray* obj = (BitArray *) malloc(sizeof(BitArray));
+	if(obj == NULL)
+		return NULL;
+	FILE *fptr = fopen(path, "rb");
+	if(fptr == NULL)
+	{
+		free(obj);
+		return NULL;
+	}
+	size_t file_size;
+	fseek(fptr, 0L, SEEK_END);
+	file_size = ftell(fptr);
+	rewind(fptr);
+
+	uint8_t* data = (uint8_t *) calloc(file_size, sizeof(uint8_t));
+	if(data == NULL)
+	{
+		free(obj);
+		fclose(fptr);
+		return NULL;
+	}
+
+	fread(data, file_size, 1, fptr);
+	_bitarray_set_size(obj, (file_size << 3));
+	obj->data = data;
+
+	bitarray_set_allocator_size(obj, 128);
+	return obj;
+}
 
 void 
-bitarray_set_allocator_size(BitArray* self, 
-							size_t alloc_size)
+del_BitArray(
+	BitArray* obj)
+{
+	free(obj->data);
+	free(obj);
+}
+
+void 
+free_BitArray_buffer(
+	BitArray* obj)
+{
+	free(obj->data);
+}
+
+/* ------------------------------------------- */
+
+
+/* ------------------ SIZE ------------------- */
+
+void 
+bitarray_set_allocator_size(
+	BitArray* self, 
+	size_t alloc_size)
 {
 	self->allocator = 0;
 	_bitarray_set_alloc_size_bytes(self, alloc_size);
 }
 
-
 bitarray_size_t 
-bitarray_size(BitArray *self)
+bitarray_size(
+	BitArray *self)
 {
 	return bitarray_lmask & self->size;
 }
 
-
-void 
-bitarray_unset_err(BitArray* self, 
-				   bitarray_size_t err)
+bool 
+bitarray_reserve(
+	BitArray* self, 
+	bitarray_size_t new_size)
 {
-	self->size &= ~err;
+	if(!_bitarray_actually_needs_resize_bits(self, new_size))
+		return true;
+	
+	bitarray_size_t alloc_size = _byte_size(new_size);
+	if(!alloc_size)
+		alloc_size = 1;
+
+	uint8_t* new_data;
+	if(self->data == NULL)
+		new_data = (uint8_t*) calloc(alloc_size, sizeof(uint8_t));
+	else
+		new_data = (uint8_t*) realloc(self->data, alloc_size*sizeof(uint8_t));
+	if(new_data == NULL)
+	{
+		free(self->data);
+		_bitarray_set_err(self, BITARRAY_MEM_ERR_FLAG);
+		return false;
+	}
+
+	bitarray_size_t n_bytes = _bitarray_num_bytes(self);
+
+	memset(&new_data[n_bytes], 0, (alloc_size-n_bytes)*sizeof(uint8_t));
+
+	_bitarray_set_extra_bytes(self, alloc_size - n_bytes);
+	self->data = new_data;
+	return true;
 }
-
-
-void 
-bitarray_clear_all_err(BitArray* self)
-{
-	self->size &= bitarray_lmask;
-}
-
 
 bool 
-bitarray_check_err(BitArray* self, 
-				   bitarray_size_t err)
+bitarray_resize(
+	BitArray* self, 
+	bitarray_size_t new_size)
 {
-	return (self->size & err) ? true : false;
+	return _bitarray_resize_and_reserve(self, new_size);
 }
 
+/* ------------------------------------------- */
 
-bool 
-bitarray_check_status(BitArray* self)
-{
-	return (self->size & BITARRAY_ERR_MASK) ? true : false;
-}
-
+/* ---------------- SETTING ------------------ */
 
 void 
-bitarray_set_byte(BitArray* self, 
-				  uint8_t byte, 
-				  size_t i)
-{
-	if(i >= (_bitarray_size(self) >> 3))
-	{
-		_bitarray_set_err(self, BITARRAY_ILL_ERR_FLAG);
-		return;
-	}
-	self->data[i] = byte;
-}
-
-
-uint8_t 
-bitarray_get_byte(BitArray* self, 
-		    	  size_t i)
-{
-	if(i >= (_bitarray_size(self) >> 3))
-	{
-		_bitarray_set_err(self, BITARRAY_ILL_ERR_FLAG);
-		return 0;
-	}
-	return self->data[i];
-}
-
-
-void 
-bitarray_set(BitArray *self, 
-			 bool bit, 
-			 size_t i)
+bitarray_set(
+	BitArray *self,
+	bool bit, 
+	size_t i)
 {
 	if(i >= _bitarray_size(self))
 	{
@@ -337,8 +826,10 @@ bitarray_set(BitArray *self,
 	}
 }
 
-
-void bitarray_unset(BitArray *self, size_t i)
+void 
+bitarray_unset(
+	BitArray *self, 
+	size_t i)
 {
 	if(i >= _bitarray_size(self))
 	{
@@ -351,139 +842,37 @@ void bitarray_unset(BitArray *self, size_t i)
 	self->data[byte_index] &= ~(1 << (7-bit_index));
 }
 
-uint8_t bitarray_get(BitArray *self, size_t i)
+void 
+bitarray_set_byte(
+	BitArray* self,
+	uint8_t byte,
+	size_t i)
 {
-	if(i >= _bitarray_size(self))
-		_bitarray_set_err(self, BITARRAY_ILL_ERR_FLAG);
-	bitarray_size_t byte_index = _byte_part(i);
-	uint8_t bit_index = _bit_part(i);
-	uint8_t masker = 1 << (7-bit_index);
-	masker = (self->data[byte_index] & masker) >> (7-bit_index);
-	return masker;
-}
-
-
-size_t bitarray_get_slice(BitArray *self, size_t i, size_t j)
-{
-	size_t diff = j - i - 1;
-	size_t mask = 1 << diff;
-	size_t val = 0;
-	// Start at j-1, end at i ?? (less shifting idk)
-	while(i < j)
-	{
-		if(bitarray_get(self, i))
-		{
-			val |= mask;
-		}
-		mask >>= 1;
-		i++;
-	}
-	return val;
-}
-
-void bitarray_memcpy(BitArray* self, size_t i, size_t len, uint8_t* buffer)
-{
-	if(i >= (_bitarray_size(self) >> 3) || (i+len) >= (_bitarray_size(self) >> 3))
+	if(i >= (_bitarray_size(self) >> 3))
 	{
 		_bitarray_set_err(self, BITARRAY_ILL_ERR_FLAG);
 		return;
 	}
-	memcpy(buffer, &(self->data[i]), len);
-}
-
-void bitarray_bit_strcpy(BitArray* self, size_t i, int64_t len, char* buffer)
-{
-	len = (len < 0) ? (_bitarray_size(self)+1+len) : len;
-	if(i >= _bitarray_size(self) || (i+len-1) >= _bitarray_size(self) >> 3)
-	{
-		_bitarray_set_err(self, BITARRAY_ILL_ERR_FLAG);
-		return;
-	}
-	uint8_t mask = 1 << (i & 0b111);
-	size_t j;
-	for(j=0;len;j++, i++, len--)
-	{
-		buffer[j] = (self->data[i >> 3] & mask) ? '1' : '0';
-		mask = (mask & 0b10000000) ? 1 : (mask << 1);
-	}
-	buffer[j+1] = 0;
-}
-
-void bitarray_print_bits(BitArray* self, size_t i, int64_t len)
-{
-	size_t max = _bitarray_size(self);
-	len = (len < 0) ? (max+1+len) : len;
-	for(;i<max && len; i++, len--)
-		putchar(bitarray_get(self, i) ? '1' : '0');
-	printf("\n");
-}
-
-void bitarray_print_bytes(BitArray* self, size_t i, int len)
-{
-	char c;
-	size_t max = _bitarray_num_bytes(self);
-	unsigned int num = (len < 0) ? (max+1+len) : len;
-	for(;i<max && num; i++, num--)
-	{
-		c = bitarray_get_byte(self, i);
-		putchar( c ? c : ' ');
-	}
-	printf("\n");
+	self->data[i] = byte;
 }
 
 
-const uint8_t STRIP_MSB = 0b0001;
-const uint8_t STRIP_LSB = 0b0000; // do nothing
-
-void bitarray_set_slice_str(BitArray *self, size_t i, size_t j, uint8_t flags, const char* bits)
-{
-	size_t bit_w = strlen(bits);
-
-	/*
-	 (11110)101         [1] (STRIP_MSB)
-			111(10101)  [2] (STRIP_LSB) (do nothing)
-			i  j
-			|  |
-			0011010001111010110
-	*/
-	if(j-i < bit_w && (flags & STRIP_MSB))
-		bits = &(bits[bit_w - (j-i)]);
-
-	/*  00          
-		--11110101
-		i         j
-		|         |
-		0011010001111010110
-	*/
-	else
-	{
-		while(j-i > bit_w)
-			_bitarray_set_off(self, i++);
-	}
-
-	char curr;
-	for(;i < j;i++)
-	{
-		switch(*(bits++))
-		{
-			case '0':
-				_bitarray_set_off(self, i);
-				break;
-			case '1':
-				_bitarray_set_on(self, i);
-				break;
-			default:
-				_bitarray_set_err(self, BITARRAY_ILL_ERR_FLAG);
-				return;	
-		}
-	}
-}
-
-void bitarray_set_slice(BitArray *self, size_t i, size_t j, size_t val)
+void 
+bitarray_set_slice(
+	BitArray *self, 
+	size_t i, 
+	size_t j, 
+	size_t val)
 {
 	size_t byte_i = _byte_part(i), byte_j = _byte_part(j);
 	uint8_t bit_i = _bit_part(i), bit_j = _bit_part(j);
 	size_t bit_w = _bit_width(val);
+
+	if(j <= i || j > _bitarray_size(self))
+	{
+		_bitarray_set_err(self, BITARRAY_ILL_ERR_FLAG);
+		return;
+	}
 
 	if(j-i < bit_w)
 	{
@@ -495,10 +884,7 @@ void bitarray_set_slice(BitArray *self, size_t i, size_t j, size_t val)
 		val <<= (j-i) - bit_w;
 		bit_w = (j-i);
 	}
-
-	size_t byte_w = _byte_size(bit_w);
 	uint8_t bit_spill = bit_w & 0b111;
-
 	if(bit_j)
 	{
 		if(byte_i == byte_j)
@@ -519,20 +905,75 @@ void bitarray_set_slice(BitArray *self, size_t i, size_t j, size_t val)
 	else
 		byte_j--;
 	
-	while(byte_j != byte_i)
-	{
+	for(;byte_j != byte_i;val >>=8, byte_j--, bit_w -= 8)
 		self->data[byte_j] = val & 0xFF;
-		val >>= 8;
-		byte_j--;
-		bit_w -= 8;
-	}
+
 	self->data[byte_j] = (self->data[byte_j] & LEFT_MOST_MASKS[8-bit_w]) | val;
 }
 
-void bitarray_fill_slice(BitArray *self, size_t i, size_t j, bool bit)
+void 
+bitarray_set_slice_str(
+	BitArray *self, 
+	size_t i, 
+	size_t j, 
+	uint8_t flags, 
+	const char* bits)
+{
+	if(j <= i || j > _bitarray_size(self))
+	{
+		_bitarray_set_err(self, BITARRAY_ILL_ERR_FLAG);
+		return;
+	}
+
+	size_t bit_w = strlen(bits);
+
+	/*
+	 (11110)101         [1] (STRIP_MSB)
+			111(10101)  [2] (STRIP_LSB) (do nothing)
+			i  j
+			|  |
+			0011010001111010110
+	*/
+	if(j-i < bit_w && (flags & STRIP_MSB))
+		bits = &(bits[bit_w - (j-i)]);
+	else
+	{
+		while(j-i > bit_w)
+			_bitarray_set_off(self, i++);
+	}
+
+	for(;i < j;i++)
+	{
+		switch(*(bits++))
+		{
+			case '0':
+				_bitarray_set_off(self, i);
+				break;
+			case '1':
+				_bitarray_set_on(self, i);
+				break;
+			default:
+				_bitarray_set_err(self, BITARRAY_ILL_ERR_FLAG);
+				return;	
+		}
+	}
+}
+
+void 
+bitarray_fill_slice(
+	BitArray *self, 
+	size_t i, 
+	size_t j, 
+	bool bit)
 {
 	size_t byte_i = _byte_part(i), byte_j = _byte_part(j);
 	uint8_t bit_i = _bit_part(i), bit_j = _bit_part(j);
+
+	if(j <= i || j > _bitarray_size(self))
+	{
+		_bitarray_set_err(self, BITARRAY_ILL_ERR_FLAG);
+		return;
+	}
 
 	if(bit_j)
 	{
@@ -566,69 +1007,10 @@ void bitarray_fill_slice(BitArray *self, size_t i, size_t j, bool bit)
 		self->data[byte_i] &= ~((1 << (7-bit_i)) - 1);
 }
 
-char* bitarray_to_str(BitArray *self)
-{
-	char* repr = (char *) calloc((_bitarray_size(self))+3, sizeof(char));
-	if(repr == NULL)
-	{
-		_bitarray_set_err(self, BITARRAY_MEM_ERR_FLAG);
-		return NULL;
-	}
-	uint8_t curr;
-	repr[0] = '0';
-	repr[1] = 'b';
-	for(size_t i=0; i<_bitarray_size(self); i++)
-	{
-		curr = bitarray_get(self, i);
-		if(curr)
-		{
-			repr[i+2] = '1';
-		}
-		else {
-			repr[i+2] = '0';
-		}
-	}
-	repr[_bitarray_size(self)+2] = '\0';
-	return repr;
-}
-
-bool bitarray_reserve(BitArray* self, bitarray_size_t new_size)
-{
-	if(!_bitarray_actually_needs_resize_bits(self, new_size))
-		return true;
-	
-	bitarray_size_t alloc_size = _byte_size(new_size);
-	if(!alloc_size)
-		alloc_size = 1;
-
-	uint8_t* new_data;
-	if(self->data == NULL)
-		new_data = (uint8_t*) calloc(alloc_size, sizeof(uint8_t));
-	else
-		new_data = (uint8_t*) realloc(self->data, alloc_size*sizeof(uint8_t));
-	if(new_data == NULL)
-	{
-		free(self->data);
-		_bitarray_set_err(self, BITARRAY_MEM_ERR_FLAG);
-		return false;
-	}
-
-	bitarray_size_t n_bytes = _bitarray_num_bytes(self);
-
-	memset(&new_data[n_bytes], 0, (alloc_size-n_bytes)*sizeof(uint8_t));
-
-	_bitarray_set_extra_bytes(self, alloc_size - n_bytes);
-	self->data = new_data;
-	return true;
-}
-
-bool bitarray_resize(BitArray* self, bitarray_size_t new_size)
-{
-	return _bitarray_resize_and_reserve(self, new_size);
-}
-
-
-bool bitarray_append(BitArray *self, size_t val)
+bool 
+bitarray_append(
+	BitArray *self, 
+	size_t val)
 {
 	size_t w = _bit_width(val);
 	size_t byte_w = _byte_size(w);
@@ -667,7 +1049,10 @@ bool bitarray_append(BitArray *self, size_t val)
 
 }
 
-bool bitarray_append_str(BitArray *self, const char* bits)
+bool 
+bitarray_append_str(
+	BitArray *self, 
+	const char* bits)
 {
 	size_t bit_w = strlen(bits);
 	size_t arr_size = _bitarray_size(self);
@@ -691,7 +1076,165 @@ bool bitarray_append_str(BitArray *self, const char* bits)
 	return true;
 }
 
-void bitarray_for_each(BitArray *self, void (*func)(bool), int max)
+/* ------------------------------------------- */
+
+
+/* ---------------- GETTING ------------------ */
+
+uint8_t 
+bitarray_get(
+	BitArray *self, 
+	size_t i)
+{
+	if(i >= _bitarray_size(self))
+		_bitarray_set_err(self, BITARRAY_ILL_ERR_FLAG);
+	bitarray_size_t byte_index = _byte_part(i);
+	uint8_t bit_index = _bit_part(i);
+	uint8_t masker = 1 << (7-bit_index);
+	masker = (self->data[byte_index] & masker) >> (7-bit_index);
+	return masker;
+}
+
+uint8_t 
+bitarray_get_byte(
+	BitArray* self,
+	size_t i)
+{
+	if(i >= (_bitarray_size(self) >> 3))
+	{
+		_bitarray_set_err(self, BITARRAY_ILL_ERR_FLAG);
+		return 0;
+	}
+	return self->data[i];
+}
+
+size_t 
+bitarray_get_slice(
+	BitArray *self, 
+	size_t i, 
+	size_t j)
+{
+	if(j > i && j <= _bitarray_size(self) && j-i <= 64)
+	{
+		size_t val = 0;
+		for(size_t mask=1; i<j; i++, mask <<= 1)
+			if(_bitarray_get(self, i++))
+				val |= mask;
+		return val;
+	}
+	else
+	{
+		_bitarray_set_err(self, BITARRAY_ILL_ERR_FLAG);
+		return -1;
+	}
+}
+
+void 
+bitarray_memcpy(
+	BitArray* self, 
+	size_t i, 
+	size_t len, 
+	uint8_t* buffer)
+{
+	if(i >= (_bitarray_size(self) >> 3) || (i+len) >= (_bitarray_size(self) >> 3))
+	{
+		_bitarray_set_err(self, BITARRAY_ILL_ERR_FLAG);
+		return;
+	}
+	memcpy(buffer, &(self->data[i]), len);
+}
+
+void 
+bitarray_bit_strcpy(
+	BitArray* self, 
+	size_t i, 
+	int64_t len, 
+	char* buffer)
+{
+	len = (len < 0) ? (_bitarray_size(self)+1+len) : len;
+	if(i >= _bitarray_size(self) || (i+len-1) >= _bitarray_size(self) >> 3)
+	{
+		_bitarray_set_err(self, BITARRAY_ILL_ERR_FLAG);
+		return;
+	}
+	uint8_t mask = 1 << (i & 0b111);
+	size_t j;
+	for(j=0;len;j++, i++, len--)
+	{
+		buffer[j] = (self->data[i >> 3] & mask) ? '1' : '0';
+		mask = (mask & 0b10000000) ? 1 : (mask << 1);
+	}
+	buffer[j+1] = 0;
+}
+
+void 
+bitarray_print_bits(
+	BitArray* self, 
+	size_t i, 
+	int64_t len)
+{
+	size_t max = _bitarray_size(self);
+	len = (len < 0) ? (max+1+len) : len;
+	for(;i<max && len; i++, len--)
+		putchar(bitarray_get(self, i) ? '1' : '0');
+	printf("\n");
+}
+
+void 
+bitarray_print_bytes(
+	BitArray* self, 
+	size_t i, 
+	int len)
+{
+	char c;
+	size_t max = _bitarray_num_bytes(self);
+	unsigned int num = (len < 0) ? (max+1+len) : len;
+	for(;i<max && num; i++, num--)
+	{
+		c = bitarray_get_byte(self, i);
+		putchar( c ? c : ' ');
+	}
+	printf("\n");
+}
+
+char* 
+bitarray_to_str(
+	BitArray *self)
+{
+	char* repr = (char *) calloc((_bitarray_size(self))+3, sizeof(char));
+	if(repr == NULL)
+	{
+		_bitarray_set_err(self, BITARRAY_MEM_ERR_FLAG);
+		return NULL;
+	}
+	uint8_t curr;
+	repr[0] = '0';
+	repr[1] = 'b';
+	for(size_t i=0; i<_bitarray_size(self); i++)
+	{
+		curr = bitarray_get(self, i);
+		if(curr)
+		{
+			repr[i+2] = '1';
+		}
+		else {
+			repr[i+2] = '0';
+		}
+	}
+	repr[_bitarray_size(self)+2] = '\0';
+	return repr;
+}
+
+/* ------------------------------------------- */
+
+
+/* --------------- ITERATING ----------------- */
+
+void 
+bitarray_for_each(
+	BitArray *self, 
+	void (*func)(bool), 
+	int max)
 {
 	if(max < 0)
 		max = _bitarray_size(self)+1+max;
@@ -699,7 +1242,11 @@ void bitarray_for_each(BitArray *self, void (*func)(bool), int max)
 		(*func)(bitarray_get(self, i));
 }
 
-void bitarray_transform(BitArray *self, bool(*func)(bool), int max)
+void 
+bitarray_transform(
+	BitArray *self, 
+	bool(*func)(bool), 
+	int max)
 {
 	if(max < 0)
 		max = _bitarray_size(self)+1+max;
@@ -711,7 +1258,10 @@ void bitarray_transform(BitArray *self, bool(*func)(bool), int max)
 	}
 }
 
-void bitarray_iterate(BitArray *self, Biterator *iter)
+void 
+bitarray_iterate(
+	BitArray *self, 
+	Biterator *iter)
 {
 	iter->parent = self;
 	Function *cont = (Function*) iter->function;
@@ -785,7 +1335,10 @@ void bitarray_iterate(BitArray *self, Biterator *iter)
 	}
 };
 
-void bitarray_map(BitArray* self, int n, BinaryMapEntry maps[])
+void bitarray_map(
+	BitArray* self, 
+	int n, 
+	BinaryMapEntry maps[])
 {
 	MapTreeNav* nav = build_binary_map(maps, n);
 
@@ -834,34 +1387,42 @@ void bitarray_map(BitArray* self, int n, BinaryMapEntry maps[])
 	del_MapTreeNav(nav);
 }
 
+/* ------------------------------------------- */
 
 
+/* ------------- ERROR HANDLING -------------- */
 
-typedef struct _BitArrayModule
+void 
+bitarray_unset_err(
+	BitArray* self,
+	bitarray_size_t err)
 {
-	bitarray_size_t (*size)(BitArray *self);
-	void (*set)(BitArray *self, bool bit, size_t index);
-	void (*unset)(BitArray *self, size_t i);
-	bool (*append)(BitArray *self, size_t val);
-	bool (*append_str)(BitArray *self, const char* bits);
-	uint8_t (*get)(BitArray *self, size_t i);
-	size_t (*get_slice)(BitArray *self, size_t i, size_t j);
-	void (*set_slice)(BitArray *self, size_t i, size_t j, size_t val);
-	void (*fill_slice)(BitArray *self, size_t i, size_t j, bool bit);
-	void (*set_slice_str)(BitArray *self, size_t i, size_t j, 
-						  uint8_t flags, const char* bits);
-	void (*memcpy)(BitArray* self, size_t i, size_t len, uint8_t* buffer);
-	void (*bit_strcpy)(BitArray* self, size_t i, int64_t len, char* buffer);
-	void (*print_bits)(BitArray* self, size_t i, int64_t len);
-	void (*print_bytes)(BitArray* self, size_t i, int len);
-	char* (*to_str)(BitArray *self);
-	bool (*resize)(BitArray *self, size_t n);
-	void (*set_allocator_size)(BitArray* self, size_t alloc_size);
-	void (*for_each)(BitArray *self, void (*f)(bool), int m);
-	void (*transform)(BitArray *self, bool (*f)(bool), int m);
-	void (*iterate)(BitArray *self, Biterator *iter);
-	void (*map)(BitArray *self, int n, BinaryMapEntry maps[]);
-} BitArrayModule;
+	self->size &= ~err;
+}
+
+void 
+bitarray_clear_all_err(
+	BitArray* self)
+{
+	self->size &= bitarray_lmask;
+}
+
+bool 
+bitarray_check_err(
+	BitArray* self,
+	bitarray_size_t err)
+{
+	return (self->size & err) ? true : false;
+}
+
+bool 
+bitarray_check_status(
+	BitArray* self)
+{
+	return (self->size & BITARRAY_ERR_MASK) ? true : false;
+}
+
+/* ------------------------------------------- */
 
 #define IMPORT_BITARRAY_MODULE_AS(m) \
 BitArrayModule m = { \
@@ -888,164 +1449,22 @@ BitArrayModule m = { \
 	.map = &bitarray_map \
 }; \
 
-
-void free_BitArray_buffer(BitArray* obj)
-{
-	free(obj->data);
-}
-
-
-bool init_BitArray(BitArray* obj, bitarray_size_t size)
-{
-	bitarray_size_t num_bytes = _byte_size(size);
-	uint8_t* data = (uint8_t *) calloc(num_bytes, sizeof(uint8_t));
-	if(data == NULL)
-	{
-		_bitarray_set_err(obj, BITARRAY_MEM_ERR_FLAG);
-		return false;
-	}
-
-	memset(data, 0, num_bytes);
-	_bitarray_set_size(obj, size);
-	obj->data = data;
-
-	bitarray_set_allocator_size(obj, 16);
-
-	return true;
-}
-
-
-BitArray* new_BitArray(bitarray_size_t size)
-{
-	bitarray_size_t num_bytes = _byte_size(size);
-	
-	BitArray* obj= (BitArray *) malloc(sizeof(BitArray));
-	if(obj== NULL)
-	{
-		return NULL;
-	}
-	uint8_t* data = (uint8_t *) calloc(num_bytes, sizeof(uint8_t));
-	if(data == NULL)
-	{
-		free(obj);
-		return NULL;
-	}
-
-	memset(data, 0, num_bytes);
-	_bitarray_set_size(obj, size);
-	obj->data = data;
-
-	bitarray_set_allocator_size(obj, 16);
-
-	return obj;
-}
-
-bool init_Bitarray_from_file(BitArray* obj, const char* path)
-{
-	FILE *fptr = fopen(path, "rb");
-	if(fptr == NULL)
-		return false;
-	size_t file_size;
-	fseek(fptr, 0L, SEEK_END);
-	file_size = ftell(fptr);
-	rewind(fptr);
-	// bitarray_resize(obj, (file_size << 3));
-	obj->data = (uint8_t*) calloc(file_size, sizeof(uint8_t));
-	if(obj->data == NULL)
-	{
-		fclose(fptr);
-		return false;
-	}
-	_bitarray_set_size(obj, file_size << 3);
-	fread(obj->data, file_size, 1, fptr);
-	fclose(fptr);
-
-	bitarray_set_allocator_size(obj, 128);
-	return true;
-}
-
-BitArray* new_Bitarray_from_file(const char* path)
-{
-	BitArray* obj = (BitArray *) malloc(sizeof(BitArray));
-	if(obj == NULL)
-		return NULL;
-	FILE *fptr = fopen(path, "rb");
-	if(fptr == NULL)
-	{
-		free(obj);
-		return NULL;
-	}
-	size_t file_size;
-	fseek(fptr, 0L, SEEK_END);
-	file_size = ftell(fptr);
-	rewind(fptr);
-
-	uint8_t* data = (uint8_t *) calloc(file_size, sizeof(uint8_t));
-	if(data == NULL)
-	{
-		free(obj);
-		fclose(fptr);
-		return NULL;
-	}
-
-	fread(data, file_size, 1, fptr);
-	_bitarray_set_size(obj, (file_size << 3));
-	obj->data = data;
-
-	bitarray_set_allocator_size(obj, 128);
-	return obj;
-}
-
-void del_BitArray(BitArray* obj)
-{
-	free(obj->data);
-	free(obj);
-}
-
-
 /* ---------------- DEBUG STUFF -------------------- */
-
-void _bitarray_print_bits_prefix(BitArray* self, const char* prefix, size_t i, int64_t len)
-{
-	size_t max = _bitarray_size(self);
-	len = (len < 0) ? (max+1+len) : len;
-	printf("%s", prefix);
-	for(;i<max && len; i++, len--)
-		putchar(bitarray_get(self, i) ? '1' : '0');
-	printf("\n");
-}
-
-
-#define __BPRINT _bitarray_print_bits_prefix(self, "  ", 0, -1)
-#define __PDELIM_S printf("\n  [][] ========================= [][] \n")
-#define __PDELIM_E printf("  [][] ========================= [][] \n")
-#define __BDEBUG(x, f) printf("  " #x ": " f "\n", x)
-#define __U_DEBUG(x) __BDEBUG(x, "%zu")
-#define __S_DEBUG(x) __BDEBUG(x, "%s")
-#define __C_DEBUG(x) __BDEBUG(x, "%c")
 
 void _bitarray_print_info(BitArray* self)
 {
-	__PDELIM_S;
-	__BPRINT;
+	printf("\n[][] ========================= [][]\n");
+	bitarray_print_bits(self, 0, -1);
 	size_t len = bitarray_size(self);
 	size_t num_bytes = _bitarray_num_bytes(self);
 	size_t real_num_bytes = _bitarray_real_num_bytes(self);
 	size_t real_num_bits = real_num_bytes << 3;
-	__U_DEBUG(len);
-	__U_DEBUG(num_bytes);
-	__U_DEBUG(real_num_bytes);
-	__U_DEBUG(real_num_bits);
-	__PDELIM_E;
+	printf("len: %zu\n", len);
+	printf("num_bytes: %zu\n", num_bytes);
+	printf("real_num_bytes: %zu\n", real_num_bytes);
+	printf("real_num_bits: %zu\n", real_num_bits);
+	printf("[][] ========================= [][]\n");
 }
-
-#undef __C_DEBUG
-#undef __S_DEBUG
-#undef __U_DEBUG
-#undef __BDEBUG
-#undef __PDELIM_S
-#undef __PDELIM_E
-#undef __BPRINT
 
 /* ------------------------------------------------- */
 
