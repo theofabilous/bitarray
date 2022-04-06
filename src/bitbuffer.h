@@ -69,7 +69,9 @@ struct BField
         int64_t*        i64_ptr;
         char            istr[8];
         unsigned char   ustr[8];
-        BField*   bf_ptr;
+        BField*         bf_ptr;
+        BitArray*       bits;
+        // BitPacket*   pkt; (Small bitarray)
     };
 };
 

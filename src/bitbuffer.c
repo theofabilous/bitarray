@@ -420,6 +420,8 @@ bitbuffer_read_fmt(const char *format, ...)
 #define _CHECK_FLAG(x, f) ( (x) & (f) )
 
 #define CONTINUE_INCR(i, incr) i += (incr); continue
+#define CONTINUE_INCR_IFN(i, x, flag) \
+    i += (_CHECK_FLAG((x), (flag))) ? 0 : 1; continue
 
 const uint16_t INTEGRAL_TYPE    = 0b1000000000000000;
 const uint16_t LITTLE_END_TYPE  = 0b0100000000000000;
@@ -429,6 +431,7 @@ const uint16_t ARRAY_TYPE       = 0b0000100000000000;
 const uint16_t SKIP_TYPE        = 0b0000010000000000;
 const uint16_t SIZE_USES_ENV    = 0b0000001000000000;
 const uint16_t SIZE_USES_REF    = 0b0000000100000000;
+const uint16_t BITARRAY_TYPE    = 0b0000000000001000;
 
 #define GET_ARRAY_FLAGS(x) ((x) &       0b1100000000)
 #define _ENDIAN(x) ((x) & LITTLE_END_TYPE )
@@ -442,6 +445,7 @@ bitbuffer_unpack(
 {
     char temp_str[100];
     BField env[100];
+    BField* target;
     size_t env_curr = 0;
     uint16_t flags;
     size_t size;
@@ -454,10 +458,12 @@ bitbuffer_unpack(
     while( (c = *(fmt++)) && i <= num && bitbuffer_check_status(self) )
     {
         dst[i].zu = (size_t) 0;
+        target = &(dst[i]);
         flags = 0;
         size = 0;
         array_size = 0;
         if(c != '%') return i;
+        env_type:
         EAT_CHECK(c, fmt);
         switch(c)
         {
@@ -471,7 +477,10 @@ bitbuffer_unpack(
                 _SET_FLAG(flags, INTEGRAL_TYPE);
                 goto integral_type;
             case '$':
+                if(_CHECK_FLAG(flags, ENV_TYPE))
+                        return i;
                 _SET_FLAG(flags, ENV_TYPE);
+                target = &(env[env_curr++]);
                 goto env_type;
             case '!':
                 _SET_FLAG(flags, SKIP_TYPE);
@@ -480,9 +489,6 @@ bitbuffer_unpack(
             default:
                 return i;
         }
-
-        env_type:
-        /* TO-DO */
 
         integral_type:
         EAT_CHECK(c, fmt);
@@ -524,19 +530,27 @@ bitbuffer_unpack(
         switch(size)
         {
             case 8:
-                dst[i].u8 = bitbuffer_read(self, 8, _ENDIAN(flags));
-                CONTINUE_INCR(i, 1);
+                target->u8 = bitbuffer_read(self, 8, _ENDIAN(flags));
+                break;
             case 16:
-                dst[i].u16 = bitbuffer_read(self, 16, _ENDIAN(flags));
-                CONTINUE_INCR(i, 1);
+                target->u16 = bitbuffer_read(self, 16, _ENDIAN(flags));
+                break;
             case 32:
-                dst[i].u32 = bitbuffer_read(self, 32, _ENDIAN(flags));
-                CONTINUE_INCR(i, 1);
+                target->u32 = bitbuffer_read(self, 32, _ENDIAN(flags));
+                break;
             case 64:
-                dst[i].u64 = bitbuffer_read(self, 64, _ENDIAN(flags));
-                CONTINUE_INCR(i, 1);
+                target->u64 = bitbuffer_read(self, 64, _ENDIAN(flags));
+                break;
             default:
                 return i;
+        }
+        if(_CHECK_FLAG(flags, ENV_TYPE))
+        {
+            CONTINUE_INCR(i, 0);
+        }
+        else
+        {
+            CONTINUE_INCR(i, 1);
         }
 
         parse_array_type:
@@ -607,6 +621,7 @@ bitbuffer_unpack(
         for(size_t ii=0; ii < array_max; ii++)
             dst[i].u8_ptr[ii] = 
                     bitbuffer_read(self, 8, false);
+        i++;
     }
     return i;
 }
