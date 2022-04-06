@@ -14,6 +14,16 @@
 
 #define __PASS__ ((void) 0)
 
+#ifdef _MSC_VER
+    #define bitarray_force_inline __forceinline
+#elif defined(__GNUC__)
+	#define bitarray_force_inline __attribute__((always_inline))
+#elif (defined (__APPLE__) && defined (__MACH__))
+	#define bitarray_force_inline static inline
+#else
+	#define bitarray_force_inline
+#endif
+
 // https://graphics.stanford.edu/~seander/bithacks.html
 // #if defined(__builtin_ctz)
 // 	#define CNT_TRZ __builtin_ctz

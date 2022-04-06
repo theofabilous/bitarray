@@ -16,6 +16,9 @@
 #if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__)) || \
     defined (__gnu_linux__) || (__GNU_CHECK_INCLUDE_UNISTD__ == 1)
 
+
+
+
 #define __BITARRAY_POSIX_MMAP 1
 
 #include "bitarray.h"
@@ -67,8 +70,14 @@ struct BField
         int16_t*        i16_ptr;
         int32_t*        i32_ptr;
         int64_t*        i64_ptr;
-        char            istr[8];
-        unsigned char   ustr[8];
+        char            c;
+        char*           c_ptr;
+        char*           str;
+        unsigned char   uc;
+        unsigned char*  uc_ptr;
+        char            str_buff[8];
+        unsigned char   ustr_buff[8];
+        uint8_t         buff[8];
         BField*         bf_ptr;
         BitArray*       bits;
         // BitPacket*   pkt; (Small bitarray)
@@ -207,7 +216,7 @@ BitBuffer* new_BitBuffer_from_file(const char *path, bool write);
 
 BitBuffer* new_BitBuffer_from_BitArray(BitArray* source);
 
-size_t bitbuffer_unpack(BitBuffer* self, const char* fmt, BitReceiver dst, size_t size);
+size_t bitbuffer_unpack(BitBuffer* self, const char* fmt, BitReceiver dst);
 
 void bitbuffer_read_into(BitBuffer* self, int size, ReadTarget sequence[]);
 

@@ -92,6 +92,39 @@ void map_test()
 	free_BitArray_buffer(&arr);
 }
 
+#define b_field(...) {.size = 0, .raw = (__VA_ARGS__) }
+#define b_field_default {.size = 0, .raw = 0 }
+#define b_u8_field(...) {.size = 0, .raw = ( (uint8_t[]) __VA_ARGS__) }
+#define b_str_field(...) {.size = 0, .raw = ( (char[]) __VA_ARGS__) }
+
+void unpack_test()
+{
+	const char* header_path = "../resources/avi_header.avi";
+	// char riff_fourcc[5];
+	// char avi_fourcc[5];
+	BitBuffer* buff = new_BitBuffer_from_file(header_path, false);
+	BField receiver[19] = {
+		b_str_field({0,0,0,0,0}),
+		b_field_default,
+		b_str_field({0,0,0,0,0}),
+		b_str_field({0,0,0,0,0}),
+		b_field_default,
+		b_str_field({0,0,0,0,0}),
+		b_str_field({0,0,0,0,0}),
+		b_field_default
+	};
+	const char* fmt = "c<4>, u32, c<4>*2, u32, c<4>*2, u32, u32*10, ![128]";
+	size_t ret = bitbuffer_unpack(buff, fmt, receiver);
+	printf("Ret: %zu\n", ret);
+	// receiver[3].istr[5] = '\0';
+	printf("%s, %zu, %s\n", receiver[0].str, receiver[1].u32, receiver[2].str);
+	printf("%s, %zu, %s, %s\n", receiver[3].str, receiver[4].u32, receiver[5].str,
+		receiver[6].str);
+	for(int i=7; i<18; i++)
+		printf("(%d) %zu\n", i, receiver[i].u32);
+	printf("POS: %zu\n", buff->pos >> 3);
+	del_BitBuffer(buff);
+}
 
 void mmap_test()
 {
@@ -159,9 +192,10 @@ void mmap_test()
 
 int main()
 {
-	map_test();
+	unpack_test();
+	// map_test();
 	// // test_func( ((char[]){'a', 'b', 'c'}),  3);
-	mmap_test();
+	// mmap_test();
 	// slice_test();
 	// vlc_test();
 	return 0;

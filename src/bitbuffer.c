@@ -1,5 +1,6 @@
 #include "bitbuffer.h"
 #include <stdarg.h>
+#include <ctype.h>
 
 #if __BITARRAY_POSIX_MMAP == 1
 
@@ -399,29 +400,39 @@ bitbuffer_read_fmt(const char *format, ...)
     return true;
 }
 
+#define ZEROESx32                       \
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,    \
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 
-#define QPEEK(str) *(str+1)
-#define EAT_PEEK(c, str) *(str+1)
-#define EAT_CHECK(c, str) if( !((c) = *((str))++) ) return i
-#define EAT_CHECK_EQ(c, c2, str) if( ((c) = *((str))++) != (c2) ) return i
-#define CHECK_0(c) if(!c) return i
-#define c_to_u8(x) ((uint8_t) (x))
-#define c_to_u16(x) ((uint16_t) (x))
-#define c_to_u32(x) ((uint32_t) (x))
-#define c_to_u64(x) ((uint64_t) (x))
-#define STR_VAL2(c1, c2) (( c_to_u16(c1) << 8 ) | c_to_u8(c2))
-#define STR_VAL3(c1, c2, c3) \
-    ( ((c_to_u32( STR_VAL2(c1, c2) )) << 8 ) | c_to_u8(c3)  )
-#define STR_VAL4(c1, c2, c3, c4) \
-    ( (STR_VAL3(c1, c2, c3)  << 8 ) | c_to_u8(c4) )
-// #define BINL(x, y, z, w) x ## y ## z ## w
+#define ZEROESx64                       \
+    ZEROESx32,                          \
+    ZEROESx32
 
-#define _SET_FLAG(x, f) x |= (f)
-#define _CHECK_FLAG(x, f) ( (x) & (f) )
+#define ZEROESx128                      \
+    ZEROESx64,                          \
+    ZEROESx64
+
+#define ZEROESx256                      \
+    ZEROESx128,                         \
+    ZEROESx128
+
+
+#define QPEEK(fmt) *(fmt)
+#define EAT_PEEK(c, fmt) *(fmt)
+#define EAT_CHECK(c, fmt) if( !((c) = *((fmt))++) ) return i
+#define EAT_CHECK_EQ(c, c2, fmt) if( ((c) = *((fmt))++) != (c2) ) return i
+
+#define SET_FLAG(x, f) x |= (f)
+#define CHECK_FLAG(x, f) ( (x) & (f) )
+
+#define MAP_SET_FLAG(m, i, f) m[(uint8_t) (i)] |= (f)
+#define MAP_CHECK_FLAG(m, i, f)  ( (m)[(uint8_t) (i)] & (f) )
+#define MAP_SET(m, i, e) m[(uint8_t) (i)] = (e)
+#define MAP_GET(m, i) ( (m)[(uint8_t) (i)] )
 
 #define CONTINUE_INCR(i, incr) i += (incr); continue
 #define CONTINUE_INCR_IFN(i, x, flag) \
-    i += (_CHECK_FLAG((x), (flag))) ? 0 : 1; continue
+    i += (CHECK_FLAG((x), (flag))) ? 0 : 1; continue
 
 const uint16_t INTEGRAL_TYPE    = 0b1000000000000000;
 const uint16_t LITTLE_END_TYPE  = 0b0100000000000000;
@@ -431,18 +442,108 @@ const uint16_t ARRAY_TYPE       = 0b0000100000000000;
 const uint16_t SKIP_TYPE        = 0b0000010000000000;
 const uint16_t SIZE_USES_ENV    = 0b0000001000000000;
 const uint16_t SIZE_USES_REF    = 0b0000000100000000;
+const uint16_t ARRAY_NO_ALLOC   = 0b0000000010000000;
+const uint16_t PTR_TYPE         = 0b0000000001000000;
+//
+const uint16_t USES_BUFFER      = 0b0000000000010000;
 const uint16_t BITARRAY_TYPE    = 0b0000000000001000;
+const uint16_t STRING_TYPE      = 0b0000000000000100;
+//
+//
+
+static uint8_t UNPACK_MAPPINGS[257]     = { ZEROESx256 , false };
+static uint8_t UNPACK_BRACES[257]       = { ZEROESx256 , false };
+const uint8_t IS_WHITESPACE             = 0b00000001;
+const uint8_t IS_BRACE                  = 0b00000010;
+const uint8_t NO_ALLOC                  = 0b00000100;
+const uint8_t IS_FIELD_BEGIN            = 0b10000000;
 
 #define GET_ARRAY_FLAGS(x) ((x) &       0b1100000000)
 #define _ENDIAN(x) ((x) & LITTLE_END_TYPE )
+
+// #define CHOMP_WHITESPACE(c, fmt)        \
+//     do { c = *((fmt)++); } while( c &&  \ 
+//         ( MAP_CHECK_FLAG(UNPACK_MAPPINGS, c, IS_WHITESPACE) ) )
+// #define CHECK_WHITESPACE(c) MAP_CHECK_FLAG(UNPACK_MAPPINGS, (c), IS_WHITESPACE)
+
+static inline void
+_bitbuffer_init_mappings()
+{
+    UNPACK_MAPPINGS[256] = true;
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, '[', IS_BRACE);
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, '(', IS_BRACE);
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, '<', IS_BRACE);
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, '{', IS_BRACE);
+    MAP_SET         (UNPACK_BRACES, '[', ']');
+    MAP_SET         (UNPACK_BRACES, '(', ')');
+    MAP_SET         (UNPACK_BRACES, '<', '>');
+    MAP_SET         (UNPACK_BRACES, '{', '}');
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, ' ', IS_WHITESPACE);
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, ',', IS_WHITESPACE);
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, '\t', IS_WHITESPACE);
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, '\n', IS_WHITESPACE);
+
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, '<', NO_ALLOC);
+
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, 'u', IS_FIELD_BEGIN);
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, 'i', IS_FIELD_BEGIN);
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, 's', IS_FIELD_BEGIN);
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, 'c', IS_FIELD_BEGIN);
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, 'z', IS_FIELD_BEGIN);
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, '!', IS_FIELD_BEGIN);
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, '$', IS_FIELD_BEGIN);
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, '?', IS_FIELD_BEGIN);
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, '&', IS_FIELD_BEGIN);
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, 'b', IS_FIELD_BEGIN);
+}
+
+typedef struct UnpackCptCtx
+{
+    uint8_t size;
+    uint8_t fmt_skip;
+    char *ptr;
+    char c;
+    bool set;
+} UnpackCptCtx;
+
+typedef struct UnpackCtx
+{
+    UnpackCptCtx chkpt;
+} UnpackCtx;
+
+static inline size_t
+parse_atoi_until(const char** fmt_ptr, char *c_ptr, uint16_t flag)
+{
+    int i;
+    char temp_str[100];
+    const char* fmt = *fmt_ptr;
+    char c = fmt++;
+    if(!c) return 0;
+    for(i=0; i<100 && c && 
+        !MAP_CHECK_FLAG(UNPACK_MAPPINGS, c, flag); 
+        i++, c = fmt++)
+    {
+        if(!isdigit(c))
+            return 0;
+        temp_str[i] = c;
+    }
+    temp_str[i] = '\0';
+    *c_ptr = c;
+    *fmt_ptr = fmt;
+    return atoi(temp_str);
+}
+
+// static inline size_t
 
 size_t
 bitbuffer_unpack(
     BitBuffer* self, 
     const char* fmt, 
-    BitReceiver dst, 
-    size_t num)
+    BitReceiver dst)
 {
+    if(!UNPACK_MAPPINGS[256])
+        _bitbuffer_init_mappings();
+
     char temp_str[100];
     BField env[100];
     BField* target;
@@ -451,40 +552,92 @@ bitbuffer_unpack(
     size_t size;
     size_t array_size;
     uint8_t multiple;
+    uint8_t mod = 0;
     size_t array_max;
+    char matching_brace;
+    UnpackCtx ctx = { 
+        .chkpt = {.ptr = fmt, .c = *fmt, .size =0 , .set = false,
+                  .fmt_skip = 0 }
+    };
     char c;
     int i = 0;
+    size_t ii;
     int j;
-    while( (c = *(fmt++)) && i <= num && bitbuffer_check_status(self) )
+    while  (    (ctx.chkpt.set || (c = *(fmt++)))
+            //  && (i <= num && bitbuffer_check_status(self))   
+                && bitbuffer_check_status(self)
+             ) 
     {
-        dst[i].zu = (size_t) 0;
+        if(ctx.chkpt.set && ctx.chkpt.size--)
+        {
+            c = ctx.chkpt.c;
+            fmt = ctx.chkpt.ptr;
+        }
+        else
+        {
+            if(ctx.chkpt.set)
+                ctx.chkpt.c = (c = *(fmt++));
+            else
+                ctx.chkpt.c = c;
+            ctx.chkpt.ptr = fmt;
+            ctx.chkpt.size = 0;
+            ctx.chkpt.set = false;
+            ctx.chkpt.fmt_skip = 0;
+        }
+        // dst[i].zu = (size_t) 0;
         target = &(dst[i]);
         flags = 0;
         size = 0;
         array_size = 0;
-        if(c != '%') return i;
-        env_type:
-        EAT_CHECK(c, fmt);
+        mod = 0;
+
+        check_again:
+        while( MAP_CHECK_FLAG(UNPACK_MAPPINGS, c, IS_WHITESPACE) )
+            EAT_CHECK(c, fmt); 
+        // EAT_CHECK(c, fmt);
         switch(c)
         {
+            case 'b':
+                SET_FLAG(flags, INTEGRAL_TYPE);
+                SET_FLAG(flags, USES_BUFFER);
+                size = 8;
+                goto check_modifiers;
+            case 's':
+                SET_FLAG(flags, STRING_TYPE);
+            case 'c':
+                SET_FLAG(flags, INTEGRAL_TYPE);
+                size = 8;
+                goto check_modifiers;
             case 'z':
                 EAT_CHECK_EQ(c, 'u', fmt);
                 size = 64;
-                _SET_FLAG(flags, INTEGRAL_TYPE);
+                SET_FLAG(flags, INTEGRAL_TYPE);
                 goto check_modifiers;
             case 'u':
             case 'i':
-                _SET_FLAG(flags, INTEGRAL_TYPE);
+                SET_FLAG(flags, INTEGRAL_TYPE);
                 goto integral_type;
-            case '$':
-                if(_CHECK_FLAG(flags, ENV_TYPE))
+            case '&':
+                if(CHECK_FLAG(flags, PTR_TYPE))
                         return i;
-                _SET_FLAG(flags, ENV_TYPE);
+                SET_FLAG(flags, PTR_TYPE);
+                EAT_CHECK(c, fmt);
+                goto check_again;
+            case '$':
+                if(CHECK_FLAG(flags, ENV_TYPE))
+                        return i;
+                SET_FLAG(flags, ENV_TYPE);
                 target = &(env[env_curr++]);
-                goto env_type;
+                EAT_CHECK(c, fmt);
+                goto check_again;
             case '!':
-                _SET_FLAG(flags, SKIP_TYPE);
-                EAT_CHECK_EQ(c, '[', fmt);
+                SET_FLAG(flags, SKIP_TYPE);
+                EAT_CHECK(c, fmt);
+                if( !MAP_CHECK_FLAG(UNPACK_MAPPINGS, c, IS_BRACE) )
+                    return i;
+                matching_brace = MAP_GET(UNPACK_BRACES, c);
+                if(MAP_CHECK_FLAG(UNPACK_MAPPINGS, c, NO_ALLOC))
+                    SET_FLAG(flags, ARRAY_NO_ALLOC);
                 goto parse_array_type;
             default:
                 return i;
@@ -514,37 +667,117 @@ bitbuffer_unpack(
         }
 
         check_modifiers:
-        switch(QPEEK(fmt))
+        if( MAP_CHECK_FLAG(UNPACK_MAPPINGS, (*fmt), IS_BRACE) )
         {
-            case '%':
-            case '\0':
-                goto parse_integral_type;
-            case '[':
-                EAT_CHECK(c, fmt);
-                goto parse_array_type;
-            default:
+            matching_brace = MAP_GET(UNPACK_BRACES, (*fmt));
+            if(    !CHECK_FLAG(flags, USES_BUFFER) 
+                && MAP_CHECK_FLAG(UNPACK_MAPPINGS, (*fmt), NO_ALLOC) )
+                SET_FLAG(flags, ARRAY_NO_ALLOC);
+            EAT_CHECK(c, fmt);
+            goto parse_array_type;
+        }
+        if(*fmt == '%')
+        {
+            if( !(mod = parse_atoi_until(
+                    fmt, &c, IS_FIELD_BEGIN | IS_WHITESPACE)) )
                 return i;
+            // EAT_CHECK(c, fmt);
+            // for(j=0; j<100 && c && 
+            //     !MAP_CHECK_FLAG(UNPACK_MAPPINGS, c,
+            //        IS_FIELD_BEGIN | IS_WHITESPACE ); 
+            //     j++, c = *(fmt++))
+            // {
+            //     if(!isdigit(c))
+            //         return i;
+            //     temp_str[j] = c;
+            // }
+            // temp_str[j] = '\0';
+            // mod = atoi(temp_str);
         }
 
-        parse_integral_type:
-        switch(size)
+        check_wildcard:
+        if(*fmt == '*')
         {
-            case 8:
-                target->u8 = bitbuffer_read(self, 8, _ENDIAN(flags));
-                break;
-            case 16:
-                target->u16 = bitbuffer_read(self, 16, _ENDIAN(flags));
-                break;
-            case 32:
-                target->u32 = bitbuffer_read(self, 32, _ENDIAN(flags));
-                break;
-            case 64:
-                target->u64 = bitbuffer_read(self, 64, _ENDIAN(flags));
-                break;
-            default:
-                return i;
+            if(ctx.chkpt.set)
+            {
+                fmt += ctx.chkpt.fmt_skip;
+                c = *fmt++;
+            }
+            else
+            {
+                fmt++;
+                for(ctx.chkpt.fmt_skip=0; ctx.chkpt.fmt_skip<100 
+                    && !MAP_CHECK_FLAG
+                        (UNPACK_MAPPINGS, *fmt, 
+                            IS_FIELD_BEGIN | IS_WHITESPACE)
+                    && *fmt; ctx.chkpt.fmt_skip++, fmt++)
+                {
+                    if(!isdigit(*fmt))
+                        return i;
+                    temp_str[ctx.chkpt.fmt_skip] = *fmt;
+                }
+                temp_str[ctx.chkpt.fmt_skip] = '\0';
+                ctx.chkpt.size = atoi(temp_str);
+                c = *fmt;
+                if(ctx.chkpt.size > 1)
+                {
+                    // ctx.chkpt.fmt_skip--;
+                    ctx.chkpt.size--;
+                    ctx.chkpt.set = true;
+                } 
+            }
         }
-        if(_CHECK_FLAG(flags, ENV_TYPE))
+        if(CHECK_FLAG(flags, ARRAY_TYPE))
+        {
+            CONTINUE_INCR(i, 1);
+        }
+        // else if( MAP_CHECK_FLAG(UNPACK_MAPPINGS, QPEEK(fmt), IS_WHITESPACE) 
+        //         || !QPEEK(fmt) )
+        //     goto parse_integral_type;
+        parse_integral_type:
+        if(CHECK_FLAG(flags, PTR_TYPE))
+        {
+            switch(size)
+            {
+                case 8:
+                    *(target->u8_ptr) = bitbuffer_read(self, 8, !_ENDIAN(flags));
+                    break;
+                case 16:
+                    *(target->u16_ptr) = bitbuffer_read(self, 16, !_ENDIAN(flags));
+                    break;
+                case 32:
+                    *(target->u32_ptr) = bitbuffer_read(self, 32, !_ENDIAN(flags));
+                    break;
+                case 64:
+                    *(target->u64_ptr) = bitbuffer_read(self, 64, !_ENDIAN(flags));
+                    break;
+                default:
+                    return i;
+            }
+        }
+        else
+        {
+            switch(size)
+            {
+                case 8:
+                    target->u8 = bitbuffer_read(self, 8, !_ENDIAN(flags));
+                    break;
+                case 16:
+                    target->u16 = bitbuffer_read(self, 16, !_ENDIAN(flags));
+                    break;
+                case 32:
+                    target->u32 = bitbuffer_read(self, 32, !_ENDIAN(flags));
+                    break;
+                case 64:
+                    target->u64 = bitbuffer_read(self, 64, !_ENDIAN(flags));
+                    break;
+                default:
+                    return i;
+            }
+        }
+  
+        // if(CHECK_FLAG)
+        if(CHECK_FLAG(flags, ENV_TYPE))
         {
             CONTINUE_INCR(i, 0);
         }
@@ -554,24 +787,26 @@ bitbuffer_unpack(
         }
 
         parse_array_type:
-        if(!_CHECK_FLAG(flags, INTEGRAL_TYPE))
+        if(    !CHECK_FLAG(flags, INTEGRAL_TYPE)
+            && !CHECK_FLAG(flags, SKIP_TYPE)    )
             return i;
-        _SET_FLAG(flags, ARRAY_TYPE);
-        if(QPEEK(fmt) == '$') 
+        SET_FLAG(flags, ARRAY_TYPE);
+        if((*fmt) == '$') 
         {
-            _SET_FLAG(flags, SIZE_USES_ENV);
+            SET_FLAG(flags, SIZE_USES_ENV);
             fmt++;
         }
-        else if(QPEEK(fmt) == '&')
+        else if((*fmt) == '&')
         {
-            _SET_FLAG(flags, SIZE_USES_REF);
+            SET_FLAG(flags, SIZE_USES_REF);
             fmt++;
         }
+        EAT_CHECK(c, fmt);
         for (j=0; 
-             j<100 && c != ']';
+             j<100 && c != matching_brace && c != '\0';
              j++, c = *(fmt++))
         {
-            if(!c) return i;
+            if(!isdigit(c)) return false;
             else temp_str[j] = c;
         }
         temp_str[j] = '\0';
@@ -581,7 +816,7 @@ bitbuffer_unpack(
         switch(GET_ARRAY_FLAGS(flags))
         {
             case 0b1000000000: // env
-                if( !  _CHECK_FLAG(flags, SKIP_TYPE) 
+                if( !  CHECK_FLAG(flags, SKIP_TYPE) 
                     && array_size >= env_curr )
                 {
                     dst[i].raw = NULL;
@@ -590,13 +825,15 @@ bitbuffer_unpack(
                 else array_size = env[array_size].zu;
                 goto read_into_array;
             case 0b0100000000: // ref
-                if( !  _CHECK_FLAG(flags, SKIP_TYPE)
-                    && array_size >= num )
+                if( !  CHECK_FLAG(flags, SKIP_TYPE)
+                    && array_size >= i )
                 {
                     dst[i].raw = NULL;
                     return i;
                 }
                 else array_size = dst[array_size].zu;
+                // if(!CHECK_FLAG(flags, SKIP_TYPE))
+                //     array_size = dst[array_size].zu;
                 goto read_into_array;
             case 0:
                 goto read_into_array;
@@ -606,7 +843,7 @@ bitbuffer_unpack(
         }
 
         read_into_array:
-        if(_CHECK_FLAG(flags, SKIP_TYPE))
+        if(CHECK_FLAG(flags, SKIP_TYPE))
         {
             bitbuffer_skip(self, array_size);
             CONTINUE_INCR(i, 0);
@@ -614,14 +851,32 @@ bitbuffer_unpack(
         dst[i].size = array_size;
         multiple = size >> 3;
         array_max = array_size * multiple;
-        dst[i].raw = 
-            calloc(dst[i].size, multiple);
-        if(dst[i].raw == NULL)
-            return i;
-        for(size_t ii=0; ii < array_max; ii++)
+
+        if(CHECK_FLAG(flags, USES_BUFFER))
+        {
+            if(array_max > 8)
+                return i;
+            for(ii=0; ii < array_max; ii++)
+                dst[i].buff[ii] = 
+                        bitbuffer_read(self, 8, false);
+            goto check_wildcard;
+        }
+
+        if(!CHECK_FLAG(flags, ARRAY_NO_ALLOC))
+        {
+            dst[i].raw = 
+                calloc(dst[i].size, multiple);
+            if(dst[i].raw == NULL)
+                return i;
+        }
+
+        for(ii=0; ii < array_max; ii++)
             dst[i].u8_ptr[ii] = 
                     bitbuffer_read(self, 8, false);
-        i++;
+        if(CHECK_FLAG(flags, STRING_TYPE))
+            dst[i].u8_ptr[ii] = '\0';
+        // i++;
+        goto check_wildcard;
     }
     return i;
 }
