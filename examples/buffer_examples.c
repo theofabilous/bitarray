@@ -77,7 +77,7 @@ parse_avi_file(const char* path)
         fourcc_field(video.AVI_)
     };
     const char* header_fmt      = "s<4>, &u32, s<4>";
-    const char* list_skip_fmt   = "![B4], $u32%2, ![$1]";
+    const char* list_skip_fmt   = "![B4], $u32%2, ![B$1]";
     const char* list_peek_fmt   = "c<4>, u32, c<4>";
 
     bitbuffer_unpack(buff, header_fmt, dst);
@@ -86,16 +86,13 @@ parse_avi_file(const char* path)
     for(;;)
     {
         bitbuffer_unpeek(buff, list_peek_fmt, dst);
-        if(strcmp(dst[0].buff, "LIST") != 0)
+        if(    strcmp(dst[0].str_buff, "LIST") != 0
+            && strcmp(dst[0].str_buff, "JUNK") != 0  )
         {
-            printf("Found movi! List fourcc: %s, List size: %zu,"
-           "List type: %s, Ofs: %zu\n", 
-           dst[0].buff, dst[1].zu, dst[2].buff,
-           buff->pos);
             printf("Avi file corrupt!\n");
             goto end;
         }
-        else if(strcmp(dst[2].buff, "movi") == 0)
+        else if(strcmp(dst[2].str_buff, "movi") == 0)
             break;
         else
             bitbuffer_unpack(buff, list_skip_fmt, dst);
@@ -104,7 +101,7 @@ parse_avi_file(const char* path)
     printf("Found movi! List fourcc: %s, List size: %zu,"
            "List type: %s, Ofs: %zu\n", 
            dst[0].buff, dst[1].zu, dst[2].buff,
-           buff->pos);
+           buff->pos >> 3);
 
     end:
     free_BitArray_buffer(&arr);
