@@ -225,6 +225,8 @@ BitBuffer* new_BitBuffer_from_BitArray(BitArray* source);
 
 size_t bitbuffer_unpack(BitBuffer* self, const char* fmt, BitReceiver dst);
 
+size_t bitbuffer_unpeek(BitBuffer* self, const char* fmt, BitReceiver dst);
+
 void bitbuffer_read_into(BitBuffer* self, int size, ReadTarget sequence[]);
 
 void bitbuffer_read_into_uint32(BitBuffer* self, int size, uint32_t* sequence[]);

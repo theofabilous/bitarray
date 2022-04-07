@@ -419,7 +419,8 @@ bitbuffer_read_fmt(const char *format, ...)
 
 #define QPEEK(fmt) *(fmt)
 #define EAT_PEEK(c, fmt) *(fmt)
-#define EAT_CHECK(c, fmt) if( !((c) = *((fmt))++) ) return i
+// #define EAT_ERR(c, fmt, b) if( !((c) = *((fmt))++) ) return ( (*(b) = false) )
+// #define EAT_CHECK(c, fmt) if( !((c) = *((fmt))++) ) return i
 #define EAT_CHECK_EQ(c, c2, fmt) if( ((c) = *((fmt))++) != (c2) ) return i
 
 #define SET_FLAG(x, f) x |= (f)
@@ -434,21 +435,39 @@ bitbuffer_read_fmt(const char *format, ...)
 #define CONTINUE_INCR_IFN(i, x, flag) \
     i += (CHECK_FLAG((x), (flag))) ? 0 : 1; continue
 
-const uint16_t INTEGRAL_TYPE    = 0b1000000000000000;
-const uint16_t LITTLE_END_TYPE  = 0b0100000000000000;
-const uint16_t ENV_TYPE         = 0b0010000000000000;
-const uint16_t REF_TYPE         = 0b0001000000000000;
-const uint16_t ARRAY_TYPE       = 0b0000100000000000;
-const uint16_t SKIP_TYPE        = 0b0000010000000000;
-const uint16_t SIZE_USES_ENV    = 0b0000001000000000;
-const uint16_t SIZE_USES_REF    = 0b0000000100000000;
-const uint16_t ARRAY_NO_ALLOC   = 0b0000000010000000;
-const uint16_t PTR_TYPE         = 0b0000000001000000;
+const uint32_t INTEGRAL_TYPE    = 0b1000000000000000;
+const uint32_t LITTLE_END_TYPE  = 0b0100000000000000;
+const uint32_t ENV_TYPE         = 0b0010000000000000;
+const uint32_t REF_TYPE         = 0b0001000000000000;
+const uint32_t ARRAY_TYPE       = 0b0000100000000000;
+const uint32_t SKIP_TYPE        = 0b0000010000000000;
+const uint32_t SIZE_USES_ENV    = 0b0000001000000000;
+const uint32_t SIZE_USES_REF    = 0b0000000100000000;
+const uint32_t ARRAY_NO_ALLOC   = 0b0000000010000000;
+const uint32_t PTR_TYPE         = 0b0000000001000000;
+const uint32_t SKIP_REWIND      = 0b0000000000100000;
+const uint32_t USES_BUFFER      = 0b0000000000010000;
+const uint32_t BITARRAY_TYPE    = 0b0000000000001000;
+const uint32_t STRING_TYPE      = 0b0000000000000100;
+const uint32_t PEEK_TYPE        = 0b0000000000000010;
 //
-const uint16_t USES_BUFFER      = 0b0000000000010000;
-const uint16_t BITARRAY_TYPE    = 0b0000000000001000;
-const uint16_t STRING_TYPE      = 0b0000000000000100;
-//
+
+const uint32_t BYTE_MULT        = 0b1000000000000000 << 16;
+const uint32_t NEGATIVE_MULT    = 0b0100000000000000 << 16;
+// const uint32_t LITTLE_END_TYPE  = 0b0100000000000000;
+// const uint32_t ENV_TYPE         = 0b0010000000000000;
+// const uint32_t REF_TYPE         = 0b0001000000000000;
+// const uint32_t ARRAY_TYPE       = 0b0000100000000000;
+// const uint32_t SKIP_TYPE        = 0b0000010000000000;
+// const uint32_t SIZE_USES_ENV    = 0b0000001000000000;
+// const uint32_t SIZE_USES_REF    = 0b0000000100000000;
+// const uint32_t ARRAY_NO_ALLOC   = 0b0000000010000000;
+// const uint32_t PTR_TYPE         = 0b0000000001000000;
+// const uint32_t SKIP_REWIND      = 0b0000000000100000;
+// const uint32_t USES_BUFFER      = 0b0000000000010000;
+// const uint32_t BITARRAY_TYPE    = 0b0000000000001000;
+// const uint32_t STRING_TYPE      = 0b0000000000000100;
+// const uint32_t PEEK_TYPE        = 0b0000000000000010;
 //
 
 static uint8_t UNPACK_MAPPINGS[257]     = { ZEROESx256 , false };
@@ -461,10 +480,8 @@ const uint8_t IS_FIELD_BEGIN            = 0b10000000;
 #define GET_ARRAY_FLAGS(x) ((x) &       0b1100000000)
 #define _ENDIAN(x) ((x) & LITTLE_END_TYPE )
 
-// #define CHOMP_WHITESPACE(c, fmt)        \
-//     do { c = *((fmt)++); } while( c &&  \ 
-//         ( MAP_CHECK_FLAG(UNPACK_MAPPINGS, c, IS_WHITESPACE) ) )
-// #define CHECK_WHITESPACE(c) MAP_CHECK_FLAG(UNPACK_MAPPINGS, (c), IS_WHITESPACE)
+// const uint8_t CTX_REWIND                = 0b00000010;
+// const uint8_t CTX_SKIP                  = 0b00000001;
 
 static inline void
 _bitbuffer_init_mappings()
@@ -498,6 +515,7 @@ _bitbuffer_init_mappings()
     MAP_SET_FLAG    (UNPACK_MAPPINGS, '$', IS_FIELD_BEGIN);
     MAP_SET_FLAG    (UNPACK_MAPPINGS, '?', IS_FIELD_BEGIN);
     MAP_SET_FLAG    (UNPACK_MAPPINGS, '&', IS_FIELD_BEGIN);
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, '^', IS_FIELD_BEGIN);
     MAP_SET_FLAG    (UNPACK_MAPPINGS, 'b', IS_FIELD_BEGIN);
 }
 
@@ -512,6 +530,9 @@ typedef struct UnpackCptCtx
 
 typedef struct UnpackCtx
 {
+    uint32_t flags;
+    size_t modifier;
+    size_t pos;
     UnpackCptCtx chkpt;
 } UnpackCtx;
 
@@ -569,18 +590,39 @@ parse_atoi_repeat(
 }
 
 static inline size_t
-parse_atoi_bracket(const char** fmt_ptr, char *c_ptr, char target)
+parse_atoi_bracket(const char** fmt_ptr, char *c_ptr, char target, UnpackCtx* ctx)
 {
     int i;
     
     uint16_t mod = 0;
     char temp_str[100];
     const char* fmt = *fmt_ptr;
-    char c = *(fmt++);
-    if(!c) return 0;
-    uint8_t amt = (c == 'B') ? 3 : 0;
-    if(amt && !(c = *(fmt++)))
-        return 0;
+    char c;
+    uint8_t amt = 0;
+
+    check_prefix_modifiers:
+    c = *(fmt++);
+    switch(c)
+    {
+        case 'B':
+            SET_FLAG(ctx->flags, BYTE_MULT);
+            amt = 3;
+            goto check_prefix_modifiers;
+        case '-':
+            if(!CHECK_FLAG(ctx->flags, SKIP_TYPE))
+                return 0;
+            else SET_FLAG(ctx->flags, SKIP_REWIND);
+            goto check_prefix_modifiers;
+            break;
+        case 0:
+            return 0;
+        default:
+            break;  
+    }
+    // if(!c) return 0;
+    // amt = (c == 'B') ? 3 : 0;
+    // if(amt && !(c = *(fmt++)))
+    //     return 0;
     for(i=0; i<100 && c && c != target; 
         i++, c = *(fmt++))
     {
@@ -594,7 +636,8 @@ parse_atoi_bracket(const char** fmt_ptr, char *c_ptr, char target)
         }
         else if(!isdigit(c))
             return 0;
-        temp_str[i] = c;
+        else
+            temp_str[i] = c;
     }
     temp_str[i] = '\0';
     *c_ptr = c;
@@ -610,11 +653,14 @@ parse_atoi_bracket(const char** fmt_ptr, char *c_ptr, char target)
 }
 
 size_t
-bitbuffer_unpack(
+_bitbuffer_unpack(
     BitBuffer* self, 
     const char* fmt, 
-    BitReceiver dst)
+    BitReceiver dst,
+    bool peeking,
+    size_t *err)
 {
+    *err = 0;
     if(!UNPACK_MAPPINGS[256])
         _bitbuffer_init_mappings();
 
@@ -622,14 +668,15 @@ bitbuffer_unpack(
     BField env[100];
     BField* target;
     size_t env_curr = 0;
-    uint16_t flags;
+    // uint16_t flags;
     size_t size;
     size_t array_size;
     uint8_t multiple;
     uint16_t mod = 0;
     size_t array_max;
     char matching_brace;
-    UnpackCtx ctx = { 
+    UnpackCtx ctx = {
+        .flags = 0,
         .chkpt = {.ptr = fmt, .c = *fmt, .size =0 , .set = false,
                   .fmt_skip = 0 }
     };
@@ -640,152 +687,151 @@ bitbuffer_unpack(
     while  ((ctx.chkpt.set || (c = *(fmt++))) 
              && bitbuffer_check_status(self)) 
     {
-        if(ctx.chkpt.set && ctx.chkpt.size--)
+        if(!peeking)
         {
-            c = ctx.chkpt.c;
-            fmt = ctx.chkpt.ptr;
-        }
-        else
-        {
-            if(ctx.chkpt.set)
-                ctx.chkpt.c = (c = *(fmt++));
+            if(ctx.chkpt.set && ctx.chkpt.size--)
+            {
+                c = ctx.chkpt.c;
+                fmt = ctx.chkpt.ptr;
+            }
             else
-                ctx.chkpt.c = c;
-            ctx.chkpt.ptr = fmt;
-            ctx.chkpt.size = 0;
-            ctx.chkpt.set = false;
-            ctx.chkpt.fmt_skip = 0;
+            {
+                if(ctx.chkpt.set)
+                    ctx.chkpt.c = (c = *(fmt++));
+                else
+                    ctx.chkpt.c = c;
+                ctx.chkpt.ptr = fmt;
+                ctx.chkpt.size = 0;
+                ctx.chkpt.set = false;
+                ctx.chkpt.fmt_skip = 0;
+            }
         }
-        // dst[i].zu = (size_t) 0;
+        if(CHECK_FLAG(ctx.flags, PEEK_TYPE))
+            self->pos = ctx.pos;
+        ctx.pos = self->pos;
+
+        ctx.flags = 0;
         target = &(dst[i]);
-        flags = 0;
         size = 0;
         array_size = 0;
         mod = 0;
 
+        #define EAT_CHECK(c, fmt)   \
+            if(!(c = *(fmt++)))     \
+            {                       \
+                *err = 1;           \
+                return i;           \
+            } ((void) 0)
+
         check_again:
         while( MAP_CHECK_FLAG(UNPACK_MAPPINGS, c, IS_WHITESPACE) )
             EAT_CHECK(c, fmt); 
-        // EAT_CHECK(c, fmt);
         switch(c)
         {
-            case 'b':
-                SET_FLAG(flags, INTEGRAL_TYPE);
-                SET_FLAG(flags, USES_BUFFER);
+            case 'c':
+                SET_FLAG(ctx.flags, INTEGRAL_TYPE);
+                SET_FLAG(ctx.flags, USES_BUFFER);
                 size = 8;
                 goto check_modifiers;
             case 's':
-                SET_FLAG(flags, STRING_TYPE);
-            case 'c':
-                SET_FLAG(flags, INTEGRAL_TYPE);
+                SET_FLAG(ctx.flags, INTEGRAL_TYPE);
+                SET_FLAG(ctx.flags, STRING_TYPE);
                 size = 8;
                 goto check_modifiers;
             case 'z':
-                EAT_CHECK_EQ(c, 'u', fmt);
+                EAT_CHECK(c, fmt); 
                 size = 64;
-                SET_FLAG(flags, INTEGRAL_TYPE);
+                SET_FLAG(ctx.flags, INTEGRAL_TYPE);
                 goto check_modifiers;
             case 'u':
             case 'i':
-                SET_FLAG(flags, INTEGRAL_TYPE);
-                goto integral_type;
+                goto get_width;
+            case '^':
+                if(CHECK_FLAG(ctx.flags, PEEK_TYPE))
+                    return i;
+                SET_FLAG(ctx.flags, PEEK_TYPE);
+                EAT_CHECK(c, fmt);
+                goto check_again;
             case '&':
-                if(CHECK_FLAG(flags, PTR_TYPE))
-                        return i;
-                SET_FLAG(flags, PTR_TYPE);
+                if(CHECK_FLAG(ctx.flags, PTR_TYPE))
+                    return i;
+                SET_FLAG(ctx.flags, PTR_TYPE);
                 EAT_CHECK(c, fmt);
                 goto check_again;
             case '$':
-                if(CHECK_FLAG(flags, ENV_TYPE))
+                if(CHECK_FLAG(ctx.flags, ENV_TYPE))
                         return i;
-                SET_FLAG(flags, ENV_TYPE);
+                SET_FLAG(ctx.flags, ENV_TYPE);
                 target = &(env[env_curr++]);
                 EAT_CHECK(c, fmt);
                 goto check_again;
             case '!':
-                SET_FLAG(flags, SKIP_TYPE);
+                SET_FLAG(ctx.flags, SKIP_TYPE);
                 EAT_CHECK(c, fmt);
                 if( !MAP_CHECK_FLAG(UNPACK_MAPPINGS, c, IS_BRACE) )
                     return i;
                 matching_brace = MAP_GET(UNPACK_BRACES, c);
                 if(MAP_CHECK_FLAG(UNPACK_MAPPINGS, c, NO_ALLOC))
-                    SET_FLAG(flags, ARRAY_NO_ALLOC);
+                    SET_FLAG(ctx.flags, ARRAY_NO_ALLOC);
                 goto parse_array_type;
             default:
                 return i;
         }
 
-        integral_type:
+        get_width:
         EAT_CHECK(c, fmt);
-        switch(c)
+        if(isdigit(*fmt))
         {
-            case '8':
-                size = 8;
-                goto check_modifiers;
-            case '1':
-                EAT_CHECK_EQ(c, '6', fmt);
-                size = 16;
-                goto check_modifiers;
-            case '3':
-                EAT_CHECK_EQ(c, '2', fmt);
-                size = 32;
-                goto check_modifiers;
-            case '6':
-                EAT_CHECK_EQ(c, '4', fmt);
-                size = 64;
-                goto check_modifiers;
-            default:
+            if((size = atoi((char[]) {c, *fmt, '\0'})) > 64 )
                 return i;
+            EAT_CHECK(c, fmt);
         }
+        else
+            size = atoi((char[]) {c ,'\0'});
+        if(!(size & 0b111))
+            SET_FLAG(ctx.flags, INTEGRAL_TYPE);
 
         check_modifiers:
         if( MAP_CHECK_FLAG(UNPACK_MAPPINGS, (*fmt), IS_BRACE) )
         {
             matching_brace = MAP_GET(UNPACK_BRACES, (*fmt));
-            if(    !CHECK_FLAG(flags, USES_BUFFER) 
+            if(    !CHECK_FLAG(ctx.flags, USES_BUFFER) 
                 && MAP_CHECK_FLAG(UNPACK_MAPPINGS, (*fmt), NO_ALLOC) )
-                SET_FLAG(flags, ARRAY_NO_ALLOC);
+                SET_FLAG(ctx.flags, ARRAY_NO_ALLOC);
             EAT_CHECK(c, fmt);
             goto parse_array_type;
         }
-        // if(*fmt == '%')
-        // {
-        //     if(!(mod = parse_atoi_until(
-        //             &fmt, &c, IS_FIELD_BEGIN | IS_WHITESPACE)))
-        //         return i;
-        // }
-
         check_wildcard:
         if(*fmt == '*')
         {
             if(ctx.chkpt.set)
             {
                 fmt += ctx.chkpt.fmt_skip;
-                c = *fmt++;
+                EAT_CHECK(c, fmt);
             }
             else if(!parse_atoi_repeat(&fmt, &c, &ctx))
                     return i;
         }
-        if(CHECK_FLAG(flags, ARRAY_TYPE))
+        if(CHECK_FLAG(ctx.flags, ARRAY_TYPE))
         {
             i++; continue;
         }
         parse_integral_type:
-        if(CHECK_FLAG(flags, PTR_TYPE))
+        if(CHECK_FLAG(ctx.flags, PTR_TYPE))
         {
             switch(size)
             {
                 case 8:
-                    *(target->u8_ptr) = bitbuffer_read(self, 8, !_ENDIAN(flags));
+                    *(target->u8_ptr) = bitbuffer_read(self, 8, !_ENDIAN(ctx.flags));
                     break;
                 case 16:
-                    *(target->u16_ptr) = bitbuffer_read(self, 16, !_ENDIAN(flags));
+                    *(target->u16_ptr) = bitbuffer_read(self, 16, !_ENDIAN(ctx.flags));
                     break;
                 case 32:
-                    *(target->u32_ptr) = bitbuffer_read(self, 32, !_ENDIAN(flags));
+                    *(target->u32_ptr) = bitbuffer_read(self, 32, !_ENDIAN(ctx.flags));
                     break;
                 case 64:
-                    *(target->u64_ptr) = bitbuffer_read(self, 64, !_ENDIAN(flags));
+                    *(target->u64_ptr) = bitbuffer_read(self, 64, !_ENDIAN(ctx.flags));
                     break;
                 default:
                     return i;
@@ -795,13 +841,13 @@ bitbuffer_unpack(
         {
             if(*fmt == '%')
             {
-                c = (*(fmt++));
+                EAT_CHECK(c, fmt);
                 if(!(mod = check_modulo(&fmt, &c)))
                     return i;
                 else
                 {
                     target->zu = 
-                    bitbuffer_read(self, size, !_ENDIAN(flags));
+                    bitbuffer_read(self, size, !_ENDIAN(ctx.flags));
                     if(target->zu <= mod)
                         target->zu = mod;
                     else if(target->zu % mod)
@@ -809,38 +855,36 @@ bitbuffer_unpack(
                 }
             }
             else
-                target->zu = bitbuffer_read(self, size, !_ENDIAN(flags));
-            // break;
+                target->zu = bitbuffer_read(self, size, !_ENDIAN(ctx.flags));
         }
   
-        if(!CHECK_FLAG(flags, ENV_TYPE))
+        if(!CHECK_FLAG(ctx.flags, ENV_TYPE))
             i++;
         continue;
 
         parse_array_type:
-        if(    !CHECK_FLAG(flags, INTEGRAL_TYPE)
-            && !CHECK_FLAG(flags, SKIP_TYPE)    )
+        if(    !CHECK_FLAG(ctx.flags, INTEGRAL_TYPE)
+            && !CHECK_FLAG(ctx.flags, SKIP_TYPE)    )
             return i;
-        SET_FLAG(flags, ARRAY_TYPE);
+        SET_FLAG(ctx.flags, ARRAY_TYPE);
         if((*fmt) == '$') 
         {
-            SET_FLAG(flags, SIZE_USES_ENV);
+            SET_FLAG(ctx.flags, SIZE_USES_ENV);
             c = *(fmt++);
         }
         else if((*fmt) == '&')
         {
-            SET_FLAG(flags, SIZE_USES_REF);
+            SET_FLAG(ctx.flags, SIZE_USES_REF);
             c = *(fmt++);
         }
-        // array_size = parse_atoi_until_eq(&fmt, &c, matching_brace);
-        array_size = parse_atoi_bracket(&fmt, &c, matching_brace);
+        array_size = parse_atoi_bracket(&fmt, &c, matching_brace, &ctx);
         if(!array_size) return i;
 
-        switch(GET_ARRAY_FLAGS(flags))
+        switch(GET_ARRAY_FLAGS(ctx.flags))
         {
             case 0b1000000000: // env
                 --array_size;
-                if( !  CHECK_FLAG(flags, SKIP_TYPE) 
+                if( !  CHECK_FLAG(ctx.flags, SKIP_TYPE) 
                     && array_size >= env_curr )
                 {
                     dst[i].raw = NULL;
@@ -850,7 +894,7 @@ bitbuffer_unpack(
                 goto read_into_array;
             case 0b0100000000: // ref
                 --array_size;
-                if( !  CHECK_FLAG(flags, SKIP_TYPE)
+                if( !  CHECK_FLAG(ctx.flags, SKIP_TYPE)
                     && array_size >= i )
                 {
                     dst[i].raw = NULL;
@@ -866,16 +910,19 @@ bitbuffer_unpack(
         }
 
         read_into_array:
-        if(CHECK_FLAG(flags, SKIP_TYPE))
+        if(CHECK_FLAG(ctx.flags, SKIP_TYPE))
         {
-            bitbuffer_skip(self, array_size);
+            if(CHECK_FLAG(ctx.flags, SKIP_REWIND))
+                bitbuffer_skip(self, -1*((int64_t) array_size));
+            else
+                bitbuffer_skip(self, array_size);
             CONTINUE_INCR(i, 0);
         }
         dst[i].size = array_size;
         multiple = size >> 3;
         array_max = array_size * multiple;
 
-        if(CHECK_FLAG(flags, USES_BUFFER))
+        if(CHECK_FLAG(ctx.flags, USES_BUFFER))
         {
             if(array_max > 8)
                 return i;
@@ -887,7 +934,7 @@ bitbuffer_unpack(
             goto check_wildcard;
         }
 
-        if(!CHECK_FLAG(flags, ARRAY_NO_ALLOC))
+        if(!CHECK_FLAG(ctx.flags, ARRAY_NO_ALLOC))
         {
             dst[i].raw = 
                 calloc(dst[i].size, multiple);
@@ -898,12 +945,39 @@ bitbuffer_unpack(
         for(ii=0; ii < array_max; ii++)
             dst[i].u8_ptr[ii] = 
                     bitbuffer_read(self, 8, false);
-        if(CHECK_FLAG(flags, STRING_TYPE))
+        if(CHECK_FLAG(ctx.flags, STRING_TYPE))
             dst[i].u8_ptr[ii] = '\0';
-        // i++;
         goto check_wildcard;
     }
     return i;
+}
+
+size_t 
+bitbuffer_unpeek(
+    BitBuffer* self, 
+    const char* fmt, 
+    BitReceiver dst)
+{
+    size_t pos = self->pos, err = 0, output;
+    output = _bitbuffer_unpack(self, fmt, dst, true, &err);
+    if(err)
+        bitbuffer_set_err(self, BITBUFFER_ILL_ERR);
+    else
+        self->pos = pos;
+    return output;
+}
+
+size_t
+bitbuffer_unpack(
+    BitBuffer* self, 
+    const char* fmt, 
+    BitReceiver dst)
+{
+    size_t err = 0, output;
+    output = _bitbuffer_unpack(self, fmt, dst, false, &err);
+    if(err)
+        bitbuffer_set_err(self, BITBUFFER_ILL_ERR);
+    return output;
 }
 
 void

@@ -102,7 +102,7 @@ void unpack_test()
 	const char* header_path = "../resources/mp2_test_.avi";
 	BitBuffer* buff = new_BitBuffer_from_file(header_path, false);
 	BField receiver[18];
-	const char* header_fmt = "b<4>, u32, b<4>*2, u32, b<4>*2, u32, u32*10, ![B16]";
+	const char* header_fmt = "c<4>, u32, c<4>*2, u32, c<4>*2, u32, u32*10, ![B16]";
 	size_t ret = bitbuffer_unpack(buff, header_fmt, receiver);
 
 	printf("Ret: %zu\n", ret);
@@ -115,7 +115,7 @@ void unpack_test()
 
 	bitreceiver_clear(receiver, 18);
 	const char* strl_fmt =
-		"b<4>, $u32%2, u8[$1]";
+		"c<4>, $u32%2, u8[$1]";
 	ret = bitbuffer_unpack(buff, strl_fmt, receiver);
 	printf("POS: %zu\n", buff->pos >> 3);
 	printf("%s, size of buff = %zu\n", receiver[0].buff, receiver[1].size);
@@ -133,7 +133,7 @@ void unpack_test()
 	bitreceiver_clear(receiver, 18);
 
 	ret = bitbuffer_unpack(buff,
-		"b<4>, $u32%2, ![$1]", receiver);
+		"c<4>, $u32%2, ![$1]", receiver);
 	printf("%s\n", receiver[0].buff);
 
 
