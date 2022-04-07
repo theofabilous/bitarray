@@ -86,6 +86,13 @@ struct BField
 
 typedef BField BitReceiver[];
 
+static inline void
+bitreceiver_clear(BField* r, size_t size)
+{
+    while(size--)
+        *(r++) = (BField) {0, 0, 0, {NULL}};
+}
+
 typedef struct BitBuffer
 {
 	uint8_t flags;

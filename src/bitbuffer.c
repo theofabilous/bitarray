@@ -474,6 +474,10 @@ _bitbuffer_init_mappings()
     MAP_SET_FLAG    (UNPACK_MAPPINGS, '(', IS_BRACE);
     MAP_SET_FLAG    (UNPACK_MAPPINGS, '<', IS_BRACE);
     MAP_SET_FLAG    (UNPACK_MAPPINGS, '{', IS_BRACE);
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, ']', IS_BRACE);
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, ')', IS_BRACE);
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, '>', IS_BRACE);
+    MAP_SET_FLAG    (UNPACK_MAPPINGS, '}', IS_BRACE);
     MAP_SET         (UNPACK_BRACES, '[', ']');
     MAP_SET         (UNPACK_BRACES, '(', ')');
     MAP_SET         (UNPACK_BRACES, '<', '>');
@@ -501,7 +505,7 @@ typedef struct UnpackCptCtx
 {
     uint8_t size;
     uint8_t fmt_skip;
-    char *ptr;
+    const char *ptr;
     char c;
     bool set;
 } UnpackCptCtx;
@@ -511,17 +515,18 @@ typedef struct UnpackCtx
     UnpackCptCtx chkpt;
 } UnpackCtx;
 
-static inline size_t
-parse_atoi_until(const char** fmt_ptr, char *c_ptr, uint16_t flag)
+static inline uint16_t
+check_modulo(const char** fmt_ptr, char *c_ptr)
 {
     int i;
     char temp_str[100];
     const char* fmt = *fmt_ptr;
-    char c = fmt++;
+    char c = *(fmt++);
     if(!c) return 0;
     for(i=0; i<100 && c && 
-        !MAP_CHECK_FLAG(UNPACK_MAPPINGS, c, flag); 
-        i++, c = fmt++)
+        !MAP_CHECK_FLAG(UNPACK_MAPPINGS, c, 
+        IS_FIELD_BEGIN | IS_WHITESPACE | IS_BRACE); 
+        i++, c = *(fmt++))
     {
         if(!isdigit(c))
             return 0;
@@ -533,7 +538,76 @@ parse_atoi_until(const char** fmt_ptr, char *c_ptr, uint16_t flag)
     return atoi(temp_str);
 }
 
-// static inline size_t
+static inline bool
+parse_atoi_repeat(
+    const char** fmt_ptr, 
+    char *c_ptr, 
+    UnpackCtx* ctx)
+{
+    char temp_str[100];
+    const char* fmt = ++(*fmt_ptr);
+    for(ctx->chkpt.fmt_skip=0; ctx->chkpt.fmt_skip<100 
+        && !MAP_CHECK_FLAG
+            (UNPACK_MAPPINGS, *fmt, 
+                IS_FIELD_BEGIN | IS_WHITESPACE | IS_BRACE)
+        && *fmt; ctx->chkpt.fmt_skip++, fmt++)
+    {
+        if(!isdigit(*fmt))
+            return false;
+        temp_str[ctx->chkpt.fmt_skip] = *fmt;
+    }
+    temp_str[ctx->chkpt.fmt_skip] = '\0';
+    ctx->chkpt.size = atoi(temp_str);
+    *fmt_ptr = fmt;
+    *c_ptr = **fmt_ptr;
+    if(ctx->chkpt.size > 1)
+    {
+        ctx->chkpt.size--;
+        ctx->chkpt.set = true;
+    }
+    return true;
+}
+
+static inline size_t
+parse_atoi_bracket(const char** fmt_ptr, char *c_ptr, char target)
+{
+    int i;
+    
+    uint16_t mod = 0;
+    char temp_str[100];
+    const char* fmt = *fmt_ptr;
+    char c = *(fmt++);
+    if(!c) return 0;
+    uint8_t amt = (c == 'B') ? 3 : 0;
+    if(amt && !(c = *(fmt++)))
+        return 0;
+    for(i=0; i<100 && c && c != target; 
+        i++, c = *(fmt++))
+    {
+        if(c == '%')
+        {
+            c = *(fmt++);
+            if(!(mod = check_modulo(&fmt, &c)) ||
+               c != target)
+                return 0;
+            break;
+        }
+        else if(!isdigit(c))
+            return 0;
+        temp_str[i] = c;
+    }
+    temp_str[i] = '\0';
+    *c_ptr = c;
+    *fmt_ptr = fmt;
+    size_t output = atoi(temp_str);
+    if(mod)
+    {
+        if(output <= mod)
+            return mod << amt;
+        else return (output + (mod - (output % mod))) << amt;
+    }
+    return output << amt;
+}
 
 size_t
 bitbuffer_unpack(
@@ -552,7 +626,7 @@ bitbuffer_unpack(
     size_t size;
     size_t array_size;
     uint8_t multiple;
-    uint8_t mod = 0;
+    uint16_t mod = 0;
     size_t array_max;
     char matching_brace;
     UnpackCtx ctx = { 
@@ -563,10 +637,8 @@ bitbuffer_unpack(
     int i = 0;
     size_t ii;
     int j;
-    while  (    (ctx.chkpt.set || (c = *(fmt++)))
-            //  && (i <= num && bitbuffer_check_status(self))   
-                && bitbuffer_check_status(self)
-             ) 
+    while  ((ctx.chkpt.set || (c = *(fmt++))) 
+             && bitbuffer_check_status(self)) 
     {
         if(ctx.chkpt.set && ctx.chkpt.size--)
         {
@@ -676,24 +748,12 @@ bitbuffer_unpack(
             EAT_CHECK(c, fmt);
             goto parse_array_type;
         }
-        if(*fmt == '%')
-        {
-            if( !(mod = parse_atoi_until(
-                    fmt, &c, IS_FIELD_BEGIN | IS_WHITESPACE)) )
-                return i;
-            // EAT_CHECK(c, fmt);
-            // for(j=0; j<100 && c && 
-            //     !MAP_CHECK_FLAG(UNPACK_MAPPINGS, c,
-            //        IS_FIELD_BEGIN | IS_WHITESPACE ); 
-            //     j++, c = *(fmt++))
-            // {
-            //     if(!isdigit(c))
-            //         return i;
-            //     temp_str[j] = c;
-            // }
-            // temp_str[j] = '\0';
-            // mod = atoi(temp_str);
-        }
+        // if(*fmt == '%')
+        // {
+        //     if(!(mod = parse_atoi_until(
+        //             &fmt, &c, IS_FIELD_BEGIN | IS_WHITESPACE)))
+        //         return i;
+        // }
 
         check_wildcard:
         if(*fmt == '*')
@@ -703,37 +763,13 @@ bitbuffer_unpack(
                 fmt += ctx.chkpt.fmt_skip;
                 c = *fmt++;
             }
-            else
-            {
-                fmt++;
-                for(ctx.chkpt.fmt_skip=0; ctx.chkpt.fmt_skip<100 
-                    && !MAP_CHECK_FLAG
-                        (UNPACK_MAPPINGS, *fmt, 
-                            IS_FIELD_BEGIN | IS_WHITESPACE)
-                    && *fmt; ctx.chkpt.fmt_skip++, fmt++)
-                {
-                    if(!isdigit(*fmt))
-                        return i;
-                    temp_str[ctx.chkpt.fmt_skip] = *fmt;
-                }
-                temp_str[ctx.chkpt.fmt_skip] = '\0';
-                ctx.chkpt.size = atoi(temp_str);
-                c = *fmt;
-                if(ctx.chkpt.size > 1)
-                {
-                    // ctx.chkpt.fmt_skip--;
-                    ctx.chkpt.size--;
-                    ctx.chkpt.set = true;
-                } 
-            }
+            else if(!parse_atoi_repeat(&fmt, &c, &ctx))
+                    return i;
         }
         if(CHECK_FLAG(flags, ARRAY_TYPE))
         {
-            CONTINUE_INCR(i, 1);
+            i++; continue;
         }
-        // else if( MAP_CHECK_FLAG(UNPACK_MAPPINGS, QPEEK(fmt), IS_WHITESPACE) 
-        //         || !QPEEK(fmt) )
-        //     goto parse_integral_type;
         parse_integral_type:
         if(CHECK_FLAG(flags, PTR_TYPE))
         {
@@ -757,34 +793,29 @@ bitbuffer_unpack(
         }
         else
         {
-            switch(size)
+            if(*fmt == '%')
             {
-                case 8:
-                    target->u8 = bitbuffer_read(self, 8, !_ENDIAN(flags));
-                    break;
-                case 16:
-                    target->u16 = bitbuffer_read(self, 16, !_ENDIAN(flags));
-                    break;
-                case 32:
-                    target->u32 = bitbuffer_read(self, 32, !_ENDIAN(flags));
-                    break;
-                case 64:
-                    target->u64 = bitbuffer_read(self, 64, !_ENDIAN(flags));
-                    break;
-                default:
+                c = (*(fmt++));
+                if(!(mod = check_modulo(&fmt, &c)))
                     return i;
+                else
+                {
+                    target->zu = 
+                    bitbuffer_read(self, size, !_ENDIAN(flags));
+                    if(target->zu <= mod)
+                        target->zu = mod;
+                    else if(target->zu % mod)
+                        target->zu = mod*(target->zu/mod) + mod;  
+                }
             }
+            else
+                target->zu = bitbuffer_read(self, size, !_ENDIAN(flags));
+            // break;
         }
   
-        // if(CHECK_FLAG)
-        if(CHECK_FLAG(flags, ENV_TYPE))
-        {
-            CONTINUE_INCR(i, 0);
-        }
-        else
-        {
-            CONTINUE_INCR(i, 1);
-        }
+        if(!CHECK_FLAG(flags, ENV_TYPE))
+            i++;
+        continue;
 
         parse_array_type:
         if(    !CHECK_FLAG(flags, INTEGRAL_TYPE)
@@ -794,28 +825,21 @@ bitbuffer_unpack(
         if((*fmt) == '$') 
         {
             SET_FLAG(flags, SIZE_USES_ENV);
-            fmt++;
+            c = *(fmt++);
         }
         else if((*fmt) == '&')
         {
             SET_FLAG(flags, SIZE_USES_REF);
-            fmt++;
+            c = *(fmt++);
         }
-        EAT_CHECK(c, fmt);
-        for (j=0; 
-             j<100 && c != matching_brace && c != '\0';
-             j++, c = *(fmt++))
-        {
-            if(!isdigit(c)) return false;
-            else temp_str[j] = c;
-        }
-        temp_str[j] = '\0';
-        array_size = atoi(temp_str);
-        j = 0;
+        // array_size = parse_atoi_until_eq(&fmt, &c, matching_brace);
+        array_size = parse_atoi_bracket(&fmt, &c, matching_brace);
+        if(!array_size) return i;
 
         switch(GET_ARRAY_FLAGS(flags))
         {
             case 0b1000000000: // env
+                --array_size;
                 if( !  CHECK_FLAG(flags, SKIP_TYPE) 
                     && array_size >= env_curr )
                 {
@@ -825,6 +849,7 @@ bitbuffer_unpack(
                 else array_size = env[array_size].zu;
                 goto read_into_array;
             case 0b0100000000: // ref
+                --array_size;
                 if( !  CHECK_FLAG(flags, SKIP_TYPE)
                     && array_size >= i )
                 {
@@ -832,8 +857,6 @@ bitbuffer_unpack(
                     return i;
                 }
                 else array_size = dst[array_size].zu;
-                // if(!CHECK_FLAG(flags, SKIP_TYPE))
-                //     array_size = dst[array_size].zu;
                 goto read_into_array;
             case 0:
                 goto read_into_array;
@@ -859,6 +882,8 @@ bitbuffer_unpack(
             for(ii=0; ii < array_max; ii++)
                 dst[i].buff[ii] = 
                         bitbuffer_read(self, 8, false);
+            if(array_max < 8)
+                dst[i].buff[ii] = 0;
             goto check_wildcard;
         }
 

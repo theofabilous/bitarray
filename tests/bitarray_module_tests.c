@@ -99,30 +99,44 @@ void map_test()
 
 void unpack_test()
 {
-	const char* header_path = "../resources/avi_header.avi";
-	// char riff_fourcc[5];
-	// char avi_fourcc[5];
+	const char* header_path = "../resources/mp2_test_.avi";
 	BitBuffer* buff = new_BitBuffer_from_file(header_path, false);
-	BField receiver[19] = {
-		b_str_field({0,0,0,0,0}),
-		b_field_default,
-		b_str_field({0,0,0,0,0}),
-		b_str_field({0,0,0,0,0}),
-		b_field_default,
-		b_str_field({0,0,0,0,0}),
-		b_str_field({0,0,0,0,0}),
-		b_field_default
-	};
-	const char* fmt = "c<4>, u32, c<4>*2, u32, c<4>*2, u32, u32*10, ![128]";
-	size_t ret = bitbuffer_unpack(buff, fmt, receiver);
+	BField receiver[18];
+	const char* header_fmt = "b<4>, u32, b<4>*2, u32, b<4>*2, u32, u32*10, ![B16]";
+	size_t ret = bitbuffer_unpack(buff, header_fmt, receiver);
+
 	printf("Ret: %zu\n", ret);
-	// receiver[3].istr[5] = '\0';
-	printf("%s, %zu, %s\n", receiver[0].str, receiver[1].u32, receiver[2].str);
-	printf("%s, %zu, %s, %s\n", receiver[3].str, receiver[4].u32, receiver[5].str,
-		receiver[6].str);
+	printf("%s, %zu, %s\n", receiver[0].buff, receiver[1].u32, receiver[2].buff);
+	printf("%s, %zu, %s, %s\n", receiver[3].buff, receiver[4].u32, receiver[5].buff,
+		receiver[6].buff);
 	for(int i=7; i<18; i++)
 		printf("(%d) %zu\n", i, receiver[i].u32);
 	printf("POS: %zu\n", buff->pos >> 3);
+
+	bitreceiver_clear(receiver, 18);
+	const char* strl_fmt =
+		"b<4>, $u32%2, u8[$1]";
+	ret = bitbuffer_unpack(buff, strl_fmt, receiver);
+	printf("POS: %zu\n", buff->pos >> 3);
+	printf("%s, size of buff = %zu\n", receiver[0].buff, receiver[1].size);
+	char c;
+	for(int i=0; i<receiver[1].size; i++)
+	{
+		c = receiver[1].c_ptr[i];
+		putchar( (c) ? c : '.' );
+	}
+		
+	putchar('\n');
+
+	free(receiver[1].u8_ptr);
+
+	bitreceiver_clear(receiver, 18);
+
+	ret = bitbuffer_unpack(buff,
+		"b<4>, $u32%2, ![$1]", receiver);
+	printf("%s\n", receiver[0].buff);
+
+
 	del_BitBuffer(buff);
 }
 
