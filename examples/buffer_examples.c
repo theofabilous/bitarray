@@ -48,6 +48,25 @@ typedef struct AviFile
     AviList idx_data;
 } AviFile;
 
+
+void check_movi(CallbackCtx* ctx)
+{
+    char* list_type = ctx->dst[2].str_buff;
+    fourcc_t stream_type;
+    if(strcmp(list_type, "movi") == 0)
+    {
+        unpack_cb_stop(ctx, false);
+        *((bool*) ctx->opaque) = true;
+        bitbuffer_read_fourcc(ctx->self, stream_type);
+        if(strcmp(stream_type, "00dc") == 0)
+            printf("Found video frame: %s\n", stream_type);
+        else if(strcmp(stream_type, "01wb") == 0)
+            printf("Found audio frame: %s\n", stream_type);
+        else
+            printf("File corrupt! Expected frame fourcc code\n");
+    }
+}
+
 int
 parse_avi_file(const char* path)
 {
@@ -76,31 +95,19 @@ parse_avi_file(const char* path)
         u32_field(&video.file_size),
         fourcc_field(video.AVI_)
     };
-    const char* list_skip_fmt   = "![B4], $u32%2, ![B$1]";
-    const char* list_peek_fmt   = "c<4>, u32, c<4>";
 
-    bitbuffer_unpack(buff, "s<4>, &u32, s<4>", dst);
+    bitbuffer_unpack(buff, "s<4>, &u32, s<4>", dst, NULL, NULL);
     printf("%s, %zu, %s\n", video.RIFF, video.file_size, video.AVI_);
 
-    for(;;)
-    {
-        bitbuffer_unpeek(buff, list_peek_fmt, dst);
-        if(    strcmp(dst[0].str_buff, "LIST") != 0
-            && strcmp(dst[0].str_buff, "JUNK") != 0  )
-        {
-            printf("Avi file corrupt!\n");
-            goto end;
-        }
-        else if(strcmp(dst[2].str_buff, "movi") == 0)
-            break;
-        else
-            bitbuffer_unpack(buff, list_skip_fmt, dst);
-    }
+    bool found_movi = false;
 
-    printf("Found movi! List fourcc: %s, List size: %zu,"
-           "List type: %s, Ofs: %zu\n", 
-           dst[0].buff, dst[1].zu, dst[2].buff,
-           buff->pos >> 3);
+    while(!found_movi)
+        bitbuffer_unpack(
+            buff, 
+            "c<4>, u32%2, c<4>, f(), ![B&2-B4]", 
+            dst,
+            check_movi,
+            &found_movi);
 
     end:
     free_BitArray_buffer(&arr);

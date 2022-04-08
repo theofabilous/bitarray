@@ -42,6 +42,23 @@ extern const uint8_t BITBUFFER_MASK_ERR;
 extern const uint8_t BYTE_ALIGN_FLOOR;
 extern const uint8_t BYTE_ALIGN_CEIL;
 
+typedef struct BitBuffer
+{
+	uint8_t flags;
+    size_t pos;
+    union
+    {
+        struct 
+        {
+            int file_no;
+	        struct stat file_info;
+        };
+        BitArray* source;
+    };
+	// char* buffer;
+    uint8_t *buffer;
+} BitBuffer;
+
 typedef struct BField BField;
 
 struct BField
@@ -84,7 +101,46 @@ struct BField
     };
 };
 
-typedef BField BitReceiver[];
+typedef struct CallbackCtx
+{
+    struct private_data
+    {
+        int size;
+        uint32_t global_flags;
+        struct private_output
+        {
+            uint32_t flags;
+        } out[10];
+    } priv;
+    size_t env_size;
+    size_t index;
+    BField input;
+    BField output;
+    BField* env;
+    BField* dst;
+    BitBuffer* self;
+    void* opaque;
+} CallbackCtx;
+
+typedef void (*unpack_cb_t)(CallbackCtx* ctx);
+
+BField*
+unpack_cb_get_input(CallbackCtx* ctx);
+
+void
+unpack_cb_stop(CallbackCtx* ctx, bool rewind);
+
+void
+unpack_cb_skip(CallbackCtx* ctx, int64_t skip_len);
+
+void
+unpack_cb_return_fmt(CallbackCtx* ctx, const char* fmt, ...);
+
+void
+unpack_cb_set_env(CallbackCtx* ctx, int i, const char* fmt, ...);
+
+// void
+// unpack_cb_
 
 static inline void
 bitreceiver_clear(BField* r, size_t size)
@@ -93,38 +149,7 @@ bitreceiver_clear(BField* r, size_t size)
         *(r++) = (BField) {0, 0, 0, {NULL}};
 }
 
-typedef struct BitBuffer
-{
-	uint8_t flags;
-    size_t pos;
-    union
-    {
-        struct 
-        {
-            int file_no;
-	        struct stat file_info;
-        };
-        BitArray* source;
-    };
-	// char* buffer;
-    uint8_t *buffer;
-} BitBuffer;
 
-
-typedef struct _ReadTarget
-{
-    uint8_t readSize;
-    union
-    {
-        void* raw;
-        uint8_t* t8;
-        uint16_t* t16;
-        uint32_t* t32;
-        uint64_t* t64;
-    };
-} ReadTarget;
-
-typedef ReadTarget ReadSequence[];
 
 static inline void bitbuffer_set_flag(BitBuffer* self, uint8_t flag)
 {
@@ -223,13 +248,21 @@ BitBuffer* new_BitBuffer_from_file(const char *path, bool write);
 
 BitBuffer* new_BitBuffer_from_BitArray(BitArray* source);
 
-size_t bitbuffer_unpack(BitBuffer* self, const char* fmt, BitReceiver dst);
+size_t 
+bitbuffer_unpack(
+    BitBuffer* self, 
+    const char* fmt, 
+    BField* dst, 
+    unpack_cb_t cb,
+    void* user);
 
-size_t bitbuffer_unpeek(BitBuffer* self, const char* fmt, BitReceiver dst);
-
-void bitbuffer_read_into(BitBuffer* self, int size, ReadTarget sequence[]);
-
-void bitbuffer_read_into_uint32(BitBuffer* self, int size, uint32_t* sequence[]);
+size_t 
+bitbuffer_unpeek(
+    BitBuffer* self, 
+    const char* fmt, 
+    BField* dst, 
+    unpack_cb_t cb,
+    void *user);
 
 bool bitbuffer_flush(BitBuffer* self);
 

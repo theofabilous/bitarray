@@ -400,40 +400,6 @@ bitbuffer_read_fmt(const char *format, ...)
     return true;
 }
 
-void
-bitbuffer_read_into(BitBuffer* self, int size, ReadSequence sequence)
-{
-    ReadTarget* t;
-    for(int i=0; i<size; i++)
-    {
-        t = &(sequence[i]);
-        switch(t->readSize)
-        {
-            case 1:
-                *(t->t8) = bitbuffer_read_byte(self);
-                break;
-            case 2:
-                *(t->t16) = bitbuffer_read_uint16(self);
-                break;
-            case 4:
-                *(t->t32) = bitbuffer_read_uint32(self);
-                break;
-            case 8:
-                *(t->t64) = bitbuffer_read_uint64(self);
-                break;
-            default:
-                break;
-        }
-    }
-}
-
-void 
-bitbuffer_read_into_uint32(BitBuffer* self, int size, uint32_t* sequence[])
-{
-    for(int i=0; i<size; i++)
-        *(sequence[i]) = bitbuffer_read_uint32(self);
-}
-
 BitBuffer* new_BitBuffer_from_file(const char *path, bool write)
 {
 	int file_no;
