@@ -76,11 +76,10 @@ parse_avi_file(const char* path)
         u32_field(&video.file_size),
         fourcc_field(video.AVI_)
     };
-    const char* header_fmt      = "s<4>, &u32, s<4>";
     const char* list_skip_fmt   = "![B4], $u32%2, ![B$1]";
     const char* list_peek_fmt   = "c<4>, u32, c<4>";
 
-    bitbuffer_unpack(buff, header_fmt, dst);
+    bitbuffer_unpack(buff, "s<4>, &u32, s<4>", dst);
     printf("%s, %zu, %s\n", video.RIFF, video.file_size, video.AVI_);
 
     for(;;)
