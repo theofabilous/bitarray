@@ -5,6 +5,7 @@ uint8_t Map_Bits      = 0b00000000;
 uint8_t Keep_Bits     = 0b00000001;
 uint8_t Ignore_Bits   = 0b00000010;
 uint8_t Callback_Bits = 0b00000100;
+uint8_t Custom_Bits = 	0b00001000;
 
 
 uint8_t MAPNODE_HAS_RIGHT =     0b00000001;
@@ -13,6 +14,7 @@ uint8_t MAPNODE_MAPPED =        0b00000100;
 uint8_t MAPNODE_KEEP_TYPE =     0b00001000;
 uint8_t MAPNODE_IGNORE_TYPE =   0b00010000;
 uint8_t MAPNODE_CALLBACK_TYPE = 0b00100000;
+uint8_t MAPNODE_OPAQUE_TYPE =	0b01000000;
 uint8_t MAPNODE_ROOT =          0b10000000;
 
 MapNode* new_root_node()
@@ -139,10 +141,75 @@ build_binary_map(
 							break;
 						case 4:
 							mapnode_set_flag(tree->curr, MAPNODE_CALLBACK_TYPE);
+						case 8:
+							mapnode_set_flag(tree->curr, MAPNODE_OPAQUE_TYPE);
 						case 0:
 						default:
 							break;
 					}
+					_continue = false; // break the loop
+					break;
+				default:
+					goto map_err; // If not '1', '0' or '\0' format error
+			}
+		}
+	}
+	tree->curr = tree->root;
+	return tree;
+
+	map_err:
+	tree->curr = tree->root;
+	del_MapTreeNav(tree);
+	return NULL;
+}
+
+VlcTable* 
+build_vlc_table(
+	VlcEntry entries[], 
+	size_t num_entries)
+{
+	VlcTable* tree = new_MapTreeNav();
+	if(tree == NULL) return tree;
+	VlcEntry* entry;
+	bool _continue;
+	// For every entry in BinaryMap...
+	for(size_t i=0; i<num_entries; i++)
+	{
+		_continue = true;
+		// First, set current to root
+		tree->curr = tree->root;
+		// Get the entry pointer
+		entry = &(entries[i]);
+		
+		// If the "key" is the empty string, error
+		if(!(entry->k[0]))
+			goto map_err;
+		// For every character in "key"
+		for(size_t j=0;_continue;j++)
+		{
+			switch(entry->k[j])
+			{
+				case '0':
+					if(!mapnode_has_left(tree->curr)) // If no left node yet
+					{
+						// Create a new left child and error if memory error
+						if(!new_child(tree->curr, 0)) goto map_err;
+					}
+					tree->curr = tree->curr->children[0]; // set current to new child
+					break;
+				case '1': 
+					if(!mapnode_has_right(tree->curr)) // If no right node yet
+					{
+						// Create a new right child and error if memory error
+						if(!new_child(tree->curr, 1)) goto map_err;
+					}
+					tree->curr = tree->curr->children[1]; // set current to new child
+					break;
+				case '\0': // If null char (end of string)
+					mapnode_set_mapped(tree->curr); // set current node as being mapped
+					// tree->curr->result = entry->v; // set resulting map to corresponding "value"
+					tree->curr->value = entry->value;
+					mapnode_set_flag(tree->curr, MAPNODE_OPAQUE_TYPE);
 					_continue = false; // break the loop
 					break;
 				default:

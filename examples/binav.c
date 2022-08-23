@@ -29,9 +29,10 @@
 #include "bitarray.h"
 #include "bitbuffer.h"
 
+#include "../resources/mpeg2_vlcs.h"
 
 #define USE_ENCODER 0
-#define USE_CURSES 0
+#define USE_CURSES 1
 #define EXPORT_MVS 0
 
 #define AV_LOG(pred, msg, lbl) \
@@ -58,7 +59,212 @@ do { \
 	endwin(); \
 	clear()
 
+#define decode_dct_type(structure, pred, mb_flags)      \
+    (( ((structure) == 3) && ((pred) == 0) &&           \
+        (mb_flags & (MB_INTRA | MB_PTRN)) ) ? 1 : 0)
+
 IMPORT_BITARRAY_MODULE_AS(Bits);
+
+typedef struct FrameCtx
+{
+    size_t save;
+    uint16_t hsize, vsize;
+    uint8_t fcode[2][2];
+    uint8_t picture_coding;
+    uint8_t picture_structure;
+    uint8_t frame_pred_frame_dct;
+    bool intra_vlc;
+    bool conceal_mvs;
+    uint8_t mb_flags;
+    VlcTable* mb_addr_vlcs;
+    VlcTable* i_mb_mode_vlcs;
+    VlcTable* p_mb_mode_vlcs;
+    VlcTable* motion_vlcs;
+    VlcTable* cbp_vlcs;
+    VlcTable* dct_0_vlcs;
+    VlcTable* dct_1_vlcs;
+    VlcTable* luma_vlcs;
+    VlcTable* chroma_vlcs;
+} FrameCtx;
+
+void
+parse_mv(BField* dst, BitBuffer* buff, FrameCtx *ctx)
+{
+    int mv_x[] = {0, 0};
+    int mv_y[] = {0, 0};
+    VlcOutput vlc;
+    if(bitbuffer_peek_bit(buff))
+    {
+        mv_x[0] = 0;
+        buff->pos++;
+    }
+    else
+    {
+        vlc = bitbuffer_get_vlc(buff, ctx->motion_vlcs);
+        mv_x[0] = (int) vlc.entry->value;
+		if(bitbuffer_peek_bit(buff))
+		{
+			mv_x[0] = -mv_x[0];
+			bitbuffer_overwrite_bit(buff, false);
+		}
+		else
+		{
+			bitbuffer_overwrite_bit(buff, true);
+		}
+    }
+
+    if(mv_x[0] != 0 && ctx->fcode[0][0] != 1)
+        mv_x[1] = bitbuffer_read(buff, ctx->fcode[0][0]-1, false);
+    
+    if(bitbuffer_peek_bit(buff))
+    {
+        mv_y[0] = 0;
+        buff->pos++;
+    }
+    else
+    {
+        vlc = bitbuffer_get_vlc(buff, ctx->motion_vlcs);
+        mv_y[0] = (int) vlc.entry->value;
+        if(bitbuffer_peek_bit(buff))
+		{
+			mv_y[0] = -mv_y[0];
+			bitbuffer_overwrite_bit(buff, false);
+		}
+		else
+		{
+			bitbuffer_overwrite_bit(buff, true);
+		}
+    }
+    if(mv_y[0] != 0 && ctx->fcode[0][1] != 1)
+        mv_y[1] = bitbuffer_read(buff, ctx->fcode[0][1]-1, false);
+}
+
+
+bool
+parse_slice(BField* dst, BitBuffer* buff, FrameCtx *ctx)
+{
+    uint8_t slice_qscale = bitbuffer_read(buff, 5, false);
+    int mb_index = 0;
+    if(bitbuffer_peek_bit(buff))
+    {
+        bitbuffer_skip(buff, 9);
+        while(bitbuffer_peek_bit(buff))
+            bitbuffer_skip(buff, 9);
+    }
+    bitbuffer_skip(buff, 1);
+    VlcOutput vlc;
+    // uint8_t flags;
+    bool dct_type;
+    VlcTable* dct_table;
+    uint8_t eob_val, eob_len, luma_chroma_size, cbp, motion_type;
+    do {
+        vlc = bitbuffer_get_vlc(buff, ctx->mb_addr_vlcs);
+
+        if(vlc.entry == NULL)
+            return false;
+
+        while(vlc.entry->value == 34)
+        {
+			// printf("MB INDEX: %d\n", mb_index);
+            mb_index += 33;
+            vlc = bitbuffer_get_vlc(buff, ctx->mb_addr_vlcs);
+        }
+        mb_index += vlc.entry->value;
+		// printf("MB INDEX: %d\n", mb_index);
+		ctx->picture_coding = 0b010;
+        switch(ctx->picture_coding)
+        {
+            case 0b001:
+                vlc = bitbuffer_get_vlc(buff, ctx->i_mb_mode_vlcs);
+                ctx->mb_flags = I_FRAME_MODE_MAPS[vlc.entry->value];
+                break;
+            case 0b010:
+                vlc = bitbuffer_get_vlc(buff, ctx->p_mb_mode_vlcs);
+                ctx->mb_flags = P_FRAME_MODE_MAPS[vlc.entry->value];
+                break;
+            case 0b011:
+                // printf("B-frames not supported\n");
+            default:
+                return false;
+        }
+
+        if(ctx->mb_flags & (MB_FW | MB_BW))
+        {
+            if( (   ctx->picture_structure == 3
+                &&  !ctx->frame_pred_frame_dct   )
+                || ctx->picture_structure != 3      )
+                motion_type = bitbuffer_read(buff, 2, false);
+        }
+
+        if( decode_dct_type(ctx->picture_structure, ctx->frame_pred_frame_dct,
+            ctx->mb_flags) )
+            dct_type = bitbuffer_read_bit(buff);
+
+        if(ctx->mb_flags & MB_QUANT)
+            bitbuffer_skip(buff, 5);
+
+        if(     ctx->mb_flags & MB_FW 
+            || ((ctx->mb_flags & MB_INTRA) && ctx->conceal_mvs) )
+            parse_mv(dst, buff, ctx);
+
+        if((ctx->mb_flags & MB_INTRA) && ctx->conceal_mvs)
+            bitbuffer_skip(buff, 1);
+
+        if(ctx->mb_flags & MB_PTRN)
+        {
+            vlc = bitbuffer_get_vlc(buff, ctx->cbp_vlcs);
+            cbp = vlc.entry->value;
+        }
+        else if(ctx->mb_flags & MB_INTRA)
+            cbp = 0b111111;
+        else
+            cbp = 0;
+
+        if(ctx->mb_flags & MB_INTRA && ctx->intra_vlc)
+        {
+            dct_table = ctx->dct_1_vlcs;
+            eob_val = 0b0110;
+            eob_len = 4;
+        }
+        else
+        {
+            dct_table = ctx->dct_0_vlcs;
+            eob_val = 0b10;
+            eob_len = 2;            
+        }
+
+        for(uint8_t i = 1, j=0;j<6; i<<=1, j++)
+        {
+            if(!(cbp & i)) continue;
+            if(ctx->mb_flags & MB_INTRA)
+            {
+                vlc = bitbuffer_get_vlc(
+                    buff, (j<4) ? ctx->luma_vlcs : ctx->chroma_vlcs
+                );
+                luma_chroma_size = vlc.entry->value;
+                if(luma_chroma_size)
+                    bitbuffer_skip(buff, luma_chroma_size);
+            }
+            else
+            {
+                if(eob_val == 0b10 && bitbuffer_peek_bit(buff))
+                    bitbuffer_skip(buff, 2);
+                else
+                {
+                    vlc = bitbuffer_get_vlc(buff, dct_table);
+                    if(vlc.entry->value == 1)
+                        bitbuffer_skip(buff, 18);
+                }
+            }
+            while( ( vlc = bitbuffer_get_vlc(buff, dct_table) )
+                    .entry->value != 2 )
+            {
+                if(vlc.entry->value == 1)
+                    bitbuffer_skip(buff, 18);
+            }
+        }
+    } while(mb_index != ctx->vsize/16);
+}
 
 
 typedef struct MpegFrame MpegFrame;
@@ -66,6 +272,7 @@ struct MpegFrame
 {
     uint8_t* dataStart;
     size_t frameSize;
+	size_t bytePos;
 };
 
 typedef struct MpegVideo MpegVideo;
@@ -115,6 +322,7 @@ parse_frame(BitBuffer* buff, bool *audio)
 		skip_size = bitbuffer_read_uint32(buff);
 		frame->dataStart = &(buff->source->data[buff->pos>>3]);
 		frame->frameSize = skip_size;
+		frame->bytePos = buff->pos >> 3;
 		if(skip_size & 1)
 			frame->frameSize++;
 		bitbuffer_skip_bytes(buff, frame->frameSize);
@@ -169,20 +377,12 @@ parse_avi_header(BitBuffer* buff, MpegVideo* vid)
 
 	bitbuffer_seek_byte(buff, 32, 0);
 
-	#define HEADER_DATA time_delay, avi_data_rate, padding_size, \
-		param_flags, num_frames, num_prv, num_streams, \
-		buffer_size, width, height, time_scale, data_rate, \
-		start_time, chunk_size_ts
-	#define HEADER_DATA_REF &time_delay, &avi_data_rate, &padding_size, \
-		&param_flags, &num_frames, &num_prv, &num_streams, \
-		&buffer_size, &width, &height, &time_scale, &data_rate, \
-		&start_time, &chunk_size_ts
-	uint32_t HEADER_DATA;
-	bitbuffer_read_into_uint32(buff, 14, (uint32_t*[]) {HEADER_DATA_REF});
-	vid->numFrames = num_frames;
-	vid->w = width;
-	vid->h = height;
-	vid->time_delay = time_delay;
+	BField receiver[14];
+	bitbuffer_unpack(buff, "u32*14", receiver);
+	vid->numFrames = receiver[4].u32;
+	vid->w = receiver[8].u32;
+	vid->h = receiver[9].u32;
+	vid->time_delay = receiver[0].u32;
 
 	#undef HEADER_DATA
 	#undef HEADER_DATA_REF
@@ -196,7 +396,7 @@ parse_video_from_bits(const char* path)
 	MpegVideo vid;
 	char fourcc[5];
 
-	if(!init_Bitarray_from_file(&arr, path))
+	if(!init_BitArray_from_file(&arr, path))
 		return (MpegVideo) {0,0,0,0,0,0,NULL,NULL};
 
     BitBuffer* buff = new_BitBuffer_from_BitArray(&arr);
@@ -358,8 +558,12 @@ play_parsed_video(const char *path, int num_frames_play, const char* log)
 	AVDictionary* opts = NULL;
 	AVCodec *codec;
     AVCodecContext *ctx;
+
+#if USE_ENCODER > 0
 	AVCodec *enc_codec;
 	AVCodecContext *enc_ctx;
+#endif
+	
 	AVBSFContext* bsf_ctx;
     AVFrame *picture, *other;
 	SDL_Event event;
@@ -368,11 +572,33 @@ play_parsed_video(const char *path, int num_frames_play, const char* log)
 	SDL_Texture *texture;
 	struct SwsContext *sws_ctx = NULL;
 
+	FrameCtx fctx;
+	for(int i=0; i<34; i++)
+        MB_ADDR_VLCS[i].skip = i+1;
+    fctx.mb_addr_vlcs = build_vlc_table(MB_ADDR_VLCS, 34);
+    fctx.i_mb_mode_vlcs = build_vlc_table(I_FRAME_MODE_VLCS, 2);
+    fctx.p_mb_mode_vlcs = build_vlc_table(P_FRAME_MODE_VLCS, 7);
+    fctx.motion_vlcs = build_vlc_table(MOTION_CODE_VLCS, 16);
+    fctx.cbp_vlcs = build_vlc_table(CBP_VLCS, 64);
+    fctx.dct_0_vlcs = build_vlc_table(DCT_0_VLCS, 224);
+    fctx.dct_1_vlcs = build_vlc_table(DCT_1_VLCS, 224);
+    fctx.luma_vlcs = build_vlc_table(DCT_LUMA_VLCS, 12);
+    fctx.chroma_vlcs = build_vlc_table(DCT_CHROMA_VLCS, 12);
+	BField dst[100];
+
 	FILE *f = fopen(log, "wb");
 	if(f==NULL)
 		return;
 
 	MpegVideo vid = parse_video_from_bits(path);
+
+	fctx.hsize = vid.h;
+	fctx.vsize = vid.w;
+
+	BitArray arr;
+	init_BitArray_from_buffer(&arr, vid.fileData, vid.fileSize, vid.fileSize << 3);
+    BitBuffer* buff = new_BitBuffer_from_BitArray(&arr);
+
 	if(vid.fileSize == 0)
 		goto free_vid;
 
@@ -517,6 +743,7 @@ play_parsed_video(const char *path, int num_frames_play, const char* log)
 #endif
 	char c = ERR, temp;
 	int played=0;
+	uint8_t slice_index;
 	for(uint32_t i=0; played<num_frames_play; 
 		i = ((i+1)%vid.numFrames), played++)
 	{
@@ -562,10 +789,71 @@ play_parsed_video(const char *path, int num_frames_play, const char* log)
 				LOG_RET(f, codec_send);
 				LOG_RET(f, codec_receive);
 				break;
+			case 's':
+				#define next_start_code(buff)                           \
+				while(bitbuffer_peek(buff, 24, false) != 0x000001)      \
+							buff->pos++;                                \
+				((void) 0)
+
+				bitbuffer_seek_byte(buff, vid.frames[i]->bytePos, 0);
+				// goto case_e;
+				for(;;)
+				{
+					bitbuffer_skip_bytes(buff, 3);
+					switch( bitbuffer_read_byte(buff) )
+					{
+						default:
+						case 0xB3:
+						case 0xB8:
+							goto case_e;
+							break;
+						case 0x00:
+							bitbuffer_skip(buff, 10+3+16 + 1+3 + 1);
+							break;
+						case 0xB5:
+							switch( bitbuffer_read(buff, 4, false) )
+							{ 
+								case 0b0001:
+									bitbuffer_skip(buff, 8 + 1 + (2*3) + 12 + 1 + 8 + 1 + 2 + 5);
+									break;
+								default:
+								case 0b1000:
+									bitbuffer_unpack(buff,
+                            			".u4*4, .u2, .u2, b*10", dst);
+									fctx.fcode[0][0] = dst[0].u8;
+									fctx.fcode[0][1] = dst[1].u8;
+									fctx.fcode[1][0] = dst[2].u8;
+									fctx.fcode[1][1] = dst[3].u8;
+									fctx.picture_structure = dst[5].u8;
+									fctx.frame_pred_frame_dct = dst[7].bl;
+									fctx.conceal_mvs = dst[8].bl;
+									fctx.intra_vlc = dst[10].bl;
+									if(dst[15].bl)
+										bitbuffer_skip(buff, 20);
+									for(;;)
+									{
+										next_start_code(buff);
+										bitbuffer_skip_bytes(buff, 3);
+										slice_index = bitbuffer_read_byte(buff);
+										// printf("SLICE IDX: %hhu\n", slice_index);
+										parse_slice(dst, buff, &fctx);
+										if(slice_index == fctx.hsize/16)
+											break;	
+									}
+									// bitbuffer_overwrite(buff, 0b10011001, 8);
+									goto case_e;
+							}
+							break;
+					}
+					next_start_code(buff);
+				}
+				goto case_e;
+				// break;
 			case 'p':
 				i = rand() % (vid.numFrames-1);
 				c = 'e';
 			default:
+			case_e:
 			case 'e':
 				mpeg_parse_packet(&vid, i);
 				codec_send = avcodec_send_packet(ctx, vid.pkt);
@@ -583,6 +871,7 @@ play_parsed_video(const char *path, int num_frames_play, const char* log)
 		if(event.type == SDL_QUIT)
 			goto finish;
 		SDL_Delay(25);
+		slice_index = 0;
 	}
 
 	finish:

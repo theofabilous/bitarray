@@ -8,7 +8,7 @@ const char* video_path = "../resources/mp2_test_.avi";
 void avi_header_test()
 {
 	BitArray bits;
-	if(!init_Bitarray_from_file(&bits, header_path))
+	if(!init_BitArray_from_file(&bits, header_path))
 		return;
 	bitarray_print_bytes(&bits, 0, -1);
 	free_BitArray_buffer(&bits);
@@ -17,7 +17,7 @@ void avi_header_test()
 void avi_full_file_test()
 {
 	BitArray bits;
-	if(!init_Bitarray_from_file(&bits, video_path))
+	if(!init_BitArray_from_file(&bits, video_path))
 		return;
 	bitarray_print_bytes(&bits, 9992-8, 12);
 	free_BitArray_buffer(&bits);

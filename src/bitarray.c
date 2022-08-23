@@ -44,8 +44,142 @@ bitarray_size_t BITARRAY_ERR_MASK = (BITARRAY_S_THREE << (BITARRAY_UMASK_AMT+2))
 #undef BITARRAY_LMASK
 #undef BITARRAY_MAX_BYTES
 
-/* -------- INSTANTIATING / DELETING --------- */
 
+#define DECL_BIT_PACKET_INIT(s) 	\
+	BitPacket_##s 					\
+	init_BitPacket_##s () 			\
+	{								\
+		BitPacket_##s pkt;			\
+		pkt.size = 0;				\
+		return pkt;					\
+	}
+
+DECL_BIT_PACKET_INIT(8)
+DECL_BIT_PACKET_INIT(16)
+DECL_BIT_PACKET_INIT(24)
+DECL_BIT_PACKET_INIT(32)
+DECL_BIT_PACKET_INIT(40)
+DECL_BIT_PACKET_INIT(48)
+DECL_BIT_PACKET_INIT(56)
+DECL_BIT_PACKET_INIT(64)
+DECL_BIT_PACKET_INIT(128)
+
+int64_t 
+buffer_append_w(
+	uint8_t* buff,
+	size_t curr_bits,
+	size_t buffer_size,
+	size_t val,
+	size_t w)
+{
+	if((curr_bits + w) > (buffer_size << 3))
+		return -1;
+	size_t byte_w = _byte_size(w);
+	size_t n_bytes = _byte_size(curr_bits);
+	uint8_t fill = curr_bits & 0b111;
+	uint8_t remaining = 8-fill;
+	int64_t new_size = curr_bits;
+	if(fill && w <= remaining)
+	{
+		buff[n_bytes-1] |= val << (remaining - w);
+		new_size += w;
+	}
+	else
+	{
+		if(fill)
+		{
+			uint8_t shifted_val = val >> (w - remaining);
+			buff[n_bytes-1] |= shifted_val;
+			new_size += remaining;
+			w -= remaining;
+			val &= ((1 << w) - 1);
+		}
+		size_t mask = 1 << (w-1);
+		new_size += w;
+		for(size_t i=new_size-w;i<new_size;i++, mask >>= 1)
+			if(val & mask)
+				buff[i >> 3] |= (1 << (7-(i & 0b111)));
+	}
+	return new_size;
+}
+
+
+bool 
+buffer_set_bit(
+	uint8_t* buffer,
+	size_t buffer_size,
+	bool bit,
+	size_t i)
+{
+	if(i >= buffer_size)
+		return false;
+	if(bit)
+		buffer[i >> 3] |= (1 << (7-(i & 0b111)));
+	else
+		buffer[i >> 3] &= ~(1 << (7-(i & 0b111)));
+	return true;
+}
+
+bool 
+buffer_get_bit(
+	uint8_t* buffer,
+	size_t buffer_size,
+	size_t i)
+{
+	if(i >= buffer_size)
+		return false;
+	return ( buffer[i >> 3] & (1 << (7-(i & 0b111))) ) ? true : false;
+}
+
+size_t 
+buffer_get_slice(
+	uint8_t* buffer,
+	size_t buffer_size, 
+	size_t i, 
+	size_t j)
+{
+	if(j > i && j <= (buffer_size << 3) && j-i <= 64)
+	{
+		size_t val = 0;
+		for(size_t mask=1; i<j; i++, mask <<= 1)
+			if(buffer[i >> 3] & (1 << (7-(i & 0b111))))
+				val |= mask;
+		return val;
+	}
+	else return -1;
+}
+
+bool 
+buffer_print_bits(
+	uint8_t* buffer,
+	size_t buffer_size,  
+	size_t i, 
+	int64_t len)
+{
+	size_t max = buffer_size << 3;
+	len = (len < 0) ? (max+1+len) : len;
+	if((i + len ) > max) return false;
+	for(;i<max && len; i++, len--)
+		putchar(buffer_get_bit(buffer, buffer_size, i) ? '1' : '0');
+	putchar('\n');
+	return true;
+}
+
+bool 
+buffer_print_bytes(
+	uint8_t* buffer,
+	size_t buffer_size,  
+	size_t i, 
+	int64_t len)
+{
+	len = (len < 0) ? (buffer_size+1+len) : len;
+	for(;i<buffer_size && len; i++, len--)
+		putchar(buffer[i]);
+	putchar('\n');	
+}
+
+
+/* -------- INSTANTIATING / DELETING --------- */
 
 bool 
 init_BitArray(
@@ -67,6 +201,20 @@ init_BitArray(
 	bitarray_set_allocator_size(obj, 16);
 
 	return true;
+}
+
+void
+init_BitArray_from_buffer(
+	BitArray* obj,
+	uint8_t* buffer,
+	size_t buffer_size,
+	size_t num_bits)
+{
+	obj->data = buffer;
+	_bitarray_set_size(obj, num_bits);
+	// _bitarray_set_extra_bytes(obj, buffer_size - (num_bits << 3));
+	_bitarray_set_extra_bytes(obj, buffer_size - (num_bits >> 3));
+	bitarray_set_allocator_size(obj, 16);
 }
 
 BitArray* 
@@ -97,7 +245,7 @@ new_BitArray(
 }
 
 bool 
-init_Bitarray_from_file(
+init_BitArray_from_file(
 	BitArray* obj, 
 	const char* path)
 {
@@ -123,7 +271,7 @@ init_Bitarray_from_file(
 }
 
 BitArray* 
-new_Bitarray_from_file(
+new_BitArray_from_file(
 	const char* path)
 {
 	BitArray* obj = (BitArray *) malloc(sizeof(BitArray));
@@ -264,6 +412,8 @@ bitarray_set(
 		self->data[byte_index] &= masker;
 	}
 }
+
+
 
 void 
 bitarray_unset(
@@ -488,6 +638,8 @@ bitarray_append(
 
 }
 
+
+
 bool 
 bitarray_append_str(
 	BitArray *self, 
@@ -557,7 +709,7 @@ bitarray_get_slice(
 	{
 		size_t val = 0;
 		for(size_t mask=1; i<j; i++, mask <<= 1)
-			if(_bitarray_get(self, i++))
+			if(_bitarray_get(self, i++)) // probably shouldn't be i++ but just i
 				val |= mask;
 		return val;
 	}
@@ -821,6 +973,7 @@ bitarray_map_into(
 					break;
 				case 0:       // regular
 					bitarray_append_str(other, nav->curr->result);
+				case 0b1000000: // opaque
 				case 0b10000: // ignore
 					break;
 			}

@@ -14,6 +14,7 @@ extern uint8_t Map_Bits;
 extern uint8_t Keep_Bits;
 extern uint8_t Ignore_Bits;
 extern uint8_t Callback_Bits;
+extern uint8_t Custom_Bits;
 
 typedef struct BinaryMapContext
 {
@@ -24,6 +25,8 @@ typedef struct BinaryMapContext
 } BinaryMapContext;
 
 typedef void (*binary_map_callback_t)(BinaryMapContext* ctx);
+typedef void (*bitstring_callback_t)(char* bits);
+typedef void (*signal_callback_t)(uint32_t sig);
 
 typedef struct BinaryMapEntry
 {
@@ -32,12 +35,18 @@ typedef struct BinaryMapEntry
 	{
 		const char *v;
 		uint32_t    skip;
+		uint32_t    value;
 		void       *raw;
 		binary_map_callback_t cb;
+		bitstring_callback_t str_cb;
+		signal_callback_t sig_cb;
 	};
 	uint8_t flags;
 	
 } BinaryMapEntry;
+
+typedef struct BinaryMapEntry VlcEntry;
+
 
 extern uint8_t MAPNODE_HAS_RIGHT;
 extern uint8_t MAPNODE_HAS_LEFT;
@@ -46,26 +55,36 @@ extern uint8_t MAPNODE_ROOT;
 extern uint8_t MAPNODE_KEEP_TYPE;
 extern uint8_t MAPNODE_IGNORE_TYPE;
 extern uint8_t MAPNODE_CALLBACK_TYPE;
+extern uint8_t MAPNODE_OPAQUE_TYPE;
 
-typedef struct _MapNode
+typedef struct MapNode
 {
 	uint8_t flags;
-	struct _MapNode* children[2];
+	struct MapNode* children[2];
 	union 
 	{
 		const char *result;
 		uint32_t    skip;
+		uint32_t 	value;
 		void       *raw;
 		binary_map_callback_t cb;
 	};
 } MapNode;
 
-typedef struct _MapTreeNav
+typedef struct MapTreeNav
 {
 	MapNode* root;
 	size_t current_depth;
 	MapNode* curr;
 } MapTreeNav;
+
+typedef struct MapTreeNav VlcTable;
+
+typedef struct VlcOutput
+{
+	MapNode* entry;
+	char bits[100];
+} VlcOutput;
 
 static inline void 
 mapnode_set_root(MapNode* node)
@@ -130,6 +149,11 @@ bool del_MapTreeNav(MapTreeNav* tree);
 MapTreeNav* 
 build_binary_map(
 	BinaryMapEntry entries[], 
+	size_t num_entries);
+
+VlcTable* 
+build_vlc_table(
+	VlcEntry entries[], 
 	size_t num_entries);
 
 

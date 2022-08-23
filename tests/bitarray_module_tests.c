@@ -1,23 +1,7 @@
 #include "../src/bitarray.h"
 #include "../src/bitbuffer.h"
-// #include "binregex.h"
-#include "vlc/libvlc.h"
-#include "vlc/vlc.h"
-
 
 IMPORT_BITARRAY_MODULE_AS(Bits);
-
-
-void vlc_test()
-{
-	libvlc_instance_t * inst;
-	libvlc_media_player_t *mp;
-	libvlc_media_t *m;
-
-	/* Load the VLC engine */
-	// inst = libvlc_new (0, NULL);
-}
-
 
 void slice_test()
 {
@@ -85,8 +69,6 @@ void map_test()
 		}, 2
 		);
 	Bits.print_bits(&other, 0, -1);
-
-
 
 	free_BitArray_buffer(&other);
 	free_BitArray_buffer(&arr);
@@ -165,7 +147,7 @@ void mmap_test()
 	del_BitBuffer(buff);
 
 	BitArray arr;
-	if(!init_Bitarray_from_file(&arr, header_path))
+	if(!init_BitArray_from_file(&arr, header_path))
 	{
 		printf("err\n");
 		return;
@@ -198,19 +180,11 @@ void mmap_test()
 
 }
 
-// void test_func(char arr[], int size)
-// {
-// 	for(int i=0; i<size; i++)
-// 		printf("%c\n", arr[i]);
-// }
-
 int main()
 {
 	unpack_test();
-	// map_test();
-	// // test_func( ((char[]){'a', 'b', 'c'}),  3);
-	// mmap_test();
-	// slice_test();
-	// vlc_test();
+	map_test();
+	mmap_test();
+	slice_test();
 	return 0;
 }

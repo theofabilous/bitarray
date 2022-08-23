@@ -48,6 +48,46 @@ typedef struct BitArray
 	uint8_t *data;
 } BitArray;
 
+typedef struct BitPacket
+{
+	uint8_t size;
+	uint8_t* data;
+} BitPacket;
+
+#define buffer_to_bitpacket(buff) { buff[0], &(buff[1]) }
+
+#define DECL_BITPACKET(bit_size, buff_size) 	\
+	typedef struct BitPacket_##bit_size 		\
+	{											\
+		uint8_t size;							\
+		uint8_t data[buff_size];				\
+	} BitPacket_##bit_size
+
+DECL_BITPACKET(8, 1);
+DECL_BITPACKET(16, 2);
+DECL_BITPACKET(24, 3);
+DECL_BITPACKET(32, 4);
+DECL_BITPACKET(40, 5);
+DECL_BITPACKET(48, 6);
+DECL_BITPACKET(56, 7);
+DECL_BITPACKET(64, 8);
+DECL_BITPACKET(128, 16);
+
+#define DEF_BIT_PACKET_INIT(s) 		\
+	BitPacket_##s					\
+	init_BitPacket_##s ()			\
+
+DEF_BIT_PACKET_INIT(8);
+DEF_BIT_PACKET_INIT(16);
+DEF_BIT_PACKET_INIT(24);
+DEF_BIT_PACKET_INIT(32);
+DEF_BIT_PACKET_INIT(40);
+DEF_BIT_PACKET_INIT(48);
+DEF_BIT_PACKET_INIT(56);
+DEF_BIT_PACKET_INIT(64);
+DEF_BIT_PACKET_INIT(128);
+
+
 typedef struct BitArrayModule
 {
 	bitarray_size_t (*size)(BitArray *self);
@@ -102,6 +142,47 @@ extern const uint8_t STRIP_LSB;
 /* ------------------------------------------- */
 
 
+
+/* -------- BITPACKET --------- */
+
+bool 
+buffer_set_bit(
+	uint8_t* buffer,
+	size_t buffer_size,
+	bool bit,
+	size_t i);
+
+bool 
+buffer_get_bit(
+	uint8_t* buffer,
+	size_t buffer_size,
+	size_t i);
+
+int64_t 
+buffer_append_w(
+	uint8_t* buffer,
+	size_t curr_bits,
+	size_t buffer_size,
+	size_t val,
+	size_t width);
+
+bool 
+buffer_print_bits(
+	uint8_t* buffer,
+	size_t buffer_size,  
+	size_t i, 
+	int64_t len);
+
+bool 
+buffer_print_bytes(
+	uint8_t* buffer,
+	size_t buffer_size,  
+	size_t i, 
+	int64_t len);
+
+/* -------- BITPACKET --------- */
+
+
 /* -------- INSTANTIATING / DELETING --------- */
 
 void 
@@ -118,13 +199,22 @@ new_BitArray(
 	bitarray_size_t size);
 
 bool 
-init_Bitarray_from_file(
+init_BitArray_from_file(
 	BitArray* obj,
 	const char* path);
 
 BitArray* 
 new_Bitarray_from_file(
 	const char* path);
+
+void
+init_BitArray_from_buffer(
+	BitArray* obj,
+	uint8_t* buffer,
+	size_t buffer_size,
+	size_t bitarray_size
+);
+
 
 void 
 del_BitArray(
@@ -206,6 +296,13 @@ bool
 bitarray_append_str(
 	BitArray *self, 
 	const char* bits);
+
+
+/*              */
+
+
+
+
 
 /* ------------------------------------------- */
 

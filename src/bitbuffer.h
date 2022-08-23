@@ -33,6 +33,7 @@
 
 extern const uint8_t BITBUFFER_WRITE;
 extern const uint8_t BITBUFFER_OPENED;
+extern const uint8_t BITBUFFER_ALLOC;
 extern const uint8_t BITBUFFER_IS_MMAP;
 extern const uint8_t BITBUFFER_EOF;
 extern const uint8_t BITBUFFER_ILL_ERR;
@@ -55,7 +56,6 @@ typedef struct BitBuffer
         };
         BitArray* source;
     };
-	// char* buffer;
     uint8_t *buffer;
 } BitBuffer;
 
@@ -63,8 +63,7 @@ typedef struct BField BField;
 
 struct BField
 {
-    uint16_t flags;
-    uint16_t flags2;
+    uint32_t flags;
     uint32_t size;
     union
     {
@@ -87,6 +86,7 @@ struct BField
         int16_t*        i16_ptr;
         int32_t*        i32_ptr;
         int64_t*        i64_ptr;
+        bool            bl;
         char            c;
         char*           c_ptr;
         char*           str;
@@ -112,8 +112,8 @@ typedef struct CallbackCtx
             uint32_t flags;
         } out[10];
     } priv;
-    size_t env_size;
-    size_t index;
+    uint16_t env_size;
+    uint16_t index;
     BField input;
     BField output;
     BField* env;
@@ -139,15 +139,9 @@ unpack_cb_return_fmt(CallbackCtx* ctx, const char* fmt, ...);
 void
 unpack_cb_set_env(CallbackCtx* ctx, int i, const char* fmt, ...);
 
-// void
-// unpack_cb_
 
-static inline void
-bitreceiver_clear(BField* r, size_t size)
-{
-    while(size--)
-        *(r++) = (BField) {0, 0, 0, {NULL}};
-}
+void
+bitreceiver_clear(BField* r, size_t size);
 
 
 
@@ -175,6 +169,15 @@ static inline bool bitbuffer_check_status(BitBuffer* self)
 {
     return !(self->flags & BITBUFFER_MASK_ERR);
 }
+
+// static inline bool bitbuffer_check_status(BitBuffer* self)
+// {
+//     if(self->flags & BITBUFFER_MASK_ERR)
+//     {
+//         printf("Err!\n");
+//     }
+//     return !(self->flags & BITBUFFER_MASK_ERR);
+// }
 
 static inline void bitbuffer_unset_flag(BitBuffer* self, uint8_t flag)
 {
@@ -207,6 +210,12 @@ static inline bool bitbuffer_aligned(BitBuffer* self)
     return !(self->pos & 0b111);
 }
 
+static inline bool bitbuffer_eof(BitBuffer* self)
+{
+    return bitbuffer_check_err(self, BITBUFFER_EOF) || 
+           self->pos >= bitbuffer_size(self);
+}
+
 bool bitbuffer_align(BitBuffer* self, uint8_t align);
 
 // Same as skip, but inline
@@ -230,6 +239,8 @@ uint8_t bitbuffer_read_byte(BitBuffer* self);
 
 bool bitbuffer_read_bit(BitBuffer* self);
 
+bool bitbuffer_peek_bit(BitBuffer* self);
+
 uint16_t bitbuffer_read_uint16(BitBuffer* self);
 
 uint32_t bitbuffer_read_uint32(BitBuffer* self);
@@ -238,18 +249,28 @@ uint64_t bitbuffer_read_uint64(BitBuffer* self);
 
 size_t bitbuffer_read(BitBuffer* self, size_t num, bool little_endian);
 
+size_t bitbuffer_peek(BitBuffer* self, size_t num, bool little_endian);
+
+VlcOutput bitbuffer_get_vlc(BitBuffer* self, VlcTable* vlc_table);
+
 bool bitbuffer_read_fourcc(BitBuffer* self, char* dest);
 
 bool bitbuffer_peek_fourcc(BitBuffer* self, char* dest);
 
 bool bitbuffer_read_bytes(BitBuffer* self, char* dest, size_t len);
 
+bool bitbuffer_overwrite(BitBuffer* self, size_t value, size_t len);
+
+bool bitbuffer_overwrite_bit(BitBuffer* self, bool bit);
+
 BitBuffer* new_BitBuffer_from_file(const char *path, bool write);
 
 BitBuffer* new_BitBuffer_from_BitArray(BitArray* source);
 
+BitBuffer* new_BitBuffer_from_buffer(uint8_t* buffer, size_t num_bytes);
+
 size_t 
-bitbuffer_unpack(
+bitbuffer_unpack_cb(
     BitBuffer* self, 
     const char* fmt, 
     BField* dst, 
@@ -257,12 +278,11 @@ bitbuffer_unpack(
     void* user);
 
 size_t 
-bitbuffer_unpeek(
+bitbuffer_unpack(
     BitBuffer* self, 
     const char* fmt, 
-    BField* dst, 
-    unpack_cb_t cb,
-    void *user);
+    BField* dst);
+
 
 bool bitbuffer_flush(BitBuffer* self);
 

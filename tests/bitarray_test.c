@@ -5,7 +5,7 @@ IMPORT_BITARRAY_MODULE_AS(Bits);
 void display_bits(BitArray *obj)
 {
 	char *brepr = Bits.to_str(obj);
-	printf("%s  (size: %d)\n", brepr, obj->size);
+	printf("%s  (size: %zu)\n", brepr, obj->size);
 	free(brepr);
 }
 
@@ -55,34 +55,6 @@ void gen_iter_test(BitArray *bits)
 	printf("\n ** FINISHED **\n\n");
 }
 
-void custom_iter_test_alloc(BitArray *obj)
-{
-	printf("* --- Running custom iterator tests... --- *\n\n");
-	Biterator *it = new_Biterator(1, -1, VOID_INT, do_bit);            
-	Bits.iterate(obj, it);
-	printf("\n");
-	del_Biterator(it, true);
-
-	it = new_Biterator(1, -1, INT_INT, transform_test);
-	Bits.iterate(obj, it);
-	Bits.for_each(obj, do_bit, -1);
-	printf("\n");
-	detach_Biterator(it);
-	Bits.iterate(obj, it);
-	del_Biterator(it, true);
-	Bits.for_each(obj, do_bit, -1);
-	printf("\n");
-
-	it = new_Biterator(1, -1, VOID_INT_IDX, do_bit_index);
-	Bits.iterate(obj, it);
-	del_Biterator(it, true);
-
-	it = new_Biterator(3, -1, VOID_INT, do_slice);
-	Bits.iterate(obj, it);
-	del_Biterator(it, true);
-	printf("\n ** FINISHED **\n\n");
-}
-
 void run_manipulation_tests(BitArray *bits)
 {
 	printf("* --- Running general tests... --- *\n\n");
@@ -98,8 +70,8 @@ void run_manipulation_tests(BitArray *bits)
 	Bits.append(bits, 0b1011);
 	Bits.append(bits, 0xFF);
 	display_bits(bits);
-	printf("[%d:%d] %d, ", 0, 4, Bits.slice(bits, 0, 4));
-	print_bit_repr(Bits.slice(bits, 0, 4));
+	printf("[%d:%d] %d, ", 0, 4, Bits.get_slice(bits, 0, 4));
+	print_bit_repr(Bits.get_slice(bits, 0, 4));
 
 	printf("\n ** FINISHED **\n\n");
 }
@@ -176,7 +148,6 @@ int main()
 	run_manipulation_tests(bits);
 	gen_iter_test(bits);
 	// custom_iter_test(bits);
-	custom_iter_test_alloc(bits);
 	del_BitArray(bits);
 
 	readme_get_started();

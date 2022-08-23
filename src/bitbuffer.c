@@ -6,6 +6,7 @@
 
 const uint8_t BITBUFFER_WRITE =    0b00000001;
 const uint8_t BITBUFFER_OPENED =   0b00000010;
+const uint8_t BITBUFFER_ALLOC =    0b00000100;
 const uint8_t BITBUFFER_IS_MMAP =  0b00001000;
 const uint8_t BITBUFFER_EOF =      0b00100000;
 const uint8_t BITBUFFER_ILL_ERR =  0b01000000;
@@ -75,6 +76,7 @@ bool bitbuffer_get_bit(BitBuffer* self, size_t i)
 
 bool bitbuffer_seek(BitBuffer* self, long long int i, int whence)
 {
+    bitbuffer_clear_err(self, BITBUFFER_EOF);
     switch(whence)
     {
         case SEEK_CUR:
@@ -181,6 +183,15 @@ bool bitbuffer_read_bit(BitBuffer* self)
         bitbuffer_set_err(self, BITBUFFER_EOF);
     
     return bit;
+}
+
+bool bitbuffer_peek_bit(BitBuffer* self)
+{
+    if(bitbuffer_check_err(self, BITBUFFER_EOF))
+        return -1;
+    
+    return self->buffer[self->pos >> 3] & 
+        (1 << (7-(self->pos & 0b111)));
 }
 
 uint16_t bitbuffer_read_uint16(BitBuffer* self)
@@ -310,6 +321,83 @@ size_t bitbuffer_read(BitBuffer* self, size_t num, bool little_endian)
 
 }
 
+size_t bitbuffer_peek(BitBuffer* self, size_t num, bool little_endian)
+{
+    if(bitbuffer_check_err(self, BITBUFFER_EOF))
+        return false;
+    else if(self->pos + num > bitbuffer_size(self))
+    {
+        bitbuffer_set_err(self, BITBUFFER_EOF);
+        return false;
+    }
+    size_t prev_pos = self->pos;
+
+    #define SZ(x) ((size_t) (x))
+    size_t val = 0;
+    size_t byte_pos = self->pos >> 3;
+    size_t bit_curr;
+
+    if(little_endian)
+    {
+        size_t bit_max = (SZ(1)) << (num-1);
+        size_t bit_pos = 0;
+        size_t bit_pos_max = num;
+        bit_curr = 1;
+        while((self->pos & 0b111) && (bit_curr < bit_max))
+        {
+            if( self->buffer[byte_pos] & (SZ(1) << (7-(self->pos++ & 0b111))) )
+                val |= bit_curr;
+            bit_curr <<= 1;
+            bit_pos++;
+        }
+        while(bit_pos_max - bit_pos >= 8)
+        {
+            val |= ( SZ(self->buffer[self->pos >> 3]) ) << bit_pos;
+            bit_pos += 8;
+            bit_curr <<= 8;
+            self->pos += 8;
+        }
+        byte_pos = self->pos >> 3;
+        while(bit_pos < bit_pos_max)
+        {
+            if( self->buffer[byte_pos] & (SZ(1) << (7-(self->pos++ & 0b111))) )
+                val |= bit_curr;
+            bit_curr <<= 1;
+            bit_pos++;
+        }
+    }
+    else
+    {
+        bit_curr = (SZ(1)) << (num-1);
+        while((self->pos & 0b111) && bit_curr)
+        {
+            if( self->buffer[byte_pos] & (SZ(1) << (7-(self->pos++ & 0b111))) )
+                val |= bit_curr;
+            bit_curr >>= 1;
+            num--;
+        }
+        while(bit_curr >= 128)
+        {
+            num -= 8;
+            val |= ( SZ(self->buffer[self->pos >> 3]) ) << num;
+            bit_curr >>= 8;
+            self->pos += 8;
+        }
+        byte_pos = self->pos >> 3;
+        while(bit_curr)
+        {
+            if( self->buffer[byte_pos] & ( SZ(1) << (7-(self->pos++ & 0b111))) )
+                    val |= bit_curr;
+                bit_curr >>= 1; 
+        }
+    }
+    self->pos = prev_pos;
+    return val;
+
+    #undef SZ
+
+}
+
 bool bitbuffer_read_fourcc(BitBuffer* self, char* dest)
 {
     if(bitbuffer_check_err(self, BITBUFFER_EOF))
@@ -378,27 +466,70 @@ bitbuffer_read_bytes(BitBuffer* self, char* dest, size_t len)
     return true;
 }
 
-bool
-bitbuffer_read_fmt(const char *format, ...)
+VlcOutput bitbuffer_get_vlc(BitBuffer* self, VlcTable* nav)
 {
-    va_list args;
-    va_start(args, format);
-
-    while(*format != '\0')
+    bool is_leaf, is_mapped, has_right, has_left, bit;
+    nav->curr = nav->root;
+	is_leaf = mapnode_is_leaf(nav->curr);
+    VlcOutput result = {.entry = NULL};
+    int i = 0;
+    while(self->pos < bitbuffer_size(self))
     {
-        if(*format != '%')
+        if(!is_leaf)
+		{
+			is_mapped = mapnode_is_mapped(nav->curr);
+			has_right = mapnode_has_right(nav->curr);
+			has_left = mapnode_has_left(nav->curr);
+			bit = self->buffer[self->pos >> 3] & 
+                (1 << (7-(self->pos & 0b111)));
+            self->pos++;
+		}
+        if(is_leaf ||  
+			(   is_mapped && ( (bit && !has_right) || (!bit && !has_left) )   )
+		  )
         {
-            va_end(args);
-            return false;
+            result.entry = nav->curr;
+            result.bits[i] = '\0';
+            return result;
         }
-        format++;
-        switch(*format)
+        else if(bit && has_right)
         {
-            
+            result.bits[i++] = '1';
+            nav->curr = nav->curr->children[1];
+            is_leaf = mapnode_is_leaf(nav->curr);
         }
+        else if(!bit && has_left)
+        {
+            result.bits[i++] = '0';
+            nav->curr = nav->curr->children[0];
+            is_leaf = mapnode_is_leaf(nav->curr);
+        }
+        else
+            return result;
     }
+    
+}
+
+bool
+bitbuffer_overwrite(BitBuffer* self, size_t value, size_t len)
+{
+    if(!(self->flags & BITBUFFER_WRITE))
+        return false;
+    bitarray_set_slice(self->source, self->pos, self->pos + len, value);
+    self->pos += len;
+    return bitarray_check_err(self->source, BITARRAY_ILL_ERR_FLAG);
+}
+
+bool
+bitbuffer_overwrite_bit(BitBuffer* self, bool bit)
+{
+    if(!(self->flags & BITBUFFER_WRITE))
+        return false;
+    bitarray_set(self->source, bit, self->pos);
+    self->pos++;
     return true;
 }
+
 
 BitBuffer* new_BitBuffer_from_file(const char *path, bool write)
 {
@@ -447,17 +578,37 @@ BitBuffer* new_BitBuffer_from_BitArray(BitArray* source)
     BitBuffer* obj = (BitBuffer*) malloc(sizeof(BitBuffer));
 	if(obj == NULL)
         return NULL;
-    obj->flags = 0;
+    obj->flags = BITBUFFER_WRITE;
     obj->source = source;
     obj->pos = 0;
-    obj->buffer = (char *) source->data;
+    obj->buffer = source->data;
+    return obj;
+}
+
+BitBuffer* new_BitBuffer_from_buffer(uint8_t* buffer, size_t num_bytes)
+{
+    BitBuffer* obj = (BitBuffer*) malloc(sizeof(BitBuffer));
+    if(obj == NULL)
+        return NULL;
+    // obj->source = new_BitArray(0);
+    // free_BitArray_buffer(obj->source);
+    obj->source = (BitArray*) malloc(sizeof(BitArray));
+    if(obj->source == NULL)
+    {
+        del_BitBuffer(obj);
+        return NULL;
+    }
+    init_BitArray_from_buffer(obj->source, buffer, num_bytes, (num_bytes << 3));
+    obj->flags = BITBUFFER_WRITE | BITBUFFER_ALLOC;
+    obj->pos = 0;
+    obj->buffer = obj->source->data;
     return obj;
 }
 
 bool bitbuffer_flush(BitBuffer* self)
 {	
 	if(!bitbuffer_check_flag(self, BITBUFFER_IS_MMAP) ||
-       !(self->flags & 1))
+       !(self->flags & BITBUFFER_WRITE))
 		return false;
 	else if(msync(self->buffer, self->file_info.st_size, MS_SYNC) == -1)
 		return false;
@@ -479,6 +630,11 @@ void bitbuffer_close(BitBuffer* self)
 void del_BitBuffer(BitBuffer* self)
 {
 	bitbuffer_close(self);
+    if(bitbuffer_check_flag(self, BITBUFFER_ALLOC) && self->source != NULL)
+    {
+        // del_BitArray(self->source);
+        free(self->source);
+    }
     if(self != NULL)
 	    free(self);
 }
