@@ -1,5 +1,5 @@
 cmake-build-debug/
-CMakeLists.txt
+# CMakeLists.txt
 bitarray.sublime-project
 bitarray.sublime-workspace
 .idea/
