@@ -7,41 +7,16 @@
 #include <stdbool.h>
 #include <string.h>
 
-#define ZEROESx32                       \
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,    \
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 
-#define ZEROESx64                       \
-    ZEROESx32,                          \
-    ZEROESx32
-
-#define ZEROESx128                      \
-    ZEROESx64,                          \
-    ZEROESx64
-
-#define ZEROESx256                      \
-    ZEROESx128,                         \
-    ZEROESx128
-
-#define ZEROESx25 \
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, \
-	0,0,0,0,0,0,0,0,0,0
-
-#define ZEROESx100 \
-	ZEROESx25, ZEROESx25, ZEROESx25, \
-	ZEROESx25
 
 static char acc[100] 			= { ZEROESx100 };
 static int acclen 				= 0;
 
 
-
 DECL_TOKENIZE(100, 10)
-#define tokenize tokenize_100_10
+// #define tokenize tokenize_100_10
 static char tokens[100][10];
 static const char* delims = "?:|.%!$=[]<>{}()uiBbcs*+-";
-
-
 
 
 typedef struct Pair
@@ -49,35 +24,15 @@ typedef struct Pair
 	int first, second;
 } Pair;
 
-// isprint(char) 					-> check if printable
 
-// isalpha(char) 					-> check if alphabetical
-// isdigit(char) 					-> check if digit
-// isalnum(char) 					-> check if alphanumeric
-// isxdigit(char) 					-> check if hexadecimal digit
-// isupper(char) / islower(char) 	-> check upper/lowercase
-
-// tolower(char) / toupper(char)	-> convert case
-
-/*
-atof			Convert string to double (function)
-atoi			Convert string to integer (function)
-atol			Convert string to long integer (function)
-atoll			Convert string to long long integer (function)
-strtod			Convert string to double (function)
-strtof			Convert string to float (function)
-strtol			Convert string to long integer (function)
-strtold			Convert string to long double (function)
-strtoll			Convert string to long long integer (function)
-strtoul			Convert string to unsigned long integer (function)
-strtoull		Convert string to unsigned long long integer (function)
-*/
 
 static const int PARSE_INNER 	= 1;
 static const int READ_INST	 	= 1 << 1;
 static const int SIGNED_READ 	= 1 << 2;
 static const int BIN_READ		= 1 << 3;
 static const int HAS_ASSIGN	 	= 1 << 29;
+
+static const int NOT_FIRST		= 1 << 30;
 
 
 #define CHECK_FLAG(flags, flag) (((flags) & (flag)) != 0)
@@ -107,15 +62,27 @@ void init_flags()
 	INNER_FLAGS[(uint8_t) '-'] = BINARY_MINUS;
 	INNER_FLAGS[(uint8_t) '%'] = BINARY_ALIGN;
 }
+
+#define CASE(name, symbol) 	\
+	case_ ## name :			\
+	case symbol 
+
+
+int compile_expr(Instruction* target, int i, int j)
+{
+	char* cptr;
+
+}
+
 	
 
 Instruction compile_single_spec(char str[100])
 {
 	Instruction item = INSTDEFAULT();
 	TargetStack _stack, *stack = &_stack;
-	tokenize(str, delims, tokens);
+	tokenize(str, delims, tokens, 100);
 	char* cptr;
-	int i=0, val=0, flags=0, tflags=0;
+	int i=0, flags=0;
 	push_target(stack, &item);
 	Instruction *target, *temp, tempr = INSTDEFAULT();
 	set_top_addr(stack, &target);
@@ -124,7 +91,7 @@ Instruction compile_single_spec(char str[100])
 		cptr = tokens[i];
 		switch(*cptr)
 		{	
-			case '$':
+			CASE($, '$'):
 				if(*(cptr+1))
 					return item;
 				if(!flags)
@@ -163,43 +130,39 @@ Instruction compile_single_spec(char str[100])
 					cptr = tokens[++i];
 				}
 				break;
-			case '.':
+			CASE(excl, '!'):
+				target->read.read_flags |= SKIP_READ;
+				cptr = tokens[++i];
+				break;	
+			CASE(dot, '.'):
 				target->read.read_flags |= READ_BIGENDIAN;
 				cptr = tokens[++i];
-			case 'u':
-			case 'i':
-			case 'b':
+				break;
+			CASE(u, 'u'):
+			CASE(i, 'i'):
+			CASE(b, 'b'):
 				if(!alloc_read(target))
 					return item;
 				target->read.read_flags |= INNER_FLAGS[(uint8_t) *cptr];
 				push_target(stack, target->read.read_size);
 				cptr = tokens[++i];
 				break;
-			case 'B':
+			CASE(B, 'B'):
 				// temp = pop_target(stack);
 				// if(!alloc_unop(&tempr))
 				// 	return item;
 				// temp = pop_target(stack);
 				// *(target) = tempr;
 				// target->unary_expr.unoperand = temp;
-
-				// temp = pop_target(stack);
-				// if(!alloc_unop(target))
-				// {
-				// 	delete_instruction(temp);
-				// 	return item;
-				// }
-				// target->unary_expr.unoperand = temp;
-				// target->unary_expr.unop |= UNARY_BYTES;
 				if(!alloc_unop(target))
 					return item;
 				target->unary_expr.unop |= UNARY_BYTES;
 				push_target(stack, target->unary_expr.unoperand);
 				cptr = tokens[++i];
 				break;
-			case '+':
-			case '-':
-			case '%':
+			CASE(plus, '+'):
+			CASE(minus, '-'):
+			CASE(amp, '%'):
 				temp = pop_target(stack);
 				if(!alloc_binop(target, false))
 				{
@@ -207,15 +170,23 @@ Instruction compile_single_spec(char str[100])
 					return item;
 				}
 				target->binary_expr.binop |= INNER_FLAGS[(uint8_t) *cptr];
-				// free(target->binary_expr.left);
 				target->binary_expr.left = temp;
 				push_target(stack, target->binary_expr.right);
 				cptr = tokens[++i];
 				break;
+			CASE(sqopen, '['):
+
 			default:
 				return item;
 
 		}
+
+		// read_context:
+		// switch(*cptr)
+		// {
+		// 	case 
+		// }
+		SET_FLAG(flags, NOT_FIRST);
 	}
 }
 
@@ -234,7 +205,7 @@ UnpackSpec compile_parse_str(const char* fmt)
 
 	if(spec.len > 100)
 		return spec;
-	spec.items = (UnpackSpec*) calloc(spec.len, sizeof(Instruction));
+	spec.items = (Instruction*) calloc(spec.len, sizeof(Instruction));
 	if(spec.items == NULL)
 		return (UnpackSpec) {NULL, -1};
 
@@ -273,8 +244,13 @@ UnpackSpec compile_parse_str(const char* fmt)
 
 void __parse_single_spec(char str[100])
 {
-	tokenize(str, delims, tokens);
+	tokenize(str, delims, tokens, 100);
 	// PRINT_TOKENS(40, tokens);
+	// int i=0;
+	// Tree* tree = make_tree_from_tokens(&i, tokens);
+	Tree* tree = create_token_tree(tokens);
+	print_tree(tree);
+	delete_tree(tree);
 	for(int i=0; i<100 && (tokens[i][0] != '\0'); i++)
 		printf("%s ", tokens[i]);
 	putchar('\n');
