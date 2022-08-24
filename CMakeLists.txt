@@ -36,11 +36,13 @@ target_link_libraries(buffer_examples
 list(APPEND TestTargets 
         main_tests 
         module_tests 
-        file_tests)
+        file_tests
+        tokenize_tests)
 list(APPEND TestFiles 
         bitarray_test 
         bitarray_module_tests 
-        file_tests)
+        file_tests
+        tokenize_test)
 
 foreach(target file IN ZIP_LISTS TestTargets TestFiles)
         add_executable(
