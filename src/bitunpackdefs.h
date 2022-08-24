@@ -272,6 +272,7 @@ FLAG32(ENV_PARENT, 1);
 FLAG32(PARENS_OPEN, 2);
 FLAG32(UNOP_PARENT, 3);
 FLAG32(BINOP_PARENT, 4);
+FLAG32(SKIP_PARENT, 5);
 
 Tree* make_tree_from_tokens(int *i, 
 	uint32_t ctx, 
@@ -309,13 +310,19 @@ Tree* make_tree_from_tokens(int *i,
 		// "(" --> keep target until ")" ?
 		switch(*cptr)
 		{
+			case '!':
+				curr->str[0] = *cptr;
+				curr->str[1] = '\0';
+				++(*i);
+				j = 0;
+				curr->left = make_tree_from_tokens(i, SKIP_PARENT, ctxsig, *cptr, tokens);
+				curr->right = NULL;
+				break;
 			case '(':
 				ctx |= PARENS_OPEN;
 				cptr = tokens[++(*i)];
 				break;
 			case ')':
-				// ------------------------
-
 				// return curr;
 
 				// ++(*i);
@@ -324,21 +331,6 @@ Tree* make_tree_from_tokens(int *i,
 				if(ctx & PARENS_OPEN)
 					return curr;
 				++(*i);
-
-				// ------------------------
-
-				// if(ctx & PARENS_OPEN)
-				// {
-				// 	*(ctxsig) |= PARENS_OPEN;
-				// 	// ++(*i);
-				// 	return curr;
-				// 	// ctx &= ~(PARENS_OPEN);
-				// 	// ++(*i);
-				// 	// return curr;
-				// }
-				// cptr = tokens[++(*i)];
-				// ctx &= ~(PARENS_OPEN);
-				// cptr = tokens[++(*i)];
 				break;
 			case 'b':
 			case 'u':
@@ -363,7 +355,7 @@ Tree* make_tree_from_tokens(int *i,
 			case '%':
 			case '-':
 			case '+':
-				if((ctx & READ_PARENT) &&
+				if(((ctx & READ_PARENT) || (ctx & SKIP_PARENT)) &&
 					!(ctx & PARENS_OPEN))
 				{
 					return curr;
@@ -402,22 +394,50 @@ void delete_tree(Tree* tree)
 	}
 }
 
+static inline bool tree_is_atomic(Tree* tree)
+{
+	return (tree->left == NULL && tree->right == NULL);
+}
+
+static inline bool tree_is_singular(Tree* tree)
+{
+	return ( (tree->left != NULL && tree->right == NULL)
+		     || (tree->left == NULL && tree->right != NULL) );
+}
+
+static inline bool tree_is_simple(Tree* tree)
+{
+	// if(   !( (tree->left != NULL && tree->right == NULL)
+	// 	     || (tree->left == NULL && tree->right != NULL) ) )
+	// 	return false;
+	if(!tree_is_singular(tree))
+		return false;
+	Tree *child = (tree->left == NULL) ? tree->right : tree->left;
+	return tree_is_atomic(child);
+}
+
 void _print_tree(Tree* tree, int depth)
 {
 	print_indent_str(depth, "  ");
-	if(tree->left == NULL && tree->right == NULL)
+	if(tree_is_atomic(tree))
 	{
 		printf("%s", tree->str);
 	}
-	else if ((tree->left != NULL && tree->right == NULL)
-			|| (tree->left == NULL && tree->right != NULL))
+	else if(tree_is_singular(tree))
 	{
-		Tree *to_print = (tree->left == NULL) ? tree->right : tree->left;
-		printf("%s(\n", tree->str);
-		_print_tree(to_print, depth+1);
-		putchar('\n');
-		print_indent_str(depth, "  ");
-		printf(")");
+		Tree *child = (tree->left == NULL) ? tree->right : tree->left;
+		if(tree_is_atomic(child))
+		{
+			printf("%s( %s )", tree->str, child->str);
+		}
+		else
+		{
+			printf("%s(\n", tree->str);
+			_print_tree(child, depth+1);
+			putchar('\n');
+			print_indent_str(depth, "  ");
+			printf(")");
+		}
 	}
 	else
 	{
@@ -429,6 +449,36 @@ void _print_tree(Tree* tree, int depth)
 		print_indent_str(depth, "  ");
 		putchar(')');
 	}
+
+	// if(tree->left == NULL && tree->right == NULL)
+	// {
+	// 	printf("%s", tree->str);
+	// }
+	// else if ((tree->left != NULL && tree->right == NULL)
+	// 		|| (tree->left == NULL && tree->right != NULL))
+	// {
+	// 	Tree *child = (tree->left == NULL) ? tree->right : tree->left;
+	// 	if(tree_is_atomic(child))
+	// 	{
+	// 		printf("%s( %s )", tree->str, child->str);
+	// 		return;
+	// 	}
+	// 	printf("%s(\n", tree->str);
+	// 	_print_tree(child, depth+1);
+	// 	putchar('\n');
+	// 	print_indent_str(depth, "  ");
+	// 	printf(")");
+	// }
+	// else
+	// {
+	// 	printf("%s(\n", tree->str);
+	// 	_print_tree(tree->left, depth+1);
+	// 	printf(",\n");
+	// 	_print_tree(tree->right, depth+1);
+	// 	putchar('\n');
+	// 	print_indent_str(depth, "  ");
+	// 	putchar(')');
+	// }
 }
 
 void print_tree(Tree *tree)
