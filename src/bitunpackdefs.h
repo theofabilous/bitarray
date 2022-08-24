@@ -407,16 +407,13 @@ static inline bool tree_is_singular(Tree* tree)
 
 static inline bool tree_is_simple(Tree* tree)
 {
-	// if(   !( (tree->left != NULL && tree->right == NULL)
-	// 	     || (tree->left == NULL && tree->right != NULL) ) )
-	// 	return false;
 	if(!tree_is_singular(tree))
 		return false;
 	Tree *child = (tree->left == NULL) ? tree->right : tree->left;
 	return tree_is_atomic(child);
 }
 
-void _print_tree(Tree* tree, int depth)
+void _print_tree(Tree* tree, int depth, bool end)
 {
 	print_indent_str(depth, "  ");
 	if(tree_is_atomic(tree))
@@ -433,57 +430,33 @@ void _print_tree(Tree* tree, int depth)
 		else
 		{
 			printf("%s(\n", tree->str);
-			_print_tree(child, depth+1);
+			_print_tree(child, depth+1, end);
 			putchar('\n');
 			print_indent_str(depth, "  ");
-			printf(")");
+			if(end)
+				printf(")%s", tree->str);
+			else
+				putchar(')');
 		}
 	}
 	else
 	{
 		printf("%s(\n", tree->str);
-		_print_tree(tree->left, depth+1);
+		_print_tree(tree->left, depth+1, end);
 		printf(",\n");
-		_print_tree(tree->right, depth+1);
+		_print_tree(tree->right, depth+1, end);
 		putchar('\n');
 		print_indent_str(depth, "  ");
-		putchar(')');
+		if(end)
+			printf(")%s", tree->str);
+		else
+			putchar(')');
 	}
-
-	// if(tree->left == NULL && tree->right == NULL)
-	// {
-	// 	printf("%s", tree->str);
-	// }
-	// else if ((tree->left != NULL && tree->right == NULL)
-	// 		|| (tree->left == NULL && tree->right != NULL))
-	// {
-	// 	Tree *child = (tree->left == NULL) ? tree->right : tree->left;
-	// 	if(tree_is_atomic(child))
-	// 	{
-	// 		printf("%s( %s )", tree->str, child->str);
-	// 		return;
-	// 	}
-	// 	printf("%s(\n", tree->str);
-	// 	_print_tree(child, depth+1);
-	// 	putchar('\n');
-	// 	print_indent_str(depth, "  ");
-	// 	printf(")");
-	// }
-	// else
-	// {
-	// 	printf("%s(\n", tree->str);
-	// 	_print_tree(tree->left, depth+1);
-	// 	printf(",\n");
-	// 	_print_tree(tree->right, depth+1);
-	// 	putchar('\n');
-	// 	print_indent_str(depth, "  ");
-	// 	putchar(')');
-	// }
 }
 
-void print_tree(Tree *tree)
+void print_tree(Tree *tree, bool end)
 {
-	_print_tree(tree, 0);
+	_print_tree(tree, 0, end);
 	putchar('\n');
 }
 

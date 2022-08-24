@@ -1,5 +1,4 @@
-#include "../src/bitunpack.h"
-
+#include "../src/binunpack.h"
 
 
 int main()
@@ -16,9 +15,10 @@ int main()
 		"$1=u10",					// 1
 		"$1=u32%10",				// 2
 		"$25=u(3+$2)-4",			// 3
-		"!$33+u5"					// 4
+		"!$33+u5",					// 4
+		"$9=u($8+(1+2))-4"			// 5
 	};
-	__compile_parse_str(fmt[4]);
+	debug_parse_str(fmt[5]);
 	return 0;
 }
 

@@ -22,6 +22,7 @@ add_library(bitarray STATIC
         src/bitarray.c
         src/bitbuffer.c
         src/bitunpack.c
+        src/binunpack.c
         src/binarymap.c
 )
 

@@ -41,14 +41,6 @@ static const int NOT_FIRST		= 1 << 30;
 
 static uint8_t INNER_FLAGS[257] = {ZEROESx256, 0};
 
-// void init_flags()
-// {
-// 	if(!READ_FLAGS[256])
-// 		return;
-// 	READ_FLAGS[(uint8_t) 'u'] = READ_INST;
-// 	READ_FLAGS[(uint8_t) 'i'] = READ_INST | SIGNED_READ;
-// 	READ_FLAGS[(uint8_t) 'b'] = READ_INST | BIN_READ;
-// }
 
 void init_flags()
 {
@@ -249,7 +241,7 @@ void __parse_single_spec(char str[100])
 	// int i=0;
 	// Tree* tree = make_tree_from_tokens(&i, tokens);
 	Tree* tree = create_token_tree(tokens);
-	print_tree(tree);
+	print_tree(tree, true);
 	delete_tree(tree);
 	for(int i=0; i<100 && (tokens[i][0] != '\0'); i++)
 		printf("%s ", tokens[i]);
