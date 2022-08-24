@@ -99,7 +99,7 @@ void tokenize(const char* str,
 }
 
 
-void debug_parse_str(const char* fmt)
+void debug_parse_str(const char* fmt, bool verbose)
 {
 	char currstr[100];
 	int idx = 0;
@@ -119,7 +119,7 @@ void debug_parse_str(const char* fmt)
 			case ',':
 				currstr[idx] = '\0';
 				idx = 0;
-				debug_single_spec(currstr);
+				debug_single_spec(currstr, verbose);
 				cptr++;
 				break;
 			default:
@@ -131,23 +131,66 @@ void debug_parse_str(const char* fmt)
 	}
 }
 
-void debug_single_spec(char str[100])
+void debug_single_spec(char str[100], bool verbose)
 {
 	tokenize(str, delims, tokens, 100);
-	Tree* tree = create_token_tree(tokens);
+	Tree* tree = create_token_tree(tokens, verbose);
 	print_tree(tree, true);
 	delete_tree(tree);
 	for(int i=0; i<100 && (tokens[i][0] != '\0'); i++)
 		printf("%s ", tokens[i]);
-	putchar('\n');
+	printf("\n\n");
+}
+
+static uint8_t PRECEDENCE_TABLE[257] = {ZEROESx256, 0};
+
+static inline void set_precedence(char c, uint8_t precedence)
+{
+	PRECEDENCE_TABLE[(uint8_t) c] = precedence;
+}
+
+static inline uint8_t get_precedence(char c)
+{
+	return PRECEDENCE_TABLE[(uint8_t) c];
+}
+
+static inline bool has_precedence_over(char b, char a)
+{
+	uint8_t b_priority = get_precedence(b);
+	// if( b == 0)
+	// 	return false;
+	return b_priority > get_precedence(a);
+}
+
+static inline void dump_precedence(char b, char a)
+{
+	printf(">> %c: %hhu\n", b, get_precedence(b));
+	printf(">> %c: %hhu\n", a, get_precedence(a));
+}
+
+void init_precedence_table()
+{
+	if(PRECEDENCE_TABLE[256] != 0)
+		return;
+	PRECEDENCE_TABLE[256] = 1;
+	set_precedence('*', 11);
+	set_precedence('u', 10);
+	set_precedence('i', 10);
+	set_precedence('b', 10);
+	set_precedence('!', 10);
+	set_precedence('%', 5);
+	set_precedence('+', 4);
+	set_precedence('-', 4);
 }
 
 Tree* make_tree_from_tokens(int *i, 
 	uint32_t ctx, 
 	uint32_t* ctxsig,
 	char parent,
-	char tokens[][10])
+	char tokens[][10],
+	bool verbose)
 {
+	init_precedence_table();
 	char tstr[100];
 	Tree* root = (Tree*) malloc(sizeof(Tree));
 	root->left = NULL;
@@ -158,16 +201,20 @@ Tree* make_tree_from_tokens(int *i,
 	while(*i<100 && tokens[*i][0])
 	{
 		cptr = tokens[*i];
-		printf("--> %s\n", cptr);
-		printf("Parens open? %s, Read parent? %s\n",
-				boolstr((ctx & PARENS_OPEN)), boolstr((ctx & READ_PARENT)));
-		printf("ctx: %u\n", ctx);
-		if(parent)
+		if(verbose)
 		{
-			printf("Parent: %c\n", parent);
+			printf("\n--> %s\n", cptr);
+			printf("Parens open? %s, Read parent? %s\n",
+					boolstr((ctx & PARENS_OPEN)), boolstr((ctx & READ_PARENT)));
+			printf("ctx: %u\n", ctx);
+			if(parent)
+			{
+				printf("Parent: %c\n", parent);
+			}
+			else
+				printf("No parent\n");			
 		}
-		else
-			printf("No parent\n");
+
 		if(isdigit(*cptr))
 		{
 			strcpy(&(curr->str[j]), cptr);
@@ -183,7 +230,12 @@ Tree* make_tree_from_tokens(int *i,
 				curr->str[1] = '\0';
 				++(*i);
 				j = 0;
-				curr->left = make_tree_from_tokens(i, SKIP_PARENT, ctxsig, *cptr, tokens);
+				curr->left = make_tree_from_tokens(i, 
+					ctx, 
+					ctxsig, 
+					*cptr, 
+					tokens,
+					verbose);
 				curr->right = NULL;
 				break;
 			case '(':
@@ -195,11 +247,26 @@ Tree* make_tree_from_tokens(int *i,
 
 				// ++(*i);
 				// return curr;
-
 				if(ctx & PARENS_OPEN)
+				{
+					++(*i);
+					ctx &= ~(PARENS_OPEN);
+					break;
+				}
+				else
+				{
 					return curr;
-				++(*i);
-				break;
+				}
+
+
+				// if(ctx & PARENS_OPEN)
+				// 	return curr;
+				// else
+				// {
+				// 	ctx 
+				// 	++(*i);
+				// }
+				// break;
 			case 'b':
 			case 'u':
 			case 'i':
@@ -209,7 +276,12 @@ Tree* make_tree_from_tokens(int *i,
 				j = 0;
 				++(*i);
 				// ctx |= READ_PARENT;
-				curr->left = make_tree_from_tokens(i, READ_PARENT, ctxsig, *cptr, tokens);
+				curr->left = make_tree_from_tokens(i, 
+					ctx, 
+					ctxsig, 
+					*cptr, 
+					tokens, 
+					verbose);
 				curr->right = NULL;
 				break;
 			case '$':
@@ -219,15 +291,29 @@ Tree* make_tree_from_tokens(int *i,
 				j++;
 				cptr = tokens[++(*i)];
 				break;
+			case '*':
 			case '=':
 			case '%':
 			case '-':
 			case '+':
-				if(((ctx & READ_PARENT) || (ctx & SKIP_PARENT)) &&
-					!(ctx & PARENS_OPEN))
+				if(verbose)
 				{
+					if(*cptr == '*')
+						dump_precedence(parent, *cptr);
+				}
+				if(has_precedence_over(parent, *cptr)
+					&& !(ctx & PARENS_OPEN))
+				{
+					if(verbose)
+						printf("%c has precender over %c, returning\n", parent, *cptr);
 					return curr;
 				}
+					
+				// if(((ctx & READ_PARENT) || (ctx & SKIP_PARENT)) &&
+				// 	!(ctx & PARENS_OPEN))
+				// {
+				// 	return curr;
+				// }
 				ctx &= ~(READ_PARENT);
 				temp = (Tree*) malloc(sizeof(Tree));
 				temp->str[0] = *cptr;
@@ -236,20 +322,28 @@ Tree* make_tree_from_tokens(int *i,
 				temp->left = curr;
 				curr = temp;
 				++(*i);
-				curr->right = make_tree_from_tokens(i, ctx, ctxsig, *cptr, tokens);
+				curr->right = make_tree_from_tokens(i, 
+					0, 
+					ctxsig, 
+					*cptr, 
+					tokens, 
+					verbose);
 				break;
 				// cptr = tokens[*i];
+			default:
+				printf("Unrecognized token: %s\n", cptr);
+				++(*i);
 		}
 		ctx |= *(ctxsig);
 	}
 	return curr;
 }
 
-Tree* create_token_tree(char tokens[][10])
+Tree* create_token_tree(char tokens[][10], bool verbose)
 {
 	int i=0;
 	uint32_t sig = 0;
-	return make_tree_from_tokens(&i, 0, &sig, '\0', tokens);
+	return make_tree_from_tokens(&i, 0, &sig, '\0', tokens, verbose);
 }
 
 void delete_tree(Tree* tree)
@@ -260,6 +354,25 @@ void delete_tree(Tree* tree)
 		delete_tree(tree->right);
 		free(tree);
 	}
+}
+
+static inline bool tree_is_atomic(Tree* tree)
+{
+	return (tree->left == NULL && tree->right == NULL);
+}
+
+static inline bool tree_is_singular(Tree* tree)
+{
+	return ( (tree->left != NULL && tree->right == NULL)
+		     || (tree->left == NULL && tree->right != NULL) );
+}
+
+static inline bool tree_is_simple(Tree* tree)
+{
+	if(!tree_is_singular(tree))
+		return false;
+	Tree *child = (tree->left == NULL) ? tree->right : tree->left;
+	return tree_is_atomic(child);
 }
 
 void _print_tree(Tree* tree, int depth, bool end)

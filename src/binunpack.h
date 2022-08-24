@@ -22,44 +22,25 @@ void tokenize(const char* str,
 			   char dest[][10],
 			   int max_tokens);
 
-Tree* create_token_tree(char tokens[][10]);
+Tree* create_token_tree(char tokens[][10], bool verbose);
 
 Tree* make_tree_from_tokens(int *i, 
 	uint32_t ctx, 
 	uint32_t* ctxsig,
 	char parent,
-	char tokens[][10]);
+	char tokens[][10],
+	bool verbose);
 
 void delete_tree(Tree* tree);
-
-
-static inline bool tree_is_atomic(Tree* tree)
-{
-	return (tree->left == NULL && tree->right == NULL);
-}
-
-static inline bool tree_is_singular(Tree* tree)
-{
-	return ( (tree->left != NULL && tree->right == NULL)
-		     || (tree->left == NULL && tree->right != NULL) );
-}
-
-static inline bool tree_is_simple(Tree* tree)
-{
-	if(!tree_is_singular(tree))
-		return false;
-	Tree *child = (tree->left == NULL) ? tree->right : tree->left;
-	return tree_is_atomic(child);
-}
 
 void _print_tree(Tree* tree, int depth, bool end);
 
 void print_tree(Tree *tree, bool end);
 
 
-void debug_parse_str(const char* fmt);
+void debug_parse_str(const char* fmt, bool verbose);
 
-void debug_single_spec(char str[100]);
+void debug_single_spec(char str[100], bool verbose);
 
 
 
