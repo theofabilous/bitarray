@@ -12,7 +12,7 @@ int main()
 		"$9=u($8+(1+2))-4",			// 5
 		"$1=u32%10*2,$1=u(32%10)*2,$1=(u(32%10))*2"		// 6
 	};
-	debug_parse_str(fmt[6], false);
+	debug_parse_str(fmt[6], Quiet);
 	// debug_parse_str(fmt[0], false);
 	return 0;
 }

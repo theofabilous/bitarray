@@ -5,6 +5,15 @@
 #include <stdbool.h>
 #include <string.h>
 
+enum LogLevel
+{
+	Quiet = 0,
+	Info = 1,
+	Inspect = 2,
+	Debug = 5,
+	Full = 10
+};
+
 typedef struct Tree
 {
 	uint32_t flags;
@@ -22,14 +31,15 @@ void tokenize(const char* str,
 			   char dest[][10],
 			   int max_tokens);
 
-Tree* create_token_tree(char tokens[][10], bool verbose);
+Tree* create_token_tree(char tokens[][10], int loglevel);
 
 Tree* make_tree_from_tokens(int *i, 
 	uint32_t ctx, 
 	uint32_t* ctxsig,
 	char parent,
 	char tokens[][10],
-	bool verbose);
+	int loglevel,
+	Tree* mainroot);
 
 void delete_tree(Tree* tree);
 
@@ -38,9 +48,9 @@ void _print_tree(Tree* tree, int depth, bool end);
 void print_tree(Tree *tree, bool end);
 
 
-void debug_parse_str(const char* fmt, bool verbose);
+void debug_parse_str(const char* fmt, int loglevel);
 
-void debug_single_spec(char str[100], bool verbose);
+void debug_single_spec(char str[100], int loglevel);
 
 
 

@@ -99,7 +99,7 @@ void tokenize(const char* str,
 }
 
 
-void debug_parse_str(const char* fmt, bool verbose)
+void debug_parse_str(const char* fmt, int loglevel)
 {
 	char currstr[100];
 	int idx = 0;
@@ -119,7 +119,7 @@ void debug_parse_str(const char* fmt, bool verbose)
 			case ',':
 				currstr[idx] = '\0';
 				idx = 0;
-				debug_single_spec(currstr, verbose);
+				debug_single_spec(currstr, loglevel);
 				cptr++;
 				break;
 			default:
@@ -131,10 +131,10 @@ void debug_parse_str(const char* fmt, bool verbose)
 	}
 }
 
-void debug_single_spec(char str[100], bool verbose)
+void debug_single_spec(char str[100], int loglevel)
 {
 	tokenize(str, delims, tokens, 100);
-	Tree* tree = create_token_tree(tokens, verbose);
+	Tree* tree = create_token_tree(tokens, loglevel);
 	print_tree(tree, true);
 	delete_tree(tree);
 	for(int i=0; i<100 && (tokens[i][0] != '\0'); i++)
@@ -173,7 +173,9 @@ void init_precedence_table()
 	if(PRECEDENCE_TABLE[256] != 0)
 		return;
 	PRECEDENCE_TABLE[256] = 1;
-	set_precedence('*', 11);
+	set_precedence('=', 0);
+	set_precedence('*', 1);
+	set_precedence('$', 10);
 	set_precedence('u', 10);
 	set_precedence('i', 10);
 	set_precedence('b', 10);
@@ -188,11 +190,14 @@ Tree* make_tree_from_tokens(int *i,
 	uint32_t* ctxsig,
 	char parent,
 	char tokens[][10],
-	bool verbose)
+	int loglevel,
+	Tree* mainroot)
 {
 	init_precedence_table();
 	char tstr[100];
 	Tree* root = (Tree*) malloc(sizeof(Tree));
+	if(mainroot == NULL)
+		mainroot = root;
 	root->left = NULL;
 	root->right = NULL;
 	Tree* curr = root, *temp = NULL;
@@ -201,18 +206,30 @@ Tree* make_tree_from_tokens(int *i,
 	while(*i<100 && tokens[*i][0])
 	{
 		cptr = tokens[*i];
-		if(verbose)
+		if(loglevel)
 		{
 			printf("\n--> %s\n", cptr);
-			printf("Parens open? %s, Read parent? %s\n",
-					boolstr((ctx & PARENS_OPEN)), boolstr((ctx & READ_PARENT)));
-			printf("ctx: %u\n", ctx);
+			if(ctx & PARENS_OPEN)
+				printf("() YES, ");
+			else
+				printf("() NO, ");
+
+			// if(ctx & READ_PARENT)
+			// printf("Parens open? %s, Read parent? %s\n",
+			// 		boolstr((ctx & PARENS_OPEN)), boolstr((ctx & READ_PARENT)));
+			// printf("ctx: %u\n", ctx);
 			if(parent)
 			{
 				printf("Parent: %c\n", parent);
 			}
 			else
-				printf("No parent\n");			
+				printf("Top level\n");			
+		}
+		if(loglevel >= Full)
+		{
+			printf("-------------------\n");
+			print_tree(curr, true);
+			printf("-------------------\n");
 		}
 
 		if(isdigit(*cptr))
@@ -235,7 +252,8 @@ Tree* make_tree_from_tokens(int *i,
 					ctxsig, 
 					*cptr, 
 					tokens,
-					verbose);
+					loglevel,
+					mainroot);
 				curr->right = NULL;
 				break;
 			case '(':
@@ -267,6 +285,7 @@ Tree* make_tree_from_tokens(int *i,
 				// 	++(*i);
 				// }
 				// break;
+			case '$':
 			case 'b':
 			case 'u':
 			case 'i':
@@ -281,30 +300,30 @@ Tree* make_tree_from_tokens(int *i,
 					ctxsig, 
 					*cptr, 
 					tokens, 
-					verbose);
+					loglevel,
+					mainroot);
 				curr->right = NULL;
 				break;
-			case '$':
-				j = 0;
-				curr->str[0] = *cptr;
-				curr->str[1] = '\0';
-				j++;
-				cptr = tokens[++(*i)];
-				break;
+			// case '$':
+			// 	j = 0;
+			// 	curr->str[0] = *cptr;
+			// 	curr->str[1] = '\0';
+			// 	j++;
+			// 	cptr = tokens[++(*i)];
+			// 	break;
 			case '*':
 			case '=':
 			case '%':
 			case '-':
 			case '+':
-				if(verbose)
+				if(loglevel >= Debug)
 				{
-					if(*cptr == '*')
-						dump_precedence(parent, *cptr);
+					dump_precedence(parent, *cptr);
 				}
 				if(has_precedence_over(parent, *cptr)
 					&& !(ctx & PARENS_OPEN))
 				{
-					if(verbose)
+					if(loglevel >= Debug)
 						printf("%c has precender over %c, returning\n", parent, *cptr);
 					return curr;
 				}
@@ -327,7 +346,8 @@ Tree* make_tree_from_tokens(int *i,
 					ctxsig, 
 					*cptr, 
 					tokens, 
-					verbose);
+					loglevel,
+					mainroot);
 				break;
 				// cptr = tokens[*i];
 			default:
@@ -339,11 +359,11 @@ Tree* make_tree_from_tokens(int *i,
 	return curr;
 }
 
-Tree* create_token_tree(char tokens[][10], bool verbose)
+Tree* create_token_tree(char tokens[][10], int loglevel)
 {
 	int i=0;
 	uint32_t sig = 0;
-	return make_tree_from_tokens(&i, 0, &sig, '\0', tokens, verbose);
+	return make_tree_from_tokens(&i, 0, &sig, '\0', tokens, loglevel, NULL);
 }
 
 void delete_tree(Tree* tree)
@@ -375,6 +395,20 @@ static inline bool tree_is_simple(Tree* tree)
 	return tree_is_atomic(child);
 }
 
+static inline bool tree_is_binary(Tree* tree)
+{
+	return (tree->left != NULL && tree->right != NULL);
+}
+
+static inline bool tree_is_bisimple(Tree* tree)
+{
+	if(!tree_is_binary(tree))
+	{
+		return false;
+	}
+	return tree_is_atomic(tree->left) && tree_is_atomic(tree->right);
+}
+
 void _print_tree(Tree* tree, int depth, bool end)
 {
 	print_indent_str(depth, "  ");
@@ -388,6 +422,8 @@ void _print_tree(Tree* tree, int depth, bool end)
 		if(tree_is_atomic(child))
 		{
 			printf("%s( %s )", tree->str, child->str);
+			if(end)
+				printf("%s", tree->str);
 		}
 		else
 		{
@@ -400,6 +436,12 @@ void _print_tree(Tree* tree, int depth, bool end)
 			else
 				putchar(')');
 		}
+	}
+	else if(tree_is_bisimple(tree))
+	{
+		printf("%s( %s , %s )", tree->str, tree->left->str, tree->right->str);
+		if(end)
+			printf("%s", tree->str);
 	}
 	else
 	{
