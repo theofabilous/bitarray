@@ -16,7 +16,7 @@ int main()
     "$1100=![B4*2]", // 9
     "$1=u9+10*2,$1=(u[9+10])*2", // 10
 	};
-	debug_parse_str(fmt[10], Quiet);
+	debug_parse_str(fmt[10], 0);
   // debug_new_parse_str(fmt[6], Quiet);
 	// debug_parse_str(fmt[0], false);
 	return 0;
