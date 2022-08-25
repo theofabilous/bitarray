@@ -59,45 +59,610 @@ FLAG32(PARENS_OPEN, 2);
 FLAG32(UNOP_PARENT, 3);
 FLAG32(BINOP_PARENT, 4);
 FLAG32(SKIP_PARENT, 5);
-
+FLAG32(SEQUENCE_OPEN, 6);
 
 static char tokens[100][10];
 static const char* delims = "?:|.%!$=[]<>{}()uiBbcs*+-";
 
 
-void tokenize(const char* str,
-			   const char* delims,
-			   char dest[][10],
-			   int max_tokens)
-{
-	const char* prev = str;
-	const char* c = strpbrk(str, delims);
-	size_t toksize=0;
-	int idx=0;
+FLAG8(CHAR_TOKEN, 0);
+FLAG8(STR_TOKEN, 1);
+FLAG8(INT_TOKEN, 2);
 
-	while(c != NULL && idx < max_tokens)
-	{
-		toksize = c-prev;
-		if(toksize != 0)
-		{
-			strncpy(dest[idx], prev, toksize);
-			dest[idx][toksize] = '\0';
-			idx++;
-		}
-		dest[idx][0] = *c;
-		dest[idx][1] = '\0';
-		prev = ++c;
-		c = strpbrk(c, delims);
-		idx++;
-	}
-	if(*prev)
-	{
-		strcpy(dest[idx], prev);
-		idx++;
-	}
-	dest[idx][0] = '\0';
+static inline bool token_is_valid(Token* tok)
+{
+	return tok->flags != 0;
 }
 
+static inline bool token_is_int(Token* tok)
+{
+	return tok->flags & INT_TOKEN;
+}
+
+static inline bool token_is_char(Token* tok)
+{
+	return tok->flags & CHAR_TOKEN;
+}
+
+static inline void reset_token(Token* tok)
+{	
+	tok->flags = 0;
+	memset(tok->str, '\0', 10*sizeof(char));
+}
+
+static inline void set_token_char(Token* tok, char c)
+{
+	tok->str[0] = c;
+	tok->str[1] = '\0';
+	tok->flags |= CHAR_TOKEN;
+}
+
+static inline bool token_is_str(Token* tok)
+{
+	return tok->flags & STR_TOKEN;
+}
+
+static inline int set_token_int(Token* tok, const char *str)
+{
+	int i;
+	for(i=0; i<10 && isdigit(str[i]); i++)
+		tok->str[i] = str[i];
+	tok->str[i] = '\0';
+	if(i<1)
+	{
+		reset_token(tok);
+		return -1;
+	}
+	tok->flags |= STR_TOKEN;
+	tok->flags |= INT_TOKEN;
+	return i;
+}
+
+static inline void set_token_str(Token* tok, const char* str)
+{
+	int i;
+	for(i=0; i<10 && str[i]; i++)
+		tok->str[i] = str[i];
+	tok->str[i] = str[i];
+	tok->flags |= STR_TOKEN;
+}
+
+static inline bool set_token_strn(Token* tok, const char* str, int len)
+{
+	if(len > 10)
+		return false;
+	int i;
+	for(i=0; i<len && str[i]; i++)
+		tok->str[i] = str[i];
+	tok->str[i] = '\0';
+	// tok->str[i] = str[i];
+	tok->flags |= STR_TOKEN;
+	return true;
+}
+
+static inline bool bracketpair_is_valid(BracketPair* br)
+{
+	return br->copen != '\0' && br->cclose != '\0';
+}
+
+static inline void list_init(TokenList* list)
+{
+	list->blen = 0;
+	list->len = 0;
+	// list->brackets[0] = (BracketPair) {.copen='\0', .cclose='\0'};
+	// list->currbr = list->brackets;
+	list->currbr = NULL;
+	memset(list->tokens, '\0', 100*sizeof(Token));
+	memset(list->brackets, '\0', 100*sizeof(BracketPair));
+}
+
+static inline bool list_incr_br(TokenList* list)
+{
+	if(list->currbr == NULL)
+	{
+		list->currbr=list->brackets;
+		return bracketpair_is_valid(list->currbr);
+	}
+	return bracketpair_is_valid(++list->currbr);
+}
+
+static inline BracketPair* list_get_curr_br(TokenList* list)
+{
+	return list->currbr;
+}
+
+static inline bool list_curr_br_is_valid(TokenList* list)
+{
+	return (list->currbr != NULL) && bracketpair_is_valid(list->currbr);
+}
+
+static inline void list_reset_curr_br(TokenList* list)
+{
+	list->currbr = NULL;
+}
+
+static inline bool list_append(TokenList* list, Token* tok)
+{
+	if(list->len >= 100)
+		return false;
+	list->tokens[list->len++] = *tok;
+	return true;
+}
+
+static inline BracketPair* list_register_bracket_open(TokenList* list, char c)
+{
+	list->brackets[list->blen] = (BracketPair) {.copen = c, .open=list->len, .close=0};
+	// list->brackets[list->blen+1] = (BracketPair) {.copen='\0', .cclose='\0'};
+	// Token tok = {.flags = CHAR_TOKEN, .c= '('};
+	Token tok;
+	set_token_char(&tok, c);
+	if(!list_append(list, &tok))
+		return NULL;
+	return &(list->brackets[list->blen++]);
+}
+
+static inline Token* list_get(TokenList* list, int index)
+{
+	if(index > 99 || index < 0)
+		return NULL;
+	Token* tok = &(list->tokens[index]);
+	if(!token_is_valid(tok))
+		return NULL;
+	return tok;
+}
+
+static inline char* list_get_str(TokenList* list, int index)
+{
+	if(index > 99 || index < 0 || index >= list->len)
+		return NULL;
+	Token* tok = &(list->tokens[index]);
+	if(!token_is_valid(tok) || tok->str[0] == '\0')
+		return NULL;
+	return tok->str;
+}
+
+static inline char list_get_char(TokenList* list, int index)
+{
+	if(index > 99 || index < 0 || index >= list->len)
+		return '\0';
+	Token* tok = &(list->tokens[index]);
+	if(!token_is_valid(tok))
+		return '\0';
+	return tok->str[0];
+}
+
+static inline bool list_copy_into(TokenList* list, int index, char* dest)
+{
+	char* str = list_get_str(list, index);
+	if(str == NULL)
+		return false;
+	strcpy(dest, str);
+	return true;
+}
+
+
+static inline BracketPair* list_get_br(TokenList* list, int index)
+{
+	if(index > 99 || index < 0 || index >= list->blen)
+		return NULL;
+	return &(list->brackets[index]);
+}
+
+static inline int list_len(TokenList* list)
+{
+	return list->len;
+}
+
+static inline int list_blen(TokenList* list)
+{
+	return list->blen;
+}
+
+static inline BracketPair* list_within_brackets(TokenList* list, int index)
+{
+	BracketPair *pair = NULL;
+	for(int i=0; i<list_blen(list); i++)
+	{
+		pair = list_get_br(list, i); 
+		if(index > pair->open && index < pair->close)
+			return pair;
+	}
+	return NULL;
+}
+
+
+static inline void stack_init(Stack* stack)
+{
+	stack->len = 0;
+	stack->ptrs[0] = NULL;
+}
+
+static inline bool stack_push(Stack* stack, BracketPair* pair)
+{
+	if(stack->len >= 100)
+		return false;
+	stack->ptrs[stack->len++] = pair;
+	return true; 
+}
+
+static inline BracketPair* stack_pop(Stack* stack)
+{
+	if(stack->len < 1)
+		return NULL;
+	return (BracketPair*) stack->ptrs[--stack->len];
+}
+
+
+static uint8_t PRECEDENCE_TABLE[257] = {ZEROESx256, 0};
+
+static inline void set_precedence(char c, uint8_t precedence)
+{
+	PRECEDENCE_TABLE[(uint8_t) c] = precedence;
+}
+
+static inline uint8_t get_precedence(char c)
+{
+	return PRECEDENCE_TABLE[(uint8_t) c];
+}
+
+static inline bool has_precedence_over(char a, char b)
+{
+	if(a == '\0')
+		return false;
+	uint8_t a_priority = get_precedence(a);
+	// if( b == 0)
+	// 	return false;
+	return a_priority < get_precedence(b);
+}
+
+static inline void dump_precedence(char b, char a)
+{
+	printf(">> %c: %hhu\n", b, get_precedence(b));
+	printf(">> %c: %hhu\n", a, get_precedence(a));
+}
+
+void init_precedence_table()
+{
+	if(PRECEDENCE_TABLE[256] != 0)
+		return;
+	PRECEDENCE_TABLE[256] = 1;
+	// set_precedence('(', 99);
+	// set_precedence(')', 99);
+	set_precedence('=', 0);
+	// set_precedence('[', 1);
+	set_precedence('*', 1);
+	set_precedence('$', 10);
+	set_precedence('u', 10);
+	set_precedence('i', 10);
+	set_precedence('b', 10);
+	set_precedence('B', 11);
+	set_precedence('!', 10);
+	set_precedence('%', 5);
+	set_precedence('+', 4);
+	set_precedence('-', 4);
+}
+
+
+Tree* new_token_tree(int *i, 
+	uint32_t ctx, 
+	char parent,
+	TokenList* list,
+	int loglevel,
+	int j)
+{
+	init_precedence_table();
+	list_reset_curr_br(list);
+	char tstr[100];
+	Tree* root = (Tree*) malloc(sizeof(Tree));
+	root->left = NULL;
+	root->right = NULL;
+	Tree* curr = root, *temp = NULL;
+	char *cptr;
+	char matching_brace = '\0';
+	while(*i<100 && *i < list_len(list))
+	{
+		cptr = list_get_str(list, *i);
+		if(loglevel)
+		{
+			printf("\n--> %s\n", cptr);
+			if(ctx & PARENS_OPEN)
+				printf("() YES, ");
+			else
+				printf("() NO, ");
+			if(parent)
+			{
+				printf("Parent: %c\n", parent);
+			}
+			else
+				printf("Top level\n");			
+		}
+		if(loglevel >= Full)
+		{
+			printf("-------------------\n");
+			print_tree(curr, true);
+			printf("-------------------\n");
+		}
+		if(token_is_int(list_get(list, *i)))
+		{
+			list_copy_into(list, *i, curr->str);
+			// strcpy(curr->str, list_get_str(list, *i));
+			(*i)++;
+			continue;
+		}
+		// if(cptr[1] != '\0') // not a char
+		// {
+
+		// }
+		switch(*cptr)
+		{
+			case '(':
+				matching_brace = ')';
+				goto handle_bracket;
+			case '[':
+				matching_brace = ']';
+				handle_bracket:
+				if(!list_incr_br(list))
+					return curr;
+				curr->str[0] = *cptr;
+				curr->str[1] = matching_brace;
+				curr->str[2] = '\0';
+				++(*i);
+				curr->left = new_token_tree(i, 
+					0, 
+					*cptr, 
+					list,
+					loglevel,
+					list_get_curr_br(list)->close);
+				curr->right = NULL;
+				break;
+			case ')':
+			case ']':
+				if(*i == j)
+					return curr;
+				else
+					++(*i);
+				break;
+
+			// case '[':
+			// 	if(has_precedence_over(parent, '[')
+			// 		&& !(ctx & PARENS_OPEN))
+			// 	{
+			// 		return curr;
+			// 	}
+			// 	ctx |= SEQUENCE_OPEN;
+
+			// 	++(*i);
+			// 	temp = make_
+			// 	// temp = 
+			case '!':
+				list_copy_into(list, *i, curr->str);
+				++(*i);
+				curr->left = new_token_tree(i, 
+					0,  
+					*cptr, 
+					list,
+					loglevel,
+					j);
+				curr->right = NULL;
+				break;
+			// case '(':
+			// 	ctx |= PARENS_OPEN;
+			// 	++(*i);
+			// 	break;
+			// case ')':
+			// 	// return curr;
+
+			// 	// ++(*i);
+			// 	// return curr;
+			// 	if(ctx & PARENS_OPEN)
+			// 	{
+			// 		++(*i);
+			// 		ctx &= ~(PARENS_OPEN);
+			// 		break;
+			// 	}
+			// 	else
+			// 	{
+			// 		return curr;
+			// 	}
+
+
+				// if(ctx & PARENS_OPEN)
+				// 	return curr;
+				// else
+				// {
+				// 	// ctx 
+				// 	++(*i);
+				// }
+				// break;
+			case 'B':
+			case '$':
+			case 'b':
+			case 'u':
+			case 'i':
+				list_copy_into(list, *i, curr->str);
+				++(*i);
+				curr->left = new_token_tree(i, 
+					0, 
+					*cptr, 
+					list, 
+					loglevel,
+					j);
+				curr->right = NULL;
+				break;
+			case '*':
+			case '=':
+			case '%':
+			case '-':
+			case '+':
+				if(has_precedence_over(*cptr, parent)
+					// && !(ctx & PARENS_OPEN)
+					)
+				{
+					if(loglevel >= Debug)
+						printf("%c has precender over %c, returning\n", parent, *cptr);
+					return curr;
+				}
+				ctx &= ~(READ_PARENT);
+				temp = (Tree*) malloc(sizeof(Tree));
+				list_copy_into(list, *i, temp->str);
+				temp->left = curr;
+				curr = temp;
+				++(*i);
+				curr->right = new_token_tree(i, 
+					0, 
+					*cptr, 
+					list, 
+					loglevel,
+					j);
+				break;
+			default:
+				printf("Unrecognized token: %s\n", cptr);
+				++(*i);
+		}
+	}
+	return curr;
+}
+
+Tree* create_token_tree(TokenList* list, int loglevel)
+{
+	int i=0;
+	uint32_t sig = 0;
+	return new_token_tree(&i, 0, '\0', list, loglevel, 0);
+}
+
+void tokenize(const char* str, 
+	TokenList* list, 
+	Stack* stack)
+{
+	list_init(list);
+	stack_init(stack);
+	Token tok;
+	int incr;
+	BracketPair* bpair = NULL;
+	while(*str && list_len(list) < 100)
+	{
+		reset_token(&tok);
+		if(isdigit(*str))
+		{
+			incr = set_token_int(&tok, str);
+			if(incr < 0)
+			{
+				list_init(list);
+				return;
+			}
+			str += incr;
+		}
+		else
+		{
+			switch(*str)
+			{
+				case ' ':
+					str++;
+					continue;
+				case '=':
+					if(*(str+1) == '=')
+					{
+						set_token_strn(&tok, str, 2);
+						str += 2;
+					}
+					else
+						goto set_char;
+					break;
+				case '{':
+				case '[':
+				case '(':
+					stack_push(stack, list_register_bracket_open(list, *str));
+					str++;
+					continue;
+				case '}':
+				case ']':
+				case ')':
+					bpair = stack_pop(stack);
+					bpair->cclose = *str;
+					bpair->close = list_len(list);
+					// stack_pop(stack)->close = list_len(list);
+					goto set_char;
+				case 'u':
+				case 'i':
+				case '$':
+				case 'B':
+				case '?':
+				case 'b':
+				case '*':
+				case '+':
+				case '-':
+				case '%':
+				case '!':
+					set_char:
+					set_token_char(&tok, *str);
+					str++;
+					break;	
+
+			}
+		}
+		list_append(list, &tok);
+	}
+}
+
+
+void debug_single_spec(char str[], int loglevel)
+{
+	TokenList list; 
+	Stack stack;
+	tokenize(str, &list, &stack);
+	Tree* tree = create_token_tree(&list, loglevel);
+	print_tree(tree, true);
+	delete_tree(tree);
+	int j=0;
+	char acc1[256];
+	char acc2[256];
+	char* currstr;
+	for(int i=0; i<100 && i<list_len(&list); i++)
+	{
+		currstr = list_get_str(&list, i);
+		bool sw = true;
+		while(*currstr)
+		{
+			acc1[j]= *currstr;
+			if(sw)
+			{
+				acc2[j]= (i % 10) + '0';
+				sw = false;
+			}
+			else
+				acc2[j]=' ';
+			j++; currstr++;
+		}
+		acc1[j] = ' ';
+		acc2[j] = ' ';
+		j++;
+	}
+	acc1[j] = '\0';
+	acc2[j] = '\0';
+	printf("%s\n%s\n\n", acc1, acc2);
+	BracketPair* br;
+	uint8_t open, close;
+
+	list_reset_curr_br(&list);
+
+	while(list_incr_br(&list))
+	{
+		br = list_get_curr_br(&list);
+		open = br->open;
+		close = br->close;
+		printf("Open %c @ %hhu: %s\n", br->copen, open, list_get_str(&list, open));
+		printf("Close %c @ %hhu: %s\n", br->cclose, close, list_get_str(&list, close));
+	}
+
+	// for(int i=0; i<list_blen(&list); i++)
+	// {
+	// 	br = list_get_br(&list, i);
+	// 	open = br->open;
+	// 	close = br->close;
+	// 	printf("Open %c @ %hhu: %s\n", br->copen, open, list_get_str(&list, open));
+	// 	printf("Close %c @ %hhu: %s\n", br->cclose, close, list_get_str(&list, close));
+	// }
+}
 
 void debug_parse_str(const char* fmt, int loglevel)
 {
@@ -131,240 +696,6 @@ void debug_parse_str(const char* fmt, int loglevel)
 	}
 }
 
-void debug_single_spec(char str[100], int loglevel)
-{
-	tokenize(str, delims, tokens, 100);
-	Tree* tree = create_token_tree(tokens, loglevel);
-	print_tree(tree, true);
-	delete_tree(tree);
-	for(int i=0; i<100 && (tokens[i][0] != '\0'); i++)
-		printf("%s ", tokens[i]);
-	printf("\n\n");
-}
-
-static uint8_t PRECEDENCE_TABLE[257] = {ZEROESx256, 0};
-
-static inline void set_precedence(char c, uint8_t precedence)
-{
-	PRECEDENCE_TABLE[(uint8_t) c] = precedence;
-}
-
-static inline uint8_t get_precedence(char c)
-{
-	return PRECEDENCE_TABLE[(uint8_t) c];
-}
-
-static inline bool has_precedence_over(char b, char a)
-{
-	uint8_t b_priority = get_precedence(b);
-	// if( b == 0)
-	// 	return false;
-	return b_priority > get_precedence(a);
-}
-
-static inline void dump_precedence(char b, char a)
-{
-	printf(">> %c: %hhu\n", b, get_precedence(b));
-	printf(">> %c: %hhu\n", a, get_precedence(a));
-}
-
-void init_precedence_table()
-{
-	if(PRECEDENCE_TABLE[256] != 0)
-		return;
-	PRECEDENCE_TABLE[256] = 1;
-	set_precedence('=', 0);
-	set_precedence('*', 1);
-	set_precedence('$', 10);
-	set_precedence('u', 10);
-	set_precedence('i', 10);
-	set_precedence('b', 10);
-	set_precedence('!', 10);
-	set_precedence('%', 5);
-	set_precedence('+', 4);
-	set_precedence('-', 4);
-}
-
-Tree* make_tree_from_tokens(int *i, 
-	uint32_t ctx, 
-	uint32_t* ctxsig,
-	char parent,
-	char tokens[][10],
-	int loglevel,
-	Tree* mainroot)
-{
-	init_precedence_table();
-	char tstr[100];
-	Tree* root = (Tree*) malloc(sizeof(Tree));
-	if(mainroot == NULL)
-		mainroot = root;
-	root->left = NULL;
-	root->right = NULL;
-	Tree* curr = root, *temp = NULL;
-	int j=0;
-	char *cptr;
-	while(*i<100 && tokens[*i][0])
-	{
-		cptr = tokens[*i];
-		if(loglevel)
-		{
-			printf("\n--> %s\n", cptr);
-			if(ctx & PARENS_OPEN)
-				printf("() YES, ");
-			else
-				printf("() NO, ");
-
-			// if(ctx & READ_PARENT)
-			// printf("Parens open? %s, Read parent? %s\n",
-			// 		boolstr((ctx & PARENS_OPEN)), boolstr((ctx & READ_PARENT)));
-			// printf("ctx: %u\n", ctx);
-			if(parent)
-			{
-				printf("Parent: %c\n", parent);
-			}
-			else
-				printf("Top level\n");			
-		}
-		if(loglevel >= Full)
-		{
-			printf("-------------------\n");
-			print_tree(curr, true);
-			printf("-------------------\n");
-		}
-
-		if(isdigit(*cptr))
-		{
-			strcpy(&(curr->str[j]), cptr);
-			j=0;
-			cptr = tokens[++(*i)];
-			continue;
-		}
-		// "(" --> keep target until ")" ?
-		switch(*cptr)
-		{
-			case '!':
-				curr->str[0] = *cptr;
-				curr->str[1] = '\0';
-				++(*i);
-				j = 0;
-				curr->left = make_tree_from_tokens(i, 
-					ctx, 
-					ctxsig, 
-					*cptr, 
-					tokens,
-					loglevel,
-					mainroot);
-				curr->right = NULL;
-				break;
-			case '(':
-				ctx |= PARENS_OPEN;
-				cptr = tokens[++(*i)];
-				break;
-			case ')':
-				// return curr;
-
-				// ++(*i);
-				// return curr;
-				if(ctx & PARENS_OPEN)
-				{
-					++(*i);
-					ctx &= ~(PARENS_OPEN);
-					break;
-				}
-				else
-				{
-					return curr;
-				}
-
-
-				// if(ctx & PARENS_OPEN)
-				// 	return curr;
-				// else
-				// {
-				// 	ctx 
-				// 	++(*i);
-				// }
-				// break;
-			case '$':
-			case 'b':
-			case 'u':
-			case 'i':
-				// temp = (Tree*) malloc(sizeof(Tree));
-				curr->str[0] = *cptr;
-				curr->str[1] = '\0';
-				j = 0;
-				++(*i);
-				// ctx |= READ_PARENT;
-				curr->left = make_tree_from_tokens(i, 
-					ctx, 
-					ctxsig, 
-					*cptr, 
-					tokens, 
-					loglevel,
-					mainroot);
-				curr->right = NULL;
-				break;
-			// case '$':
-			// 	j = 0;
-			// 	curr->str[0] = *cptr;
-			// 	curr->str[1] = '\0';
-			// 	j++;
-			// 	cptr = tokens[++(*i)];
-			// 	break;
-			case '*':
-			case '=':
-			case '%':
-			case '-':
-			case '+':
-				if(loglevel >= Debug)
-				{
-					dump_precedence(parent, *cptr);
-				}
-				if(has_precedence_over(parent, *cptr)
-					&& !(ctx & PARENS_OPEN))
-				{
-					if(loglevel >= Debug)
-						printf("%c has precender over %c, returning\n", parent, *cptr);
-					return curr;
-				}
-					
-				// if(((ctx & READ_PARENT) || (ctx & SKIP_PARENT)) &&
-				// 	!(ctx & PARENS_OPEN))
-				// {
-				// 	return curr;
-				// }
-				ctx &= ~(READ_PARENT);
-				temp = (Tree*) malloc(sizeof(Tree));
-				temp->str[0] = *cptr;
-				temp->str[1] = '\0';
-				j = 0;
-				temp->left = curr;
-				curr = temp;
-				++(*i);
-				curr->right = make_tree_from_tokens(i, 
-					0, 
-					ctxsig, 
-					*cptr, 
-					tokens, 
-					loglevel,
-					mainroot);
-				break;
-				// cptr = tokens[*i];
-			default:
-				printf("Unrecognized token: %s\n", cptr);
-				++(*i);
-		}
-		ctx |= *(ctxsig);
-	}
-	return curr;
-}
-
-Tree* create_token_tree(char tokens[][10], int loglevel)
-{
-	int i=0;
-	uint32_t sig = 0;
-	return make_tree_from_tokens(&i, 0, &sig, '\0', tokens, loglevel, NULL);
-}
 
 void delete_tree(Tree* tree)
 {
@@ -463,377 +794,4 @@ void print_tree(Tree *tree, bool end)
 	_print_tree(tree, 0, end);
 	putchar('\n');
 }
-
-
-
-
-
-
-/* ----------------------------------------------- */
-
-
-
-
-
-
-
-
-FLAG32(GET_ENV, 0);
-FLAG32(LITERAL, 1);
-FLAG32(PATTERN, 2);
-FLAG32(UNARY_EXP, 3);
-FLAG32(BINARY_EXP, 4);
-FLAG32(READ, 5);
-FLAG32(SEQUENCE, 6);
-FLAG32(ASSIGN, 7);
-FLAG32(MATCH, 8);
-// FLAG32(SKIP, 9);
-
-FLAG32(ALLOCATED, 31);
-
-FLAG8(READ_SIGNED, 1);
-FLAG8(READ_BINARY, 2);
-FLAG8(READ_BIGENDIAN, 3);
-FLAG8(SKIP_READ, 4);
-
-FLAG8(UNARY_NEG, 1);
-FLAG8(UNARY_BYTES, 2);
-
-FLAG8(BINARY_ALIGN, 1);
-FLAG8(BINARY_PLUS, 2);
-FLAG8(BINARY_MINUS, 3);
-FLAG8(BINARY_SHIFTL, 4);
-FLAG8(BINARY_SHIFTR, 5);
-
-#define INSTDEFAULT() \
-	((Instruction) { .spec = 0, .repeat = 0 })
-
-#define INSTALLOC() (Instruction*) malloc(sizeof(Instruction))
-
-
-
-static inline bool alloc_assign(Instruction* dest)
-{
-	dest->assign.target = INSTALLOC();
-	if(dest->assign.target == NULL)
-		return false;
-	dest->assign.value = INSTALLOC();
-	if(dest->assign.value == NULL)
-	{
-		free(dest->assign.target);
-		return NULL;
-	}
-	dest->assign.target->spec |= ALLOCATED;
-	dest->assign.value->spec |= ALLOCATED;
-	dest->spec |= ASSIGN;
-	return true;
-}
-
-
-static inline bool alloc_read(Instruction* dest)
-{
-	dest->read.read_size = INSTALLOC();
-	if(dest->read.read_size == NULL)
-		return false;
-	dest->spec |= READ;
-	dest->read.read_size->spec |= ALLOCATED;
-	return true;
-}
-
-
-static inline bool alloc_unop(Instruction* dest)
-{
-	dest->unary_expr.unoperand = INSTALLOC();
-	if(dest->unary_expr.unoperand == NULL)
-		return false;
-	dest->spec |= UNARY_EXP;
-	dest->unary_expr.unoperand->spec |= ALLOCATED;
-	return true;
-}
-
-static inline bool alloc_binop(Instruction* dest, bool alloc_left)
-{
-	if(alloc_left)
-	{
-		dest->binary_expr.left = INSTALLOC();
-		if(dest->binary_expr.left == NULL)
-			return false;
-		dest->binary_expr.right = INSTALLOC();
-		if(dest->binary_expr.right == NULL)
-		{
-			free(dest->binary_expr.left);
-			return false;
-		}
-		dest->spec |= BINARY_EXP;
-		dest->binary_expr.left->spec |= ALLOCATED;
-		dest->binary_expr.right->spec |= ALLOCATED;
-		return true;	
-	}
-	else
-	{
-		dest->binary_expr.right = INSTALLOC();
-		if(dest->binary_expr.right == NULL)
-			return false;
-		dest->spec |= BINARY_EXP;
-		dest->binary_expr.right->spec |= ALLOCATED;
-		return true;
-	}
-
-}
-
-void set_top_addr(TargetStack* stack, Instruction** ptr)
-{
-	stack->top = ptr;
-}
-
-
-bool push_target(TargetStack* stack, Instruction* target)
-{
-	if(stack->len == 100)
-		return false;
-	stack->targets[stack->len] = target;
-	*(stack->top) = target;
-	stack->len++;
-	return true;
-}
-
-Instruction* peek_target(TargetStack* stack)
-{
-	if(!stack->len || stack->len > 100)
-		return NULL;
-	return stack->targets[stack->len - 1];
-}
-
-Instruction* pop_target(TargetStack* stack)
-{
-	if(!stack->len || stack->len > 100)
-		return NULL;
-	Instruction* ret = stack->targets[stack->len - 1];
-	stack->targets[--stack->len] = NULL;
-	*(stack->top) = stack->targets[stack->len - 1];
-	return ret;
-}
-
-Instruction* rem_target(TargetStack* stack)
-{
-	if(!stack->len || stack->len > 100)
-		return NULL;
-	Instruction* ret = stack->targets[stack->len - 1];
-	stack->targets[--stack->len] = NULL;
-	return ret;
-}
-
-void delete_instruction(Instruction* inst)
-{
-	// ...
-	return;
-}
-
-
-static const int PARSE_INNER 	= 1;
-static const int READ_INST	 	= 1 << 1;
-static const int SIGNED_READ 	= 1 << 2;
-static const int BIN_READ		= 1 << 3;
-static const int HAS_ASSIGN	 	= 1 << 29;
-
-static const int NOT_FIRST		= 1 << 30;
-
-
-#define CHECK_FLAG(flags, flag) (((flags) & (flag)) != 0)
-#define CHECK_NFLAG(flags, flag) (((flags) & (flag)) == 0)
-#define SET_FLAG(flags, flag) flags |= (flag)
-
-static uint8_t INNER_FLAGS[257] = {ZEROESx256, 0};
-
-
-void init_flags()
-{
-	if(!INNER_FLAGS[256])
-		return;
-	INNER_FLAGS[(uint8_t) 'u'] = 0;
-	INNER_FLAGS[(uint8_t) 'i'] = READ_SIGNED;
-	INNER_FLAGS[(uint8_t) 'b'] = READ_BINARY;
-
-	INNER_FLAGS[(uint8_t) '+'] = BINARY_PLUS;
-	INNER_FLAGS[(uint8_t) '-'] = BINARY_MINUS;
-	INNER_FLAGS[(uint8_t) '%'] = BINARY_ALIGN;
-}
-
-#define CASE(name, symbol) 	\
-	case_ ## name :			\
-	case symbol 
-
-
-int compile_expr(Instruction* target, int i, int j)
-{
-	char* cptr;
-
-}
-
-	
-
-Instruction __compile_single_spec(char str[100])
-{
-	Instruction item = INSTDEFAULT();
-	TargetStack _stack, *stack = &_stack;
-	tokenize(str, delims, tokens, 100);
-	char* cptr;
-	int i=0, flags=0;
-	push_target(stack, &item);
-	Instruction *target, *temp, tempr = INSTDEFAULT();
-	set_top_addr(stack, &target);
-	while(i<100 && tokens[i][0])
-	{
-		cptr = tokens[i];
-		switch(*cptr)
-		{	
-			CASE($, '$'):
-				if(*(cptr+1))
-					return item;
-				if(!flags)
-				{
-					SET_FLAG(flags, HAS_ASSIGN);
-					cptr = tokens[++i];
-					for(int j=0; cptr[j]; j++)
-					{
-						if(!isdigit(cptr[j]) || j == 2) // max 2 digits (max 99)
-							return item;
-					}
-					if(!(*cptr))
-						return item;
-					if(!alloc_assign(target))
-						return item;
-					target->assign.target->spec |= LITERAL;
-					target->assign.target->env_index = atoi(cptr);
-					cptr = tokens[++i];
-					if(*(cptr) != '=' || *(cptr+1) != '\0')
-						return item;
-					cptr = tokens[++i];
-					push_target(stack, target->assign.value);
-				}
-				else
-				{
-					cptr = tokens[++i];
-					for(int j=0; cptr[j]; j++)
-					{
-						if(!isdigit(cptr[j]) || j == 2) // max 2 digits (max 99)
-							return item;
-					}
-					if(!(*cptr))
-						return item;
-					target->spec |= GET_ENV;
-					target->env_index = atoi(cptr);
-					cptr = tokens[++i];
-				}
-				break;
-			CASE(excl, '!'):
-				target->read.read_flags |= SKIP_READ;
-				cptr = tokens[++i];
-				break;	
-			CASE(dot, '.'):
-				target->read.read_flags |= READ_BIGENDIAN;
-				cptr = tokens[++i];
-				break;
-			CASE(u, 'u'):
-			CASE(i, 'i'):
-			CASE(b, 'b'):
-				if(!alloc_read(target))
-					return item;
-				target->read.read_flags |= INNER_FLAGS[(uint8_t) *cptr];
-				push_target(stack, target->read.read_size);
-				cptr = tokens[++i];
-				break;
-			CASE(B, 'B'):
-				// temp = pop_target(stack);
-				// if(!alloc_unop(&tempr))
-				// 	return item;
-				// temp = pop_target(stack);
-				// *(target) = tempr;
-				// target->unary_expr.unoperand = temp;
-				if(!alloc_unop(target))
-					return item;
-				target->unary_expr.unop |= UNARY_BYTES;
-				push_target(stack, target->unary_expr.unoperand);
-				cptr = tokens[++i];
-				break;
-			CASE(plus, '+'):
-			CASE(minus, '-'):
-			CASE(amp, '%'):
-				temp = pop_target(stack);
-				if(!alloc_binop(target, false))
-				{
-					delete_instruction(temp);
-					return item;
-				}
-				target->binary_expr.binop |= INNER_FLAGS[(uint8_t) *cptr];
-				target->binary_expr.left = temp;
-				push_target(stack, target->binary_expr.right);
-				cptr = tokens[++i];
-				break;
-			CASE(sqopen, '['):
-
-			default:
-				return item;
-
-		}
-
-		// read_context:
-		// switch(*cptr)
-		// {
-		// 	case 
-		// }
-		SET_FLAG(flags, NOT_FIRST);
-	}
-}
-
-
-UnpackSpec __compile_parse_str(const char* fmt)
-{
-	init_flags();
-	UnpackSpec spec = {NULL, 1};
-	const char* cptr = fmt;
-	while(*cptr)
-	{
-		if(*cptr == ',')
-			spec.len++;
-		cptr++;
-	}
-
-	if(spec.len > 100)
-		return spec;
-	spec.items = (Instruction*) calloc(spec.len, sizeof(Instruction));
-	if(spec.items == NULL)
-		return (UnpackSpec) {NULL, -1};
-
-	char currstr[100];
-	int idx = 0;
-	cptr = fmt;
-	bool brk = 0;
-	while(idx < 100 && !brk)
-	{
-		switch(*cptr)
-		{
-			case ' ':
-				cptr++;
-				break;
-			case '\0':
-				brk = true;
-				if(!idx)
-					break;
-			case ',':
-				currstr[idx] = '\0';
-				idx = 0;
-				// __parse_single_spec(currstr);
-				cptr++;
-				break;
-			default:
-				currstr[idx] = *cptr;
-				cptr++;
-				idx++;
-				break;
-		}
-	}
-	return spec;
-}
-
 
