@@ -29,8 +29,8 @@ static inline BracketPair* stack_pop(Stack* stack)
 }
 /* -------------------------------------------------------- */
 
-static const SKIP_MODE = -10;
-static const SET_CHAR_MODE = 1;
+static const int SKIP_MODE = -10;
+static const int SET_CHAR_MODE = 1;
 // static const SET_STR_
 void tokenize(const char* str, 
 	TokenList* list, 
@@ -87,15 +87,22 @@ void tokenize(const char* str,
 						mode=SET_CHAR_MODE;
 					break;
 				case '{':
-					// for(int i=0; *(str+i); i++)
-					// {
-					// 	if(*(str+i) == '}')
-					// 	{
-					// 		mode=i;
-					// 		break;
-					// 	}
-					// }
-					// break;
+					stack_push(stack, list_register_bracket_open(list, *str));
+					str++;
+					reset_token(&tok);
+					for(mode=0; str[mode] && (str[mode] != '}') && (mode<TOKEN_BUFFSIZE); mode++)
+						tok.str[mode] = str[mode];
+					if(str[mode] != '}')
+					{
+						printf("Expected matching '}' when tokenizing, not found\n");
+						mode = -1;
+						break;
+					}
+					tok.str[mode] = '\0';
+					tok.flags |= STR_TOKEN;
+					list_append(list, &tok);
+					str+=(mode);
+					goto bracket_close;
 				case '[':
 				case '(':
 					stack_push(stack, list_register_bracket_open(list, *str));
@@ -104,13 +111,12 @@ void tokenize(const char* str,
 				case '}':
 				case ']':
 				case ')':
+					bracket_close:
 					bpair = stack_pop(stack);
 					bpair->cclose = *str;
 					bpair->close = list_len(list);
-					// stack_pop(stack)->close = list_len(list);
 					mode=SET_CHAR_MODE;
 					break;
-					// goto set_char;
 				case '-':
 					if(*(str+1) == '>')
 					{
@@ -143,6 +149,7 @@ void tokenize(const char* str,
 		if(mode == SKIP_MODE)
 		{
 			str++;
+			mode=0;
 			continue;
 		}
 		else if(mode == SET_CHAR_MODE)
@@ -157,7 +164,7 @@ void tokenize(const char* str,
 		}
 		else if(mode != 0)
 		{
-			printf("Unrecognized mode!\n");
+			printf("Encountered error!\n");
 			list_init(list);
 			return;
 		}

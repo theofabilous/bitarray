@@ -8,11 +8,15 @@
 
 #include "common.h"
 
+#ifndef TOKEN_BUFFSIZE
+	#define TOKEN_BUFFSIZE 25
+#endif
+
 
 typedef struct Token
 {
 	uint8_t flags;
-	char str[10];
+	char str[TOKEN_BUFFSIZE];
 } Token;
 
 typedef struct BracketPair
@@ -66,7 +70,7 @@ static inline bool token_is_char(Token* tok)
 static inline void reset_token(Token* tok)
 {	
 	tok->flags = 0;
-	memset(tok->str, '\0', 10*sizeof(char));
+	memset(tok->str, '\0', TOKEN_BUFFSIZE*sizeof(char));
 }
 
 static inline void set_token_char(Token* tok, char c)
@@ -84,7 +88,7 @@ static inline bool token_is_str(Token* tok)
 static inline int set_token_int(Token* tok, const char *str)
 {
 	int i;
-	for(i=0; i<10 && isdigit(str[i]); i++)
+	for(i=0; i<TOKEN_BUFFSIZE && isdigit(str[i]); i++)
 		tok->str[i] = str[i];
 	tok->str[i] = '\0';
 	if(i<1)
@@ -100,7 +104,7 @@ static inline int set_token_int(Token* tok, const char *str)
 static inline void set_token_str(Token* tok, const char* str)
 {
 	int i;
-	for(i=0; i<10 && str[i]; i++)
+	for(i=0; i<TOKEN_BUFFSIZE && str[i]; i++)
 		tok->str[i] = str[i];
 	tok->str[i] = str[i];
 	tok->flags |= STR_TOKEN;
@@ -108,7 +112,7 @@ static inline void set_token_str(Token* tok, const char* str)
 
 static inline bool set_token_strn(Token* tok, const char* str, int len)
 {
-	if(len > 10)
+	if(len > TOKEN_BUFFSIZE)
 		return false;
 	int i;
 	for(i=0; i<len && str[i]; i++)

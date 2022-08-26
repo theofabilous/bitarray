@@ -1,6 +1,6 @@
 // #include "../src/binunpack.h"
 #include "tokentree.h"
-
+#include <stdio.h>
 
 void simple_tests()
 {
@@ -63,13 +63,15 @@ void condition_tests()
 void new_operators_tests()
 {
 	const char* fmt[] = {
-		"$1=^u33>>4+(1<<3)",
-		"$99 = ^u32 || Bu31. ? $2 := u1:u3",
-		"u($1)->u32==100||@($1+@5)<=u33",
+		// "$1=^u33>>4+(1<<3)",
+		// "$99 = ^u32 || uB31. ? $2 := u1:u3",
+		// "u($1)->u32==100||@($1+@5)<=u33",
+		"$1=($1==(i(99+u32)-{5acd_aaaaa_i0}))?(u32:i32)",
+		"$1=={51234}+1*2",
 		""
 	};
 	for(int i=0; fmt[i][0]; i++)
-		debug_parse_str(fmt[i], Quiet, false, false);
+		debug_parse_str(fmt[i], Full, false, false);
 }
 
 
