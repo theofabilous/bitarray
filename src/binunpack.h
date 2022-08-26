@@ -62,7 +62,7 @@ void _print_tree(Tree* tree, int depth, bool end);
 void print_tree(Tree *tree, bool end);
 
 
-void debug_parse_str(const char* fmt, int loglevel);
+void debug_parse_str(const char* fmt, int loglevel, bool end, bool parens_node);
 
-void debug_single_spec(char str[], int loglevel);
+void debug_single_spec(char str[], int loglevel, bool end, bool parens_node);
 
