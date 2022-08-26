@@ -87,6 +87,15 @@ void tokenize(const char* str,
 						mode=SET_CHAR_MODE;
 					break;
 				case '{':
+					// for(int i=0; *(str+i); i++)
+					// {
+					// 	if(*(str+i) == '}')
+					// 	{
+					// 		mode=i;
+					// 		break;
+					// 	}
+					// }
+					// break;
 				case '[':
 				case '(':
 					stack_push(stack, list_register_bracket_open(list, *str));
@@ -110,6 +119,7 @@ void tokenize(const char* str,
 					}
 				case 'u':
 				case 'i':
+				case '@':
 				case '$':
 				case 'B':
 				case '^':

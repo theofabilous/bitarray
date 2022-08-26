@@ -19,13 +19,13 @@ static uint8_t LOGICAL_ANDOR_PRECEDENCE;
 static uint8_t PRECEDENCE_TABLE[257] = {ZEROESx256, 0};
 static uint16_t TOKEN_FLAG_TABLE[257] = {ZEROESx256, 0};
 
-static const char* BIN_OPS = "=+-*%?:<>&|";	//	= --->
-static const char* PRE_OPS = "^Bbiu$"; // 		! --->
+static const char* BIN_OPS = "=+-*%?:<>&|";
+static const char* PRE_OPS = "^Bbiu$@";
 static const char* POST_OPS = ".";
 static const char* _DIGITS = "0123456789";
-static const char* OPEN_BRACKETS = "({"; // 	[ --->
+static const char* OPEN_BRACKETS = "({";
 static const char* CLOSE_BRACKETS = ")}]";
-static const char* SPECIAL_OP = "[!"; // 		<------
+static const char* SPECIAL_OP = "[!";
 
 static inline void set_precedence(char c, uint8_t precedence)
 {
@@ -62,19 +62,6 @@ static inline uint8_t get_precedence_str(const char* s)
 		}
 	}
 	return get_precedence(*s);
-	// if(s[0] == ':' && s[1] == '=')
-	// 	return WALRUS_PRECEDENCE;
-	// if(s[1] == '=')
-	// 	return COMPARISON_PRECEDENCE;
-	// bool same_char = s[0] == s[1];
-	// bool lefta, righta;
-	// if(  same_char && ( (lefta = (s[0] == '<')) || (righta = (s[1] == '>')) )  )
-	// 	return SHIFT_PRECEDENCE;
-	// else if( (lefta && (s[1] == '-')) || (righta && (s[0] == '-')) )
-	// 	return ARROW_PRECEDENCE;
-	// else if( same_char && ((s[0] == '&') || (s[0] == '|')))
-	// 	return LOGICAL_ANDOR_PRECEDENCE;
-	// return get_precedence(*s);
 }
 
 
@@ -117,6 +104,7 @@ void init_precedence_table()
 	set_precedence('<', 70);
 	set_precedence('>', 70);
 	WALRUS_PRECEDENCE = 89;
+	set_precedence('@', 100);
 	set_precedence('$', 100);
 	set_precedence('u', 100);
 	set_precedence('i', 100);
@@ -133,40 +121,6 @@ void init_precedence_table()
 	set_precedence('+', 40);
 	set_precedence('-', 40);
 }
-
-// void init_precedence_table()
-// {
-// 	if(PRECEDENCE_TABLE[256] != 0)
-// 		return;
-// 	PRECEDENCE_TABLE[256] = 1;
-// 	// set_precedence('(', 99);
-// 	// set_precedence(')', 99);
-// 	set_precedence('=', 0);
-// 	// set_precedence('[', 1);
-// 	set_precedence('*', 1);
-// 	set_precedence('?', 2);
-// 	// set_precedence(':', 3);
-// 	set_precedence(':', 6);
-// 	COMPARISON_PRECEDENCE = 7;
-// 	set_precedence('&', 6);
-// 	set_precedence('|', 6);
-// 	set_precedence('<', 7);
-// 	set_precedence('>', 7);
-// 	set_precedence('$', 10);
-// 	set_precedence('u', 10);
-// 	set_precedence('i', 10);
-// 	set_precedence('b', 10);
-// 	set_precedence('B', 11);
-// 	set_precedence('!', 10);
-// 	set_precedence('.', 9);
-// 	set_precedence('[', 3);
-// 	SHIFT_PRECEDENCE = 6;
-// 	set_precedence('&', 6);
-// 	set_precedence('|', 6);
-// 	set_precedence('%', 5);
-// 	set_precedence('+', 4);
-// 	set_precedence('-', 4);
-// }
 
 void init_token_flag_table()
 {
@@ -434,24 +388,6 @@ Tree* new_token_tree(int *i,
 						);
 						curr = temp;
 						break;
-					// case '<':
-					// case '>':
-					// 	if(*(cptr+1) == '=')
-					// 	{
-
-					// 	}
-					// case '=':
-					// 	if(*(cptr+1) == '=')
-					// 	{
-					// 		if(has_precedence_str(cptr, parent))
-					// 		{
-					// 			if(loglevel >= Debug)
-					// 				printf("'%s' has precendence over '%s', returning\n", cptr, parent);
-					// 			return curr;
-					// 		}
-					// 		goto binop_skip_check;
-					// 	}
-					// 	goto binop;
 					case '!':
 						if(*(cptr+1) == '=')
 						{
