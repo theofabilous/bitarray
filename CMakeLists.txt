@@ -22,8 +22,8 @@ add_library(bitarray STATIC
         src/bitarray.c
         src/bitbuffer.c
         src/bitunpack.c
-        src/binunpack.c
         src/binarymap.c
+        # src/binunpack.c
 )
 
 add_executable(buffer_examples
@@ -35,15 +35,17 @@ target_link_libraries(buffer_examples
 )
 
 list(APPEND TestTargets 
-        main_tests 
+        main_tests
         module_tests 
         file_tests
-        tokenize_tests)
+        # tokenize_tests
+        )
 list(APPEND TestFiles 
         bitarray_test 
         bitarray_module_tests 
         file_tests
-        tokenize_test)
+        # tokenize_test
+        )
 
 foreach(target file IN ZIP_LISTS TestTargets TestFiles)
         add_executable(
@@ -55,6 +57,13 @@ foreach(target file IN ZIP_LISTS TestTargets TestFiles)
                 bitarray
         )
 endforeach()
+
+add_subdirectory(src/parse)
+add_executable(tokenize_test tests/tokenize_test.c)
+target_link_libraries(tokenize_test PUBLIC 
+        parse)
+target_include_directories(tokenize_test PUBLIC
+        src/parse/src)
 
 
 add_executable(binav
