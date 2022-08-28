@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.21)
 project(parse C)
 
 add_library(parse STATIC
-	src/tokenize.c
-	src/tokentree.c)
+	tokenize.c
+	tokentree.c
+	stringtree.c
+	treecompile.c)
 
-include_directories(
-	src
-	/usr/local/include)
+include_directories(/usr/local/include)

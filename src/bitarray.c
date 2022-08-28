@@ -568,10 +568,10 @@ bitarray_fill_slice(
 	{
 		if(byte_i == byte_j)
 		{
-			if(bit)
-				self->data[byte_j] |= ((1 << bit_j - bit_i)-1) << bit_j;
+			if(bit)							// ------------- // <-- parens placed here
+				self->data[byte_j] |= ((1 << (bit_j - bit_i))-1) << bit_j;
 			else
-				self->data[byte_j] &= ~(((1 << bit_j - bit_i)-1) << bit_j);
+				self->data[byte_j] &= ~(((1 << (bit_j - bit_i))-1) << bit_j);
 			return;
 		}
 		else

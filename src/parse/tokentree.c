@@ -14,39 +14,6 @@ void delete_tree(Tree* tree)
 	}
 }
 
-static inline bool tree_is_atomic(Tree* tree)
-{
-	return (tree->left == NULL && tree->right == NULL);
-}
-
-static inline bool tree_is_singular(Tree* tree)
-{
-	return ( (tree->left != NULL && tree->right == NULL)
-		     || (tree->left == NULL && tree->right != NULL) );
-}
-
-static inline bool tree_is_simple(Tree* tree)
-{
-	if(!tree_is_singular(tree))
-		return false;
-	Tree *child = (tree->left == NULL) ? tree->right : tree->left;
-	return tree_is_atomic(child);
-}
-
-static inline bool tree_is_binary(Tree* tree)
-{
-	return (tree->left != NULL && tree->right != NULL);
-}
-
-static inline bool tree_is_bisimple(Tree* tree)
-{
-	if(!tree_is_binary(tree))
-	{
-		return false;
-	}
-	return tree_is_atomic(tree->left) && tree_is_atomic(tree->right);
-}
-
 static inline void print_indent(int depth, char c)
 {
 	while(depth--)
@@ -66,7 +33,7 @@ void _print_tree(Tree* tree, int depth, bool end)
 	{
 		printf("%s", tree->str);
 	}
-	else if(tree_is_singular(tree))
+	else if(tree_is_unary(tree))
 	{
 		Tree *child = (tree->left == NULL) ? tree->right : tree->left;
 		if(tree_is_atomic(child))
@@ -124,6 +91,7 @@ Tree* new_token_tree(int *i,
 	Tree* curr = (Tree*) malloc(sizeof(Tree)), *temp = NULL;
 	if(curr == NULL)
 		return curr;
+	curr->flags = 0;
 	curr->str[0] = '\0';
 	curr->left = NULL;
 	curr->right = NULL;
@@ -150,6 +118,7 @@ Tree* new_token_tree(int *i,
 		{
 			case TOKEN_DIGIT:
 				list_copy_into(list, *i, curr->str);
+				curr->flags = 1;
 				(*i)++;
 				break;
 			case TOKEN_SPECIAL:
@@ -168,6 +137,7 @@ Tree* new_token_tree(int *i,
 						temp->str[0] = '[';
 						temp->str[1] = ']';
 						temp->str[2] = '\0';
+						temp->flags = 0;
 						temp->left = curr;
 						++(*i);
 						temp->right = new_token_tree(i, 
@@ -202,6 +172,7 @@ Tree* new_token_tree(int *i,
 						temp = (Tree*) malloc(sizeof(Tree));
 						temp->left = NULL;
 						temp->right = NULL;
+						temp->flags = 1;
 						cptr = list_get_str(list, *i);
 						// printf("cptr: %s\n", cptr);
 						list_copy_into(list, *i, temp->str);
@@ -234,6 +205,7 @@ Tree* new_token_tree(int *i,
 						loglevel,
 						list_get_curr_br(list)->close,
 						parens_node);
+				temp->flags = 0;
 				if(parens_node)
 				{
 					curr->str[0] = *cptr;
@@ -275,6 +247,7 @@ Tree* new_token_tree(int *i,
 				}
 				postop_skip_check:
 				temp = (Tree*) malloc(sizeof(Tree));
+				temp->flags = 0;
 				list_copy_into(list, *i, temp->str);
 				temp->left = curr;
 				curr = temp;
@@ -292,6 +265,7 @@ Tree* new_token_tree(int *i,
 				temp = (Tree*) malloc(sizeof(Tree));
 				list_copy_into(list, *i, temp->str);
 				temp->left = curr;
+				temp->flags = 0;
 				curr = temp;
 				++(*i);
 				curr->right = new_token_tree(i, 
@@ -387,6 +361,14 @@ void debug_single_spec(char str[], int loglevel, bool end, bool parens_node)
 
 
 	printf("----------------------------------------------\n");
+}
+
+Tree* make_single_token_tree(const char* fmt, int loglevel)
+{
+	TokenList list; 
+	Stack stack;
+	tokenize(fmt, &list, &stack);
+	return create_token_tree(&list, loglevel, false);
 }
 
 void debug_parse_str(const char* fmt, int loglevel, bool end, bool parens_node)

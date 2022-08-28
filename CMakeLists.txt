@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.21)
 project(bitarray C)
 
 set(CMAKE_C_STANDARD 11)
+# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-everything")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-nullability-completeness")
 
 find_package(Curses REQUIRED)
 
@@ -25,6 +27,9 @@ add_library(bitarray STATIC
         src/binarymap.c
         # src/binunpack.c
 )
+
+target_compile_options(bitarray PUBLIC
+        -Wno-format)
 
 add_executable(buffer_examples
         examples/buffer_examples.c
@@ -56,14 +61,18 @@ foreach(target file IN ZIP_LISTS TestTargets TestFiles)
                 ${target}
                 bitarray
         )
+        target_compile_options(${target} PUBLIC
+                -Wno-format)
 endforeach()
+
 
 add_subdirectory(src/parse)
 add_executable(tokenize_test tests/tokenize_test.c)
 target_link_libraries(tokenize_test PUBLIC 
         parse)
 target_include_directories(tokenize_test PUBLIC
-        src/parse/src)
+        src/parse)
+
 
 
 add_executable(binav
