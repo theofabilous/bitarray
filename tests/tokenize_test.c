@@ -135,22 +135,24 @@ void string_tree_test()
 			errs++;
 	}
 	printf("Done! i=%d, errs=%zu, succeeds=%zu\n", i, errs, succeeds);
-
-	// if(!res.valid) printf("Invalid\n");
 }
 
 void compile_test()
 {
 	FMTS(fmts,
-		"u(31+1)->$1=={00dc}",
-		"$(50+B4)=u59%(10*2)",
-		"$1=(u32?u1:u2)"
+		// "u(31+1)->$1=={00dc}",
+		// "$(50+B4)=u59%(10*2)",
+		// "$1=(u32 || 10 ?u1:u2)",
+		// "$1=u($1)+u10*10",
+		// "u($1?(1:2))[$1+10]",
+		// "u(^i1)"
+		"$1=u(^i1)+u10*10"
 		);
 	const char* fmt;
 	for(int i=0; ((fmt = fmts[i])[0]); i++)
 	{
 		printf("\n\n[INPUT]: %s\n\n", fmt);
-		Tree* tree = make_single_token_tree(fmt, Quiet);
+		Tree* tree = make_single_token_tree(fmt, Quiet, false);
 		printf("\n--- Tree representation ---\n");
 		print_tree(tree, true);
 		debug_compile(tree);

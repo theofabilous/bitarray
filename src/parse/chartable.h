@@ -14,6 +14,7 @@ and should *only* be included in that file
 #include "common.h"
 
 static uint8_t 	COMPARISON_PRECEDENCE;
+static uint8_t 	REPEAT_PRECEDENCE;
 static uint8_t 	SHIFT_PRECEDENCE;
 static uint8_t 	WALRUS_PRECEDENCE;
 static uint8_t 	ARROW_PRECEDENCE;
@@ -29,6 +30,8 @@ FLAG16(TOKEN_DIGIT, 3);
 FLAG16(TOKEN_OPEN, 4);
 FLAG16(TOKEN_CLOSE, 5);
 FLAG16(TOKEN_SPECIAL, 6);
+FLAG16(TOKEN_READ, 7);
+static const uint16_t HIDE_READ = (1 << 7)-1;
 
 static const char* BIN_OPS 			= "=+-*%?:<>&|";
 static const char* PRE_OPS 			= "^Bbiu$@";
@@ -37,6 +40,7 @@ static const char* _DIGITS 			= "0123456789";
 static const char* OPEN_BRACKETS 	= "(";
 static const char* CLOSE_BRACKETS 	= ")}]";
 static const char* SPECIAL_OP 		= "{[!";
+static const char* READ_OPS			= "^bui.";
 
 static inline void set_precedence(char c, uint8_t precedence)
 {
@@ -58,6 +62,8 @@ static inline uint8_t get_precedence_str(const char* s)
 	{
 		switch(CHARS2(s[0], s[1]))
 		{
+			case CHARS2('*', '*'):
+				return REPEAT_PRECEDENCE;
 			case CHARS2(':', '='):
 				return WALRUS_PRECEDENCE;
 			case CHARS2('<', '-'):
@@ -104,34 +110,35 @@ void init_precedence_table()
 		return;
 	PRECEDENCE_TABLE[256] = 1;
 
-	set_precedence('=', 		1);
-	ARROW_PRECEDENCE = 			10;
-	set_precedence('*', 		10);
-	set_precedence('?', 		20);
-	set_precedence(':', 		55);
-	LOGICAL_ANDOR_PRECEDENCE = 	57;
-	COMPARISON_PRECEDENCE = 	70;
-	set_precedence('&', 		60);
-	set_precedence('|', 		60);
-	set_precedence('<', 		70);
-	set_precedence('>', 		70);
-	WALRUS_PRECEDENCE = 		89;
-	set_precedence('@', 		100);
-	set_precedence('$', 		100);
-	set_precedence('u', 		100);
-	set_precedence('i', 		100);
-	set_precedence('b', 		100);
-	set_precedence('B', 		105);
-	set_precedence('!', 		100);
-	set_precedence('^', 		80);
-	set_precedence('.', 		90);
-	set_precedence('[', 		30);
-	SHIFT_PRECEDENCE = 			60;
-	set_precedence('&', 		60);
-	set_precedence('|', 		60);
-	set_precedence('%', 		50);
-	set_precedence('+', 		40);
-	set_precedence('-', 		40);
+	set_precedence('=', 			1);
+	ARROW_PRECEDENCE 			= 	10;
+	REPEAT_PRECEDENCE 			=	10;
+	set_precedence('*', 			REPEAT_PRECEDENCE);
+	set_precedence('?', 			20);
+	set_precedence(':', 			55);
+	LOGICAL_ANDOR_PRECEDENCE 	= 	57;
+	COMPARISON_PRECEDENCE 		= 	70;
+	set_precedence('&', 			60);
+	set_precedence('|', 			60);
+	set_precedence('<', 			70);
+	set_precedence('>', 			70);
+	WALRUS_PRECEDENCE = 			89;
+	set_precedence('@', 			100);
+	set_precedence('$', 			100);
+	set_precedence('u', 			100);
+	set_precedence('i', 			100);
+	set_precedence('b', 			100);
+	set_precedence('B', 			105);
+	set_precedence('!', 			100);
+	set_precedence('^', 			80);
+	set_precedence('.', 			90);
+	set_precedence('[', 			30);
+	SHIFT_PRECEDENCE = 				60;
+	set_precedence('&', 			60);
+	set_precedence('|', 			60);
+	set_precedence('%', 			50);
+	set_precedence('+', 			40);
+	set_precedence('-', 			40);
 }
 
 void init_token_flag_table()
@@ -185,6 +192,13 @@ void init_token_flag_table()
 	while(*cptr)
 	{
 		TOKEN_FLAG_TABLE[(uint8_t) *cptr] |= TOKEN_SPECIAL;
+		cptr++;
+	}
+
+	cptr = READ_OPS;
+	while(*cptr)
+	{
+		TOKEN_FLAG_TABLE[(uint8_t) *cptr] |= TOKEN_READ;
 		cptr++;
 	}
 }

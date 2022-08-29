@@ -40,7 +40,7 @@ typedef struct Instruction
 typedef struct CodeList
 {
 	uint32_t registers;
-	uint32_t len;
+	int64_t len;
 	Instruction items[200];
 } CodeList;
 

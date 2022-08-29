@@ -123,6 +123,12 @@ void tokenize(const char* str,
 						mode=2;
 						break;
 					}
+				case '*':
+					if(*(str+1) == '*')
+					{
+						mode=2;
+						break;
+					}
 				case 'u':
 				case 'i':
 				case '@':
@@ -131,7 +137,6 @@ void tokenize(const char* str,
 				case '^':
 				case '?':
 				case 'b':
-				case '*':
 				case '.':
 				case '+':
 				case '%':

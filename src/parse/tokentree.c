@@ -114,7 +114,7 @@ Tree* new_token_tree(int *i,
 			print_tree(curr, true);
 			  printf(". . . . . . . . . . . . . .\n\n");
 		}
-		switch(get_token_flags(*cptr))
+		switch(get_token_flags(*cptr) & HIDE_READ)
 		{
 			case TOKEN_DIGIT:
 				list_copy_into(list, *i, curr->str);
@@ -206,7 +206,12 @@ Tree* new_token_tree(int *i,
 						list_get_curr_br(list)->close,
 						parens_node);
 				temp->flags = 0;
-				if(parens_node)
+				if(parens_node ||
+						(  
+						((get_token_flags(*parent) & TOKEN_READ) != 0) &&
+						((get_token_flags(temp->str[0]) & TOKEN_READ) != 0)
+						)
+					)
 				{
 					curr->str[0] = *cptr;
 					curr->str[1] = get_matching_brace(*cptr);
@@ -363,12 +368,12 @@ void debug_single_spec(char str[], int loglevel, bool end, bool parens_node)
 	printf("----------------------------------------------\n");
 }
 
-Tree* make_single_token_tree(const char* fmt, int loglevel)
+Tree* make_single_token_tree(const char* fmt, int loglevel, bool parens_node)
 {
 	TokenList list; 
 	Stack stack;
 	tokenize(fmt, &list, &stack);
-	return create_token_tree(&list, loglevel, false);
+	return create_token_tree(&list, loglevel, parens_node);
 }
 
 void debug_parse_str(const char* fmt, int loglevel, bool end, bool parens_node)

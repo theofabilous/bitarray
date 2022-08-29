@@ -77,7 +77,8 @@ FLAG8(TREE_LEFT_ATOMIC, 5);
 FLAG8(TREE_RIGHT_ATOMIC, 6);
 
 
-static inline uint8_t get_tree_details(Tree* tree)
+static inline uint8_t 
+get_tree_details(Tree* tree)
 {
 	uint8_t flags = 0;
 	if(tree->left == NULL)
@@ -108,33 +109,11 @@ static inline uint8_t get_tree_details(Tree* tree)
 			flags |= TREE_SIMPLE;
 	}
 	return flags;
-
-
-	// if(tree->left == NULL)
-		// flags |= TREE_LEFT_NULL;
-	// else if(tree->left->left == NULL && tree->left->right == NULL)
-	// 	flags |= TREE_LEFT_ATOMIC;
-	// else if(tree->left->right == NULL && tree->left->left != NULL)
-	// {
-	// 	if(tree->left->left->left == NULL)
-	// 		flags |= TREE_LEFT_SIMPLE;
-	// }
-
-	// if(tree->right == NULL)
-	// 	flags |= TREE_RIGHT_NULL;
-	// else if(tree->right->left == NULL && tree->right->right == NULL)
-	// 	flags |= TREE_RIGHT_ATOMIC;
-	// else if(tree->right->right == NULL && tree->right->left != NULL)
-	// {
-	// 	if(tree->right->left->left == NULL)
-	// 		flags |= TREE_RIGHT_SIMPLE;
-	// }
-	// return flags;
 }
 
 Tree* create_token_tree(TokenList* list, int loglevel, bool parens_node);
 
-Tree* make_single_token_tree(const char* fmt, int loglevel);
+Tree* make_single_token_tree(const char* fmt, int loglevel, bool parens_node);
 
 void debug_parse_str(const char* fmt, int loglevel, bool end, bool parens_node);
 
