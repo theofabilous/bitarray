@@ -39,6 +39,8 @@ typedef struct StringSpec
 FLAG16(REQUIRE_SIMPLE, 	0);
 FLAG16(UNARY_SPEC, 		1);
 FLAG16(BINARY_SPEC, 	2);
+FLAG16(TERNARY_SPEC, 	3);
+FLAG16(NO_RETURN,		8);
 FLAG16(LOOP_SPECIAL,	11);
 FLAG16(BOOL_CHECK, 		12);
 FLAG16(READ_COLLAPSE, 	13);
@@ -67,15 +69,15 @@ const StringSpec SPECMAP[] =
 	{"@", 	"GET_FIELD",			UNARY_SPEC 	| REQUIRE_SIMPLE},
 	{"{}", 	"RAW_VALUE", 			UNARY_SPEC 	| REQUIRE_SIMPLE},
 	{"()", 	"-()-",					UNARY_SPEC 	| OTHER_SPECIAL},
-	{"!", 	"SKIP",					UNARY_SPEC},
-	{"B",	"BYTES",				UNARY_SPEC},
+	{"!", 	"SKIP",					UNARY_SPEC 	| NO_RETURN},
+	{"B",	"BYTES",				UNARY_SPEC 	| OTHER_SPECIAL},
 	{"u", 	"----",					BINARY_SPEC | READ_COLLAPSE},
 	{"i", 	"----",					BINARY_SPEC | READ_COLLAPSE},
 	{".", 	"----",					BINARY_SPEC | READ_COLLAPSE},
 	{"^", 	"----",					BINARY_SPEC | READ_COLLAPSE},
 	{"_R", 	"READ",					BINARY_SPEC},
 	{"_P", 	"PEEK",					BINARY_SPEC},
-	{"=", 	"ASSIGN",				BINARY_SPEC},
+	{"=", 	"ASSIGN",				BINARY_SPEC | NO_RETURN},
 	{":=", 	"WALRUS_ASSIGN",		BINARY_SPEC},
 	{"==", 	"EQUAL?", 				BINARY_SPEC},
 	{"!=",	"NOT_EQUAL?",			BINARY_SPEC},
@@ -86,7 +88,7 @@ const StringSpec SPECMAP[] =
 	{"&&", 	"OR?",					BINARY_SPEC},
 	{"||", 	"AND?",					BINARY_SPEC},
 	{":", 	"-----",				BINARY_SPEC | ACCESS_SPECIAL},
-	{"->", 	"DO_UNTIL",				BINARY_SPEC | LOOP_SPECIAL},
+	{"->", 	"LOOP_WHILE",			BINARY_SPEC | LOOP_SPECIAL},
 	{"<-", 	"-----",				BINARY_SPEC},
 	{"[]", 	"READ_ARRAY",			BINARY_SPEC | LOOP_SPECIAL},
 	{"+",	"PLUS",					BINARY_SPEC},
@@ -345,7 +347,7 @@ compile_special_tree(
 {
 	DLOG(__func__, __LINE__);
 	Tree* new_tree = tree;
-	int ret1 = -1, ret2 = -1;
+	int ret1 = -1, ret2 = -1, temp;
 	if(res.flags & READ_COLLAPSE)
 	{
 		char c;
@@ -399,7 +401,7 @@ compile_special_tree(
 		ret1 = codelist_append(list, 
 			(Instruction)
 			{
-				.spec = BINARY_SPEC,
+				.spec = BINARY_SPEC | NO_RETURN,
 				.name = "IF_JUMP",
 				.left = MAKEGET(ret1)
 			}
@@ -420,7 +422,7 @@ compile_special_tree(
 			ret1 = codelist_append(list, 
 				(Instruction)
 				{
-					.spec = UNARY_SPEC,
+					.spec = UNARY_SPEC | NO_RETURN,
 					.name = "JUMP"
 				}
 			);
@@ -441,24 +443,57 @@ compile_special_tree(
 	}
 	else if(res.flags & LOOP_SPECIAL)
 	{
-		if(tree->str[0] == '*' || tree->str[0] == '[')
+		if(tree->str[0] == '*' || tree->str[0] == '['
+			// || ((tree->str[0] == '-') && (tree->str[1] == '>'))
+			)
 		{
 			if(!(flags & TREE_BINARY) || (flags & TREE_LEFT_ATOMIC))
 				return TREE_INVALID;
-			Instruction ins = { .spec = BINARY_SPEC, .name = res.str_val };
+			Instruction ins = { .spec = TERNARY_SPEC, .name = res.str_val };
+			ins._1 = MAKEREF(list->len+1);
 			if(flags & TREE_RIGHT_ATOMIC)
-				ins.right = MAKESTR(tree->right->str);
+				ins._3 = MAKESTR(tree->right->str);
 			else
 			{
 				ret1 = _compile_tokentree(tree->right, list);
 				if(ret1 < 0) return ret1;
-				ins.right = MAKEGET(ret1);
+				ins._3 = MAKEGET(ret1);
 			}
 			ret1 = codelist_append(list, ins);
 			if(ret1 < 0) return ret1;
 			ret2 = _compile_tokentree(tree->left, list);
 			if(ret2 < 0) return ret2;
-			codelist_get(list, ret1)->left = MAKEREF(ret2);
+			codelist_get(list, ret1)->_2 = MAKEREF(ret2);
+			return ret2;
+		}
+		else if((tree->str[0] == '-') && (tree->str[1] == '>'))
+		{
+			if(!(flags & TREE_BINARY) || (flags & TREE_LEFT_ATOMIC) || (flags & TREE_RIGHT_ATOMIC))
+				return TREE_INVALID;
+			ret1 = list->len;
+			ret2 = _compile_tokentree(tree->right, list);
+			if(ret2 < 0) return ret2;
+			temp = codelist_append(list,
+				(Instruction)
+				{ 
+					.spec = BINARY_SPEC | NO_RETURN, 
+					.name = "IFN_JUMP",
+					.left = MAKEGET(ret2)
+				}
+			);
+			if(temp < 0) return ret2;
+			ret2 = _compile_tokentree(tree->left, list);
+			if(ret2 < 0) return ret2;
+			ret2 = codelist_append(list,
+				(Instruction)
+				{
+					.spec = UNARY_SPEC | NO_RETURN,
+					.name = "JUMP",
+					.left = MAKEREF(ret1)
+				}
+			);
+			if(ret2 < 0) return ret2;
+			codelist_get(list, temp)->right = MAKEREF(ret2 + 1);
 			return ret2;
 		}
 	}
@@ -470,6 +505,28 @@ compile_special_tree(
 				return TREE_INVALID;
 			// if(flags & TREE_LEFT_ATOMIC)
 			return _compile_tokentree(tree->left, list);
+		}
+		else if(tree->str[0] == 'B')
+		{
+			if((flags & TREE_BINARY) || (flags & TREE_ATOMIC))
+				return TREE_INVALID;
+			res = stringtree_find_str(&strmap, "<<");
+			BITASSERT((res.valid));
+			Instruction ins =
+			{
+				.spec = res.flags | BINARY_SPEC,
+				.name = res.str_val,
+				.right = MAKESTR("3")
+			};
+			if(flags & TREE_LEFT_ATOMIC)
+				ins.left = MAKESTR(tree->left->str);
+			else
+			{
+				ret1 = _compile_tokentree(tree->left, list);
+				if(ret1 < 0) return ret1;
+				ins.left = MAKEGET(ret1);
+			}
+			return codelist_append(list, ins);
 		}
 		// if(tree->str[0] == '[')
 		// {
@@ -557,7 +614,9 @@ CodeList compile_tokentree(Tree* tree)
 	CodeList list;
 	init_codelist(&list);
 	int idx = _compile_tokentree(tree, &list);
-	if(idx >= 0)
+	if(idx >= 0 &&
+		!(codelist_get(&list, idx)->spec & NO_RETURN)
+	  )
 	{
 		Instruction ret = {
 			.spec=UNARY_SPEC,
@@ -574,68 +633,109 @@ CodeList compile_tokentree(Tree* tree)
 void print_codelist(CodeList* list)
 {
 	Instruction ins;
-	char buffleft[50];
-	char buffright[50];
-	const char* pleft;
-	const char* pright;
+	// char buffleft[50];
+	// char buffright[50];
+	// const char* pleft;
+	// const char* pright;
+	char buffs[3][50];
+	CodeValue* targets[4];
 	CodeValue target;
+	int num_targets = 0;
 	for(int i=0; i<list->len; i++)
 	{
 		ins = list->items[i];
+		targets[0] = &(ins._1);
+		targets[1] = &(ins._2);
+		targets[2] = &(ins._3);
+		targets[3] = NULL;
 		if(ins.spec & UNARY_SPEC)
-			target = ins.value;
+			num_targets = 1;
 		else if(ins.spec & BINARY_SPEC)
-			target = ins.left;
-		else
+			num_targets = 2;
+		else if(ins.spec & TERNARY_SPEC)
+			num_targets = 3;
+		for(int j=0; j<3; j++)
 		{
-			printf("%s ???\n", ins.name);
-			continue;
-		}
-		switch(target.type)
-		{
-			case StrType:
-				pleft = target.str_value;
-				break;
-			case RefType:
-				sprintf(buffleft, "@%d", target.i32_value);
-				pleft = buffleft;
-				break;
-			case GetType:
-				sprintf(buffleft, "$%d", target.i32_value);
-				pleft = buffleft;
-				break;
-			default:
-				buffleft[0] = '\0';
-				pleft = buffleft;
-		}
-		if(ins.spec & UNARY_SPEC)
-		{
-			buffright[0] = '\0';
-			pright = buffright;
-		}
-		else
-		{
-			target = ins.right;
+			if(j>=num_targets)
+			{
+				buffs[j][0] = '\0';
+				continue;
+			}
+			target = *(targets[j]);
 			switch(target.type)
 			{
 				case StrType:
-					pright = target.str_value;
+					sprintf(buffs[j], "%s", target.str_value);
 					break;
-				case RefType:
-					sprintf(buffright, "@%d", target.i32_value);
-					pright = buffright;
-					break;
-				case GetType:
-					sprintf(buffright, "$%d", target.i32_value);
-					pright = buffright;
-					break;
-				default:
-					buffright[0] = '\0';
-					pright = buffright;
+			case RefType:
+				sprintf(buffs[j], "@%d", target.i32_value);
+				break;
+			case GetType:
+				sprintf(buffs[j], "$%d", target.i32_value);
+				break;
+			default:
+				buffs[j][0] = '\0';
 			}
 		}
-		printf("%-10d %-15s %-10s%s\n", i, ins.name, pleft, pright);
+		printf("%-10d %-15s %-10s%-10s%s\n", i, ins.name, buffs[0], buffs[1], buffs[2]);
 	}
+	// for(int i=0; i<list->len; i++)
+	// {
+	// 	ins = list->items[i];
+	// 	if(ins.spec & UNARY_SPEC)
+	// 		target = ins.value;
+	// 	else if(ins.spec & BINARY_SPEC)
+	// 		target = ins.left;
+	// 	else
+	// 	{
+	// 		printf("%s ???\n", ins.name);
+	// 		continue;
+	// 	}
+	// 	switch(target.type)
+	// 	{
+	// 		case StrType:
+	// 			pleft = target.str_value;
+	// 			break;
+	// 		case RefType:
+	// 			sprintf(buffleft, "@%d", target.i32_value);
+	// 			pleft = buffleft;
+	// 			break;
+	// 		case GetType:
+	// 			sprintf(buffleft, "$%d", target.i32_value);
+	// 			pleft = buffleft;
+	// 			break;
+	// 		default:
+	// 			buffleft[0] = '\0';
+	// 			pleft = buffleft;
+	// 	}
+	// 	if(ins.spec & UNARY_SPEC)
+	// 	{
+	// 		buffright[0] = '\0';
+	// 		pright = buffright;
+	// 	}
+	// 	else
+	// 	{
+	// 		target = ins.right;
+	// 		switch(target.type)
+	// 		{
+	// 			case StrType:
+	// 				pright = target.str_value;
+	// 				break;
+	// 			case RefType:
+	// 				sprintf(buffright, "@%d", target.i32_value);
+	// 				pright = buffright;
+	// 				break;
+	// 			case GetType:
+	// 				sprintf(buffright, "$%d", target.i32_value);
+	// 				pright = buffright;
+	// 				break;
+	// 			default:
+	// 				buffright[0] = '\0';
+	// 				pright = buffright;
+	// 		}
+	// 	}
+	// 	printf("%-10d %-15s %-10s%s\n", i, ins.name, pleft, pright);
+	// }
 }
 
 void debug_compile(Tree* tree)

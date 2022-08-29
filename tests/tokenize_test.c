@@ -146,7 +146,10 @@ void compile_test()
 		// "$1=u($1)+u10*10",
 		// "u($1?(1:2))[$1+10]",
 		// "u(^i1)"
-		"$1=u(^i1)+u10*10"
+		"$1=u(^i1)+u10*10",
+		"u(^i1)+u10*10"
+		// "!($1==10?B4:B8)",
+		// "u32->^u1==10"
 		);
 	const char* fmt;
 	for(int i=0; ((fmt = fmts[i])[0]); i++)
@@ -165,11 +168,43 @@ void compile_test()
 	// const char* fmt = "$(50+B4)=u59%(10*2)";
 }
 
+void compile_userinput()
+{
+	char fmt[256];
+	char c;
+	for(;;)
+	{
+		printf("Enter an expression: \n>> ");
+		fgets(fmt, 256, stdin);
+		fmt[ strlen(fmt) - 1 ] = '\0';
+		Tree* tree = make_single_token_tree(fmt, Quiet, false);
+		if(tree == NULL)
+		{
+			printf("Incorrectly formatted expression!\n");
+			printf("Try again? (Y/n): \n>>");
+			c = tolower(getchar());
+			getchar();
+			if(c != 'Y')
+				break;
+		}
+		printf("\n--- Tree representation ---\n");
+		print_tree(tree, true);
+		debug_compile(tree);
+		delete_tree(tree);
+		printf("\nGo again? (Y/n): \n>>");
+		c = tolower(getchar());
+		getchar();
+		if(c != 'y')
+			break;
+	}
+}
+
 
 
 
 int main()
 {
+	// compile_userinput();
 	compile_test();
 	// init_char_maps();
 	// string_tree_test();

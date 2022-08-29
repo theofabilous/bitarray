@@ -28,10 +28,17 @@ typedef struct Instruction
 	const char* name;
 	union
 	{
-		CodeValue value;
 		struct
 		{
-			CodeValue left, right;
+			CodeValue value, _1_ignore1, _2_ignore1;
+		};
+		struct
+		{
+			CodeValue left, right, _1_ignore2;
+		};
+		struct
+		{
+			CodeValue _1, _2, _3;
 		};
 	};
 } Instruction;
