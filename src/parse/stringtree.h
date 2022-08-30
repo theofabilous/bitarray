@@ -121,6 +121,17 @@ stringtree_add_str_str(
 	const char* strv
 	);
 
+static inline bool
+stringtree_add_str_raw(
+	StringTree* tree, 
+	const char* s, 
+	uint16_t flags, 
+	void* opaque
+	)
+{
+	return stringtree_add_str_u64(tree, s, flags, (uint64_t) opaque);
+}
+
 
 
 #endif /* stringtree.h */

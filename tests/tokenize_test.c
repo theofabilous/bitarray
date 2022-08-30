@@ -2,6 +2,7 @@
 #include "tokentree.h"
 #include "stringtree.h"
 #include "treecompile.h"
+// #include "tokenhash.h"
 #include <stdio.h>
 
 #define FMT_END ,""
@@ -50,6 +51,7 @@ void sequence_tests()
 	const char* fmt[] = {
 		"$1=u32[B5+i7],$1=(u{32})[B5+i7]",
 		"$1=u32.[5]",
+		"$1=B(m{0x0B,0b0101, 52, 52})+u1",
 		""
 	};
 	for(int i=0; fmt[i][0]; i++)
@@ -137,17 +139,65 @@ void string_tree_test()
 	printf("Done! i=%d, errs=%zu, succeeds=%zu\n", i, errs, succeeds);
 }
 
+
+void verify_sizes_addrs()
+{
+	printf("Sizeof codevalue: %zu\n", sizeof(CodeValue));
+	printf("Sizeof instruction: %zu\n", sizeof(Instruction));
+	Instruction x;
+	CodeValue* ptrs_arr[] =
+	{
+		&(x.values[0]),
+		&(x.values[1]),
+		&(x.values[2])
+	};
+	CodeValue* ptrs_un[] =
+	{
+		&(x.value),
+		0,
+		0
+	};
+	CodeValue* ptrs_bin[] =
+	{
+		&(x.left), 
+		&(x.right),
+		0
+	};
+	CodeValue* ptrs_tern[] =
+	{
+		&(x._1), 
+		&(x._2), 
+		&(x._3)
+	};
+	for(int i=0; i<3; i++)
+	{
+		printf("%d: %p\n", i, ptrs_arr[i]);
+		printf("%d: %p\n", i, ptrs_un[i]);
+		printf("%d: %p\n", i, ptrs_bin[i]);
+		printf("%d: %p\n", i, ptrs_tern[i]);
+		putchar('\n');
+	}
+}
+
+
 void compile_test()
 {
+	// verify_sizes_addrs();
 	FMTS(fmts,
 		// "u(31+1)->$1=={00dc}",
+		"u32+r{u31+5}",
+		"i33+5{u31}-{000dc}>>7{}",
+		"0b1001+0x00AF"
 		// "$(50+B4)=u59%(10*2)",
 		// "$1=(u32 || 10 ?u1:u2)",
 		// "$1=u($1)+u10*10",
+		// "u32*10",
 		// "u($1?(1:2))[$1+10]",
+		// "u(32)[10]"
+		// "u1"
 		// "u(^i1)"
-		"$1=u(^i1)+u10*10",
-		"u(^i1)+u10*10"
+		// "$1=u(^i1)+u10*10",
+		// "u(^i1)+u10*10"
 		// "!($1==10?B4:B8)",
 		// "u32->^u1==10"
 		);
@@ -199,16 +249,34 @@ void compile_userinput()
 	}
 }
 
+// void gperf_test()
+// {
+// 	FMTS(fmts,
+// 		"+", "-", "=", "=="
+// 		);
+// 	HashToken* tok;
+// 	const char* fmt;
+// 	for(int i=0; ((fmt = fmts[i])[0]); i++)
+// 	{
+// 		tok = in_word_set(fmt, strlen(fmt));
+// 		if(tok == NULL)
+// 			printf("NULL\n");
+// 		else
+// 			printf("in: %s, out: %s\n", fmt, tok->descr);
+// 	}
+// };
+
 
 
 
 int main()
 {
+	// gperf_test();
 	// compile_userinput();
-	compile_test();
+	// compile_test();
 	// init_char_maps();
 	// string_tree_test();
-	// simple_tests();
+	simple_tests();
 	// bracket_tests();
 	// sequence_tests();
 	// condition_tests();

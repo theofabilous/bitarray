@@ -242,7 +242,13 @@ bool stringtree_add_str_u64(StringTree* tree, const char* s, uint16_t flags, uin
 	return false;
 }
 
-bool stringtree_add_str_str(StringTree* tree, const char* s, uint16_t flags, const char* strv)
+bool 
+stringtree_add_str_str(
+	StringTree* tree, 
+	const char* s, 
+	uint16_t flags, 
+	const char* strv
+	)
 {
 	if(*s < 33 || *s > 126)
 		return false;

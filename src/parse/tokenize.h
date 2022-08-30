@@ -51,6 +51,8 @@ void tokenize(const char* str,
 FLAG8(CHAR_TOKEN, 0);
 FLAG8(STR_TOKEN, 1);
 FLAG8(INT_TOKEN, 2);
+FLAG8(HEX_TOKEN, 3);
+FLAG8(BIN_TOKEN, 4);
 
 static inline bool token_is_valid(Token* tok)
 {
@@ -100,6 +102,44 @@ static inline int set_token_int(Token* tok, const char *str)
 	tok->flags |= INT_TOKEN;
 	return i;
 }
+
+static inline int set_token_hex(Token* tok, const char *str)
+{
+	int i;
+	tok->str[0] = '0';
+	tok->str[1] = 'x';
+	for(i=2; i<TOKEN_BUFFSIZE && isxdigit(str[i]); i++)
+		tok->str[i] = str[i];
+	tok->str[i] = '\0';
+	if(i<=2)
+	{
+		reset_token(tok);
+		return -1;
+	}
+	tok->flags |= STR_TOKEN;
+	tok->flags |= HEX_TOKEN;
+	return i;
+}
+
+static inline int set_token_bin(Token* tok, const char *str)
+{
+	int i;
+	tok->str[0] = '0';
+	tok->str[1] = 'b';
+	for(i=2; i<TOKEN_BUFFSIZE && (str[i] == '0' || str[i] == '1'); i++)
+		tok->str[i] = str[i];
+	tok->str[i] = '\0';
+	if(i<=2)
+	{
+		reset_token(tok);
+		return -1;
+	}
+	tok->flags |= STR_TOKEN;
+	tok->flags |= BIN_TOKEN;
+	return i;
+}
+
+
 
 static inline void set_token_str(Token* tok, const char* str)
 {
@@ -182,13 +222,33 @@ static inline bool list_append(TokenList* list, Token* tok)
 	return true;
 }
 
-static inline BracketPair* list_register_bracket_open(TokenList* list, char c)
+static inline BracketPair* 
+list_register_bracket_open(
+	TokenList* list, 
+	char c)
 {
 	list->brackets[list->blen] = (BracketPair) {.copen = c, .open=list->len, .close=0};
 	// list->brackets[list->blen+1] = (BracketPair) {.copen='\0', .cclose='\0'};
 	// Token tok = {.flags = CHAR_TOKEN, .c= '('};
 	Token tok;
 	set_token_char(&tok, c);
+	if(!list_append(list, &tok))
+		return NULL;
+	return &(list->brackets[list->blen++]);
+}
+
+static inline BracketPair* 
+list_register_bracket_open_str(
+	TokenList* list, 
+	const char* s, 
+	char c, 
+	int size)
+{
+	list->brackets[list->blen] = (BracketPair) {.copen = c, .open=list->len, .close=0};
+	// list->brackets[list->blen+1] = (BracketPair) {.copen='\0', .cclose='\0'};
+	// Token tok = {.flags = CHAR_TOKEN, .c= '('};
+	Token tok;
+	set_token_strn(&tok, s, size);
 	if(!list_append(list, &tok))
 		return NULL;
 	return &(list->brackets[list->blen++]);

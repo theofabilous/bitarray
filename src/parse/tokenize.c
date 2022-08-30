@@ -45,7 +45,37 @@ void tokenize(const char* str,
 	while(*str && list_len(list) < 100)
 	{
 		reset_token(&tok);
-		if(isdigit(*str))
+		if(*str == '0')
+		{
+			// str += 2;
+			if(*(str+1) == 'x')
+				incr = set_token_hex(&tok, str);
+			else if(*(str+1) == 'b')
+				incr = set_token_bin(&tok, str);
+			else
+				goto leave_num_fmt;
+			if(incr < 0)
+			{
+				list_init(list);
+				return;
+			}
+			str += incr;
+			list_append(list, &tok);
+			continue;
+		}
+		leave_num_fmt:
+		if(*(str+1) == '{' &&
+			isalnum(*str))
+		{
+			stack_push(stack, 
+				list_register_bracket_open_str(
+					list, str, '{', 2)
+			);
+			str+=2;
+			mode=0;
+			continue;
+		}
+		else if(isdigit(*str))
 		{
 			incr = set_token_int(&tok, str);
 			if(incr < 0)
@@ -61,6 +91,10 @@ void tokenize(const char* str,
 		{
 			switch(*str)
 			{
+				case ';':
+				case ',':
+					mode = SET_CHAR_MODE;
+					break;
 				case ' ':
 					mode=SKIP_MODE;
 					break;
@@ -70,8 +104,13 @@ void tokenize(const char* str,
 						mode=2;
 						break;
 					}
-				case '&':
 				case '|':
+					if(*(str+1) == '>')
+					{
+						mode=2;
+						break;
+					}
+				case '&':
 				case '>':
 					if(*(str+1) == *str)
 					{

@@ -31,42 +31,31 @@ typedef struct Tree
 		char c;
 		uint16_t val;
 	};
-	struct Tree *left, *right;
+	union
+	{
+		struct Tree* left;
+		struct Tree** children;
+	};
+	union
+	{
+		struct Tree* right;
+		uint64_t num_children;
+	};
 } Tree;
 
-
-static inline bool tree_is_atomic(Tree* tree)
+static inline
+Tree* alloc_binary_tree()
 {
-	return (tree->left == NULL && tree->right == NULL);
-}
+	Tree *tree = (Tree*) malloc(sizeof(Tree));
+	if(tree == NULL)
+		return NULL;
+	tree->flags = 0;
+	tree->left = NULL;
+	tree->right = NULL;
+	tree->str[0] = '\0';
+	return tree;
+};
 
-static inline bool tree_is_unary(Tree* tree)
-{
-	return ( (tree->left != NULL && tree->right == NULL)
-		     || (tree->left == NULL && tree->right != NULL) );
-}
-
-static inline bool tree_is_simple(Tree* tree)
-{
-	if(!tree_is_unary(tree))
-		return false;
-	Tree *child = (tree->left == NULL) ? tree->right : tree->left;
-	return tree_is_atomic(child);
-}
-
-static inline bool tree_is_binary(Tree* tree)
-{
-	return (tree->left != NULL && tree->right != NULL);
-}
-
-static inline bool tree_is_bisimple(Tree* tree)
-{
-	if(!tree_is_binary(tree))
-	{
-		return false;
-	}
-	return tree_is_atomic(tree->left) && tree_is_atomic(tree->right);
-}
 
 FLAG8(TREE_ATOMIC, 0);
 FLAG8(TREE_SIMPLE, 1);
@@ -75,18 +64,21 @@ FLAG8(TREE_BISIMPLE, 3);
 FLAG8(TREE_BINARY, 4);
 FLAG8(TREE_LEFT_ATOMIC, 5);
 FLAG8(TREE_RIGHT_ATOMIC, 6);
+FLAG8(TREE_MANY, 7);
 
 
 static inline uint8_t 
 get_tree_details(Tree* tree)
 {
 	uint8_t flags = 0;
+	if(tree->flags & TREE_MANY)
+		return TREE_MANY;
 	if(tree->left == NULL)
 	{
 		BITASSERT((tree->right == NULL));
 		return TREE_ATOMIC;
 	}
-	if(tree->left->left == NULL)
+	if(!(tree->left->flags & TREE_MANY) && tree->left->left == NULL)
 	{
 		BITASSERT((tree->left->right == NULL));
 		flags |= TREE_LEFT_ATOMIC;
@@ -94,7 +86,7 @@ get_tree_details(Tree* tree)
 	if(tree->right != NULL)
 	{
 		flags |= TREE_BINARY;
-		if(tree->right->left == NULL)
+		if(!(tree->right->flags & TREE_MANY) && tree->right->left == NULL)
 		{
 			BITASSERT((tree->right->right == NULL));
 			flags |= TREE_RIGHT_ATOMIC;
@@ -116,6 +108,8 @@ Tree* create_token_tree(TokenList* list, int loglevel, bool parens_node);
 Tree* make_single_token_tree(const char* fmt, int loglevel, bool parens_node);
 
 void debug_parse_str(const char* fmt, int loglevel, bool end, bool parens_node);
+
+void debug_tokenize(TokenList* list, int loglevel);
 
 void print_tree(Tree *tree, bool end);
 

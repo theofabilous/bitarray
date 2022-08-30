@@ -2,11 +2,30 @@
 
 #include "tokentree.h"
 #include "chartable.h"
+#include "stringtree.h"
+
+static StringTree strmap = { .init = false };
+
+typedef struct TokenSpec
+{
+	uint8_t precedence;
+	uint16_t flags;
+	const char* descr;
+} TokenSpec;
+
 
 
 void delete_tree(Tree* tree)
 {
-	if(tree != NULL)
+	if(tree == NULL)
+		return;
+	if(tree->flags & TREE_MANY)
+	{
+		for(int i=0; i<tree->num_children; i++)
+			delete_tree(tree->children[i]);
+		free(tree);
+	}
+	else
 	{
 		delete_tree(tree->left);
 		delete_tree(tree->right);
@@ -26,26 +45,66 @@ static inline void print_indent_str(int depth, const char* s)
 		printf("%s", s);
 }
 
+static inline bool
+tree_set_many(Tree* tree, int size, Tree** buff)
+{
+	if(size < 0)
+		return false;
+	tree->flags |= TREE_MANY;
+	tree->num_children = (size_t) size;
+	tree->children = (Tree**) calloc(size, sizeof(Tree*));
+	if(tree->children == NULL)
+		return false;
+	for(int i =0; i<size; i++)
+		tree->children[i] = buff[i];
+	return true;
+}
+
 void _print_tree(Tree* tree, int depth, bool end)
 {
 	print_indent_str(depth, "  ");
-	if(tree_is_atomic(tree))
+	uint8_t flags = get_tree_details(tree);
+	if(flags & TREE_ATOMIC)
 	{
+		// printf("nutzatom\n");
 		printf("%s", tree->str);
 	}
-	else if(tree_is_unary(tree))
+	else if(flags & TREE_MANY)
 	{
-		Tree *child = (tree->left == NULL) ? tree->right : tree->left;
-		if(tree_is_atomic(child))
+		// printf("nutz\n");
+		if(tree->num_children < 1)
 		{
-			printf("%s( %s )", tree->str, child->str);
+			printf("%s()", tree->str);
+			return;
+		}
+		printf("%s(\n", tree->str);
+		_print_tree(tree->children[0], depth+1, end);
+		for(int i=1; i< tree->num_children; i++)
+		{
+			printf(",\n");
+			_print_tree(tree->children[i], depth+1, end);
+		}
+		putchar('\n');
+		print_indent_str(depth, "  ");
+		if(end)
+			printf(")%s", tree->str);
+		else
+			putchar(')');
+	}
+	else if(flags & TREE_UNARY)
+	{
+		// printf("nutz p\n");
+		BITASSERT((tree->right == NULL));
+		if(TREE_LEFT_ATOMIC)
+		{
+			printf("%s( %s )", tree->str, tree->left->str);
 			if(end)
 				printf("%s", tree->str);
 		}
 		else
 		{
 			printf("%s(\n", tree->str);
-			_print_tree(child, depth+1, end);
+			_print_tree(tree->left, depth+1, end);
 			putchar('\n');
 			print_indent_str(depth, "  ");
 			if(end)
@@ -54,13 +113,13 @@ void _print_tree(Tree* tree, int depth, bool end)
 				putchar(')');
 		}
 	}
-	else if(tree_is_bisimple(tree))
+	else if(flags & TREE_BISIMPLE)
 	{
 		printf("%s( %s , %s )", tree->str, tree->left->str, tree->right->str);
 		if(end)
 			printf("%s", tree->str);
 	}
-	else
+	else if(flags & TREE_BINARY)
 	{
 		printf("%s(\n", tree->str);
 		_print_tree(tree->left, depth+1, end);
@@ -88,13 +147,9 @@ Tree* new_token_tree(int *i,
 	int j,
 	bool parens_node)
 {
-	Tree* curr = (Tree*) malloc(sizeof(Tree)), *temp = NULL;
+	Tree* curr = alloc_binary_tree(), *temp = NULL;
 	if(curr == NULL)
 		return curr;
-	curr->flags = 0;
-	curr->str[0] = '\0';
-	curr->left = NULL;
-	curr->right = NULL;
 	char *cptr;
 	while(*i<100 && *i < list_len(list))
 	{
@@ -114,16 +169,99 @@ Tree* new_token_tree(int *i,
 			print_tree(curr, true);
 			  printf(". . . . . . . . . . . . . .\n\n");
 		}
-		switch(get_token_flags(*cptr) & HIDE_READ)
+		if(isalnum(*cptr) && (*(cptr+1) == '{'))
+		{
+			if(!list_incr_br(list))
+				return curr;
+			(*i)++;
+			curr->str[0] = *cptr;
+			curr->str[1] = '!';
+			curr->str[2] = '\0';
+			int jj = list_get_curr_br(list)->close;
+			if(*cptr == 'm' || *cptr == 'l')
+			{
+				Tree* tree_buff[100];
+				int ii, num_children = 0;
+				for(;*i <= jj && *i < list_len(list) && num_children < 20; num_children++)
+				{
+					ii = *i;
+					while(list_get_str(list, ii)[0] != ',' && ii < jj)
+						ii++;
+					temp = new_token_tree(
+								i, 
+								cptr, 
+								list, 
+								loglevel, 
+								ii, 
+								parens_node
+								);
+					tree_buff[num_children] = temp;
+					if(ii == jj)
+					{
+						num_children++;
+						break;
+					}
+					else
+						(*i)++;
+				}
+				if(	*i != jj 
+					|| !( tree_set_many(curr, num_children, tree_buff) )
+				  )
+				{
+					for(; num_children > 0; num_children--)
+						free(tree_buff[num_children-1]);
+					curr->flags = 0;
+				}
+				// printf("LISTR %s\n", list_get_str(list, *i));
+				++(*i);
+				// printf("LISTR %s\n", list_get_str(list, *i));
+				// if(parent[0])
+				// 	return curr;
+				// temp->flags = 0;
+				// j = 0;
+				// printf("HERE!\n");
+				// print_tree(curr, false);
+				continue;
+			}
+			if(*i == j)
+				curr->left = NULL;
+			else
+				curr->left = new_token_tree(
+					i,
+					cptr,
+					list,
+					loglevel,
+					j,
+					parens_node);
+			curr->right = NULL;
+			continue;
+		}
+		switch(
+			#ifndef USE_GPERF
+			get_token_flags(*cptr) & HIDE_READ
+			#else
+			get_token_flags(cptr) & HIDE_READ
+			#endif
+			)
 		{
 			case TOKEN_DIGIT:
+				// printf("Digit\n");
 				list_copy_into(list, *i, curr->str);
 				curr->flags = 1;
 				(*i)++;
 				break;
 			case TOKEN_SPECIAL:
+				// printf("Special\n");
 				switch(*cptr)
 				{
+					case ',':
+						if(*i == j)
+							return curr;
+						else
+						{
+							printf("Hmmmmmm\n");
+							return curr;
+						}
 					case '[':
 						if(has_precedence_str(cptr, parent))
 						{
@@ -137,7 +275,7 @@ Tree* new_token_tree(int *i,
 						temp->str[0] = '[';
 						temp->str[1] = ']';
 						temp->str[2] = '\0';
-						temp->flags = 0;
+						// temp->flags = 0;
 						temp->left = curr;
 						++(*i);
 						temp->right = new_token_tree(i, 
@@ -149,6 +287,7 @@ Tree* new_token_tree(int *i,
 						);
 						curr = temp;
 						break;
+					#ifndef USE_GPERF
 					case '!':
 						if(*(cptr+1) == '=')
 						{
@@ -161,6 +300,7 @@ Tree* new_token_tree(int *i,
 							goto binop_skip_check;
 						}
 						goto preop;
+					#endif
 					case '{':
 						++(*i);
 						if(!list_incr_br(list))
@@ -196,6 +336,7 @@ Tree* new_token_tree(int *i,
 				}
 				break;
 			case TOKEN_OPEN:
+			// printf("Open\n");
 				if(!list_incr_br(list))
 					return curr;
 				++(*i);
@@ -205,13 +346,22 @@ Tree* new_token_tree(int *i,
 						loglevel,
 						list_get_curr_br(list)->close,
 						parens_node);
-				temp->flags = 0;
+				// temp->flags = 0;
+				#ifndef USE_GPERF
 				if(parens_node ||
 						(  
 						((get_token_flags(*parent) & TOKEN_READ) != 0) &&
 						((get_token_flags(temp->str[0]) & TOKEN_READ) != 0)
 						)
 					)
+				#else
+				if(parens_node ||
+						(  
+						((get_token_flags(parent) & TOKEN_READ) != 0) &&
+						((get_token_flags(temp->str) & TOKEN_READ) != 0)
+						)
+					)
+				#endif
 				{
 					curr->str[0] = *cptr;
 					curr->str[1] = get_matching_brace(*cptr);
@@ -226,14 +376,18 @@ Tree* new_token_tree(int *i,
 				}
 				break;
 			case TOKEN_CLOSE:
+			// printf("Close\n");
 				if(*i == j)
 					return curr;
 				else
 					++(*i);
 				break;
 			case TOKEN_PREOP:
+			// printf("Preop\n");
 				preop:
+
 				list_copy_into(list, *i, curr->str);
+				// printf("THE STR: %s\n", curr->str);
 				++(*i);
 				curr->left = new_token_tree(i, 
 					cptr, 
@@ -241,9 +395,12 @@ Tree* new_token_tree(int *i,
 					loglevel,
 					j,
 					parens_node);
+				// printf("\n\n\nCOKC AND HVAhuw\n\n\n");
+				// print_tree(curr->left, false);
 				curr->right = NULL;
 				break;
 			case TOKEN_POSTOP:
+			// printf("Post\n");
 				if(has_precedence_str(cptr, parent))
 				{
 					if(loglevel >= Debug)
@@ -252,7 +409,7 @@ Tree* new_token_tree(int *i,
 				}
 				postop_skip_check:
 				temp = (Tree*) malloc(sizeof(Tree));
-				temp->flags = 0;
+				// temp->flags = 0;
 				list_copy_into(list, *i, temp->str);
 				temp->left = curr;
 				curr = temp;
@@ -260,17 +417,19 @@ Tree* new_token_tree(int *i,
 				break;
 			case TOKEN_BINOP:
 				binop:
+				// printf("Bin\n");
 				if(has_precedence_str(cptr, parent))
 				{
 					if(loglevel >= Debug)
 						printf("'%s' has precendence over '%s', returning\n", cptr, parent);
+					// print_tree(curr, false);
 					return curr;
 				}
 				binop_skip_check:
 				temp = (Tree*) malloc(sizeof(Tree));
 				list_copy_into(list, *i, temp->str);
 				temp->left = curr;
-				temp->flags = 0;
+				// temp->flags = 0;
 				curr = temp;
 				++(*i);
 				curr->right = new_token_tree(i, 
@@ -291,8 +450,10 @@ Tree* new_token_tree(int *i,
 Tree* create_token_tree(TokenList* list, int loglevel, bool parens_node)
 {
 	int i=0;
-	init_precedence_table();
-	init_token_flag_table();
+	#ifndef USE_GPERF
+		init_precedence_table();
+		init_token_flag_table();
+	#endif
 	list_reset_curr_br(list);
 	return new_token_tree(&i, "", list, loglevel, 0, parens_node);
 }
@@ -373,6 +534,7 @@ Tree* make_single_token_tree(const char* fmt, int loglevel, bool parens_node)
 	TokenList list; 
 	Stack stack;
 	tokenize(fmt, &list, &stack);
+	debug_tokenize(&list, loglevel);
 	return create_token_tree(&list, loglevel, parens_node);
 }
 
@@ -383,10 +545,21 @@ void debug_parse_str(const char* fmt, int loglevel, bool end, bool parens_node)
 	int idx = 0;
 	const char* cptr = fmt;
 	bool brk = 0;
+	int num_brackets = 0;
 	while(idx < 100 && !brk)
 	{
 		switch(*cptr)
 		{
+			case '(':
+			case '{':
+			case '[':
+				num_brackets++;
+				goto _default_label;
+			case ')':
+			case '}':
+			case ']':
+				num_brackets--;
+				goto _default_label;
 			case ' ':
 				cptr++;
 				break;
@@ -395,12 +568,16 @@ void debug_parse_str(const char* fmt, int loglevel, bool end, bool parens_node)
 				if(!idx)
 					break;
 			case ',':
-				currstr[idx] = '\0';
-				idx = 0;
-				debug_single_spec(currstr, loglevel, end, parens_node);
-				cptr++;
-				break;
+				if(num_brackets == 0)
+				{
+					currstr[idx] = '\0';
+					idx = 0;
+					debug_single_spec(currstr, loglevel, end, parens_node);
+					cptr++;
+					break;	
+				}
 			default:
+				_default_label:
 				currstr[idx] = *cptr;
 				cptr++;
 				idx++;
