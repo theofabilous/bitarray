@@ -95,7 +95,7 @@ void _print_tree(Tree* tree, int depth, bool end)
 	{
 		// printf("nutz p\n");
 		BITASSERT((tree->right == NULL));
-		if(TREE_LEFT_ATOMIC)
+		if(flags & TREE_LEFT_ATOMIC)
 		{
 			printf("%s( %s )", tree->str, tree->left->str);
 			if(end)
@@ -237,11 +237,7 @@ Tree* new_token_tree(int *i,
 			continue;
 		}
 		switch(
-			#ifndef USE_GPERF
-			get_token_flags(*cptr) & HIDE_READ
-			#else
 			get_token_flags(cptr) & HIDE_READ
-			#endif
 			)
 		{
 			case TOKEN_DIGIT:
@@ -287,20 +283,6 @@ Tree* new_token_tree(int *i,
 						);
 						curr = temp;
 						break;
-					#ifndef USE_GPERF
-					case '!':
-						if(*(cptr+1) == '=')
-						{
-							if(has_precedence_str(cptr, parent))
-							{
-								if(loglevel >= Debug)
-									printf("'%s' has precendence over '%s', returning\n", cptr, parent);
-								return curr;
-							}
-							goto binop_skip_check;
-						}
-						goto preop;
-					#endif
 					case '{':
 						++(*i);
 						if(!list_incr_br(list))
@@ -328,7 +310,8 @@ Tree* new_token_tree(int *i,
 						curr->right = NULL;
 						j = list_get_curr_br(list)->close;
 						// printf("J=%d\n", j);
-						// ++(*i);
+						// print_tree(curr, false);
+						++(*i);
 						break;
 					default:
 						printf("Unrecognized token: %s\n", cptr);
@@ -347,21 +330,12 @@ Tree* new_token_tree(int *i,
 						list_get_curr_br(list)->close,
 						parens_node);
 				// temp->flags = 0;
-				#ifndef USE_GPERF
-				if(parens_node ||
-						(  
-						((get_token_flags(*parent) & TOKEN_READ) != 0) &&
-						((get_token_flags(temp->str[0]) & TOKEN_READ) != 0)
-						)
-					)
-				#else
 				if(parens_node ||
 						(  
 						((get_token_flags(parent) & TOKEN_READ) != 0) &&
 						((get_token_flags(temp->str) & TOKEN_READ) != 0)
 						)
 					)
-				#endif
 				{
 					curr->str[0] = *cptr;
 					curr->str[1] = get_matching_brace(*cptr);
@@ -450,10 +424,6 @@ Tree* new_token_tree(int *i,
 Tree* create_token_tree(TokenList* list, int loglevel, bool parens_node)
 {
 	int i=0;
-	#ifndef USE_GPERF
-		init_precedence_table();
-		init_token_flag_table();
-	#endif
 	list_reset_curr_br(list);
 	return new_token_tree(&i, "", list, loglevel, 0, parens_node);
 }

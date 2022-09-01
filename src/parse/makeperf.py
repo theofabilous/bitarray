@@ -27,12 +27,6 @@ delimiter = ","
 class TokenizeFlags:
 	CheckNext = 0
 
-# 	FLAG16(TOKEN_DIGIT, 3);
-# FLAG16(TOKEN_OPEN, 4);
-# FLAG16(TOKEN_CLOSE, 5);
-# FLAG16(TOKEN_SPECIAL, 6);
-# FLAG16(TOKEN_READ, 8);
-
 class TreeFlags:
 	BinOp = 0
 	PreOp =  1
@@ -163,9 +157,7 @@ binops = [
 	("&", 	BitOpPrecedence, "BitAnd"),
 	("&&", LogicalAndOrPrecedence, "And"),
 	("||", LogicalAndOrPrecedence, "Or"),
-	# ("|||", 0, "TEST"),
-	# ("||||", 0, "TEST"),
-	# ("|||-->", 0, "TEST"),
+	("|>", 90, "MatchCase"),
 	(":", 55, "If_Else"),
 	("?", 20, "Conditional")
 ]
@@ -236,7 +228,7 @@ for k, v in tokens.items():
 
 
 
-output = "tokens.gperf"
+output = "../src/parse/tokens.gperf"
 struct_name = "HashToken"
 
 with open(output, "w") as f:

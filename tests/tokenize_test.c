@@ -18,13 +18,13 @@
 void simple_tests()
 {
 	const char* fmt[] = {
-		"![$1]",
-		"$1=u10",
-		"$1=u32%10",
-		"!$33+u5",
-		"$1=u32*2",
+//		"![$1]",
+//		"$1=u10",
+//		"$1=u32%10",
+//		"!$33+u5",
+//		"$1=u32*2",
 		"$1100=!{B4*2}",
-		"$99==u32",
+//		"$99==u32",
 		""
 	};
   	for(int i=0; fmt[i][0]; i++)
@@ -49,9 +49,10 @@ void bracket_tests()
 void sequence_tests()
 {
 	const char* fmt[] = {
-		"$1=u32[B5+i7],$1=(u{32})[B5+i7]",
-		"$1=u32.[5]",
-		"$1=B(m{0x0B,0b0101, 52, 52})+u1",
+//		"$1=u32[B5+i7],$1=(u{32})[B5+i7]",
+//		"$1=u32.[5]",
+		"$1=B(m{0x0B |> u31,0b0101, 52, 52, u32})+u1",
+        "$1=^m{0x0B,0b0101, 52, 52, u32}",
 		""
 	};
 	for(int i=0; fmt[i][0]; i++)
@@ -185,20 +186,20 @@ void compile_test()
 	// verify_sizes_addrs();
 	FMTS(fmts,
 		// "u(31+1)->$1=={00dc}",
-		"u32+r{u31+5}",
-		"i33+5{u31}-{000dc}>>7{}",
-		"0b1001+0x00AF"
+		// "u32+r{u31+5}",
+		// "i33+5{u31}-{000dc}>>7",
+		// "0b1001+0x00AF"
 		// "$(50+B4)=u59%(10*2)",
 		// "$1=(u32 || 10 ?u1:u2)",
 		// "$1=u($1)+u10*10",
 		// "u32*10",
-		// "u($1?(1:2))[$1+10]",
+		"u($1?(1:2))[$1+10]",
 		// "u(32)[10]"
 		// "u1"
 		// "u(^i1)"
-		// "$1=u(^i1)+u10*10",
+		"$1=u(^i1)+u10*10",
 		// "u(^i1)+u10*10"
-		// "!($1==10?B4:B8)",
+		"!($1==10?B4:B8)"
 		// "u32->^u1==10"
 		);
 	const char* fmt;
@@ -269,16 +270,16 @@ void compile_userinput()
 
 
 
-int main()
+int main() 
 {
 	// gperf_test();
 	// compile_userinput();
-	// compile_test();
+	compile_test();
 	// init_char_maps();
 	// string_tree_test();
-	simple_tests();
+//	simple_tests();
 	// bracket_tests();
-	// sequence_tests();
+	 // sequence_tests();
 	// condition_tests();
 	// new_operators_tests();
 	return 0;

@@ -504,6 +504,14 @@ compile_special_tree(
 			ret2 = _compile_tokentree(tree->right->right, list);
 			if(ret2<0)
 				return ret2;
+			temp = codelist_append(list,
+				(Instruction)
+				{
+					.spec = BINARY_SPEC,
+					.name = "SET_REGISTER",
+					.right = MAKEGET(ret2)
+				});
+			if(temp < 0) return temp;
 			codelist_get(list, ret1)->right = MAKEREF(ret2+2);
 			ret1 = codelist_append(list, 
 				(Instruction)
@@ -515,6 +523,7 @@ compile_special_tree(
 			if(ret1 < 0) return ret1;
 			ret2 = _compile_tokentree(tree->right->left, list);
 			if(ret2 < 0) return ret2;
+			codelist_get(list, temp)->left = MAKEREF(ret2);
 			codelist_get(list, ret1)->value = MAKEREF(ret2+1);
 			return ret2;
 		}
@@ -531,7 +540,7 @@ compile_special_tree(
 	{
 		temp = 0;
 		if(tree->str[0] == '*' 
-			|| (temp = tree->str[0] == '[')
+			// || (temp = tree->str[0] == '[')
 			// || ((tree->str[0] == '-') && (tree->str[1] == '>'))
 			)
 		{
@@ -565,7 +574,28 @@ compile_special_tree(
 			codelist_get(list, ret1)->_2 = MAKEREF(ret2);
 			return ret2;
 		}
-		// else if(tree->str[])
+		else if(tree->str[0] == '[')
+		{
+			if(!(flags & TREE_BINARY) || (flags & TREE_LEFT_ATOMIC))
+				return TREE_INVALID;
+			Instruction ins = { .spec = TERNARY_SPEC, .name = GET_RES_STR(res) };
+			if(flags & TREE_RIGHT_ATOMIC)
+				ins._3 = MAKESTR(tree->right->str);
+			else
+			{
+				ret1 = _compile_tokentree(tree->right, list);
+				if(ret1 < 0) return ret1;
+				ins._3 = MAKEGET(ret1);
+			}
+			ret1 = _compile_tokentree(tree->left, list);
+			if(ret1 < 0) return ret1;
+			Instruction *temp_ins = codelist_get(list, ret1);
+			ins._1 = temp_ins->left;
+			ins._2 = temp_ins->right;
+			if(!codelist_set(list, ins, ret1))
+				return GENERIC_ERROR;
+			return ret1;
+		}
 		else if((tree->str[0] == '-') && (tree->str[1] == '>'))
 		{
 			if(!(flags & TREE_BINARY) || (flags & TREE_LEFT_ATOMIC) || (flags & TREE_RIGHT_ATOMIC))

@@ -2,17 +2,39 @@ cmake_minimum_required(VERSION 3.21)
 project(bitarray C)
 
 set(CMAKE_C_STANDARD 11)
-# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-everything")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-nullability-completeness")
 
 find_package(Curses REQUIRED)
 
 
+add_custom_target(makeperf ALL DEPENDS dummy)
+
+add_custom_command(OUTPUT dummy
+        COMMAND echo Rebuilding perfect hash
+        COMMAND python ../src/parse/makeperf.py
+        COMMAND gperf -L C -t -G ../src/parse/tokens.gperf --output-file=../src/parse/tokenhash.h
+        DEPENDS always_rebuild)
+
+add_custom_command(OUTPUT always_rebuild
+        COMMAND cmake -E echo)
+
+
+if (${CMAKE_SYSTEM_NAME} MATCHES Darwin)
+        if(NOT DEFINED MACOSX_SDK_PATH)
+                execute_process(
+                        COMMAND xcrun --show-sdk-path
+                        OUTPUT_VARIABLE MACOSX_SDK_PATH
+                )
+                string(STRIP ${MACOSX_SDK_PATH} MACOSX_SDK_PATH)
+        endif()
+        include_directories(
+                SYSTEM ${MACOSX_SDK_PATH}/usr/include
+        )
+endif()
+
 include_directories(
         src
-        /usr/local/include
-)
-
+        /usr/local/include)
 
 link_directories(
         /usr/local/lib
