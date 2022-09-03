@@ -12,6 +12,7 @@
 #endif
 
 #include "tokenize.h"
+#include "chartable.h"
 
 enum LogLevel
 {

@@ -1,4 +1,7 @@
 from dataclasses import dataclass
+from os import path
+import subprocess
+import shutil
 
 def iter_members(e: type):
 	yield from filter(
@@ -98,6 +101,7 @@ class Result:
 	compile_flags: u(16)
 	descr: cstr()
 	max_search_size: u(8, False)
+	compile_idx: u(8, False) = 0
 
 	def __str__(self):
 		s = ""
@@ -192,18 +196,85 @@ def postopify(postops):
 	for tok, prec, desc in postops:
 		yield Result(tok, prec, 0, TreeFlags.PostOp, 0, desc, 0 )
 
+# tokens = {
+# 	v.name: v for v in ( 
+# 		list(binopify(binops)) +
+# 		list(preopify(preops)) +
+# 		list(postopify(postops))
+# 		)
+# }
+
+READ_COLLAPSE_1 = 1
+BOOL_CHECK_2 = 2
+REPEAT_LOOP_3 = 3
+SQUARE_BRACKET_4 = 4
+RIGHT_ARROW_5 = 5
+M_CURLY_BRACE_6 = 6
+PARENS_OPEN_7 = 7
+B_TO_BYTES_8 = 8
+
+
+_binops = [
+	("+", 40, 0, TreeFlags.BinOp, 0, "PLUS", 0, 0),
+	("-", 40, 0, TreeFlags.BinOp, 0, "MINUS", 0, 0),
+	("=", 1, 0, TreeFlags.BinOp, 0, "ASSIGN", 0, 0),
+	("*", 10, 0, TreeFlags.BinOp, 0, "REPEAT", 0, REPEAT_LOOP_3),
+	("**", 10, 0, TreeFlags.BinOp, 0, "REPEAT", 0, REPEAT_LOOP_3),
+	("%", 50, 0, TreeFlags.BinOp, 0, "Align", 0, 0),
+	(">", 	CompPrecedence, 0, TreeFlags.BinOp, 0, "Greater", 0, 0),
+	("<", 	CompPrecedence, 0, TreeFlags.BinOp, 0, "Smaller", 0, 0),
+	(">=", 	CompPrecedence, 0, TreeFlags.BinOp, 0, "GreEq", 0, 0),
+	("<=", 	CompPrecedence, 0, TreeFlags.BinOp, 0, "SmEq", 0, 0),
+	("==", 	CompPrecedence, 0, TreeFlags.BinOp, 0, "Eq", 0, 0),
+	("!=", 	CompPrecedence, 0, TreeFlags.BinOp, 0, "NEq", 0, 0),
+	(":=", 89, 0, TreeFlags.BinOp, 0, "WalrusAssign", 0, 0),
+	("<-", 10, 0, TreeFlags.BinOp, 0, "???", 0, 0),
+	("->", 10, 0, TreeFlags.BinOp, 0, "DoWhile", 0, RIGHT_ARROW_5),
+	("<<", 	BitOpPrecedence, 0, TreeFlags.BinOp, 0, "ShiftLeft", 0, 0),
+	(">>", 	BitOpPrecedence, 0, TreeFlags.BinOp, 0, "ShiftRight", 0, 0),
+	("|", 	BitOpPrecedence, 0, TreeFlags.BinOp, 0, "BitOr", 0, 0),
+	("&", 	BitOpPrecedence, 0, TreeFlags.BinOp, 0, "BitAnd", 0, 0),
+	("&&", LogicalAndOrPrecedence, 0, TreeFlags.BinOp, 0, "And", 0, 0),
+	("||", LogicalAndOrPrecedence, 0, TreeFlags.BinOp, 0, "Or", 0, 0),
+	("|>", 90, 0, TreeFlags.BinOp, 0, "MatchCase", 0, 0),
+	(":", 55, 0, TreeFlags.BinOp, 0, "If_Else", 0, 0),
+	("?", 20, 0, TreeFlags.BinOp, 0, "Conditional", 0, BOOL_CHECK_2)
+]
+
+_preops = [
+	("u", ReadPrecedence, 	0, TreeFlags.PreOp, 0, "Unsigned", 	0, READ_COLLAPSE_1),
+	("i", ReadPrecedence, 	0, TreeFlags.PreOp, 0, "Signed", 	0, READ_COLLAPSE_1),
+	("b", ReadPrecedence, 	0, TreeFlags.PreOp, 0, "Bits", 		0, READ_COLLAPSE_1),
+	("^", 80, 				0, TreeFlags.PreOp, 0, "Peek", 		0, READ_COLLAPSE_1),
+	("B", 100, 				0, TreeFlags.PreOp, 0, "Bytes", 	0, B_TO_BYTES_8),
+	("$", 100, 				0, TreeFlags.PreOp, 0, "Env", 		0, 0),
+	("@", 100, 				0, TreeFlags.PreOp, 0, "Ref", 		0, 0),
+	("!", 100, 				0, TreeFlags.PreOp, 0, "Skip", 		0, 0)
+]
+
+_postops = [
+	(".", 90,				0, TreeFlags.PostOp, 0, "BigEndian", 0, READ_COLLAPSE_1)
+]
+
+# tokens = {
+# 	v.name: v for v in
+# 	map(lambda t: Result(*t), (_binops + _preops + _postops))
+# }
+
 tokens = {
-	v.name: v for v in ( 
-		list(binopify(binops)) +
-		list(preopify(preops)) +
-		list(postopify(postops))
-		)
+	v[0]: Result(*v) for v in
+	(_binops + _preops + _postops)
 }
+
+
 
 for i in range(10):
 	tokens[str(i)] = Result(str(i), 0, 0, TreeFlags.Digit, 0, "DIGIT", 0)
 
-tokens['('] = Result('(', 0, 0, TreeFlags.Open, 0, "ParensOpen", 0)
+tokens['('] = Result('(', 0, 0, TreeFlags.Open, 0, "ParensOpen", 0, 0)
+tokens['()'] = Result('()', 0, 0, TreeFlags.Open, 0, "ParensOpen", 0, PARENS_OPEN_7)
+tokens['m!'] = Result('m!', 0, 0, 0, 0, "Match", 0, M_CURLY_BRACE_6)
+tokens['[]'] = Result('[]', 0, 0, 0, 0, "ReadArray", 0, SQUARE_BRACKET_4)
 
 for e in ")]}":
 	tokens[e] = Result(e, 0, 0, TreeFlags.Close, 0, "Close", 0)
@@ -228,18 +299,19 @@ for k, v in tokens.items():
 
 
 
-output = "../src/parse/tokens.gperf"
+token_output = path.realpath("../src/parse/tokens.gperf")
+header_file = path.realpath("../src/parse/tokenhash.h")
+c_file = path.realpath("../src/parse/tokenhash.c")
 struct_name = "HashToken"
 
-with open(output, "w") as f:
+with open(token_output, "w") as f:
 	f.write(f"%delimiters={delimiter}\n")
-	if includes or typedef:
-		f.write("%{\n")
-		for inc in includes:
-			f.write(f"#include <{inc}.h>\n")
-		if typedef:
-			f.write(f"typedef struct {struct_name} {struct_name};\n")
-		f.write("%}\n")
+	# if includes or typedef:
+	f.write("%{\n")
+	f.write('\n#include "tokenhash.h"\n')
+	# if typedef:
+	# 	f.write(f"typedef struct {struct_name} {struct_name};\n")
+	f.write("%}\n")
 	f.write(f"struct {struct_name}\n" + "{\n")
 	for name, dtype in Result.__annotations__.items():
 		# f.write(f"\t{dtype} {name};\n")
@@ -247,6 +319,58 @@ with open(output, "w") as f:
 	f.write("};\n%%\n")
 	for tok in tokens.values():
 		f.write(f"{tok}\n")
+
+gperf_path = shutil.which("gperf")
+
+# gperf -L C -t -G ../src/parse/tokens.gperf --output-file=../src/parse/tokenhash.h
+subprocess.run([
+	gperf_path, "-L", "C", 
+	"-t", 
+	"-G", token_output, f"--output-file={c_file}"
+	])
+
+lines = None
+with open(c_file, 'r') as f:
+	lines = f.readlines()
+
+with open(c_file, 'w') as f:
+	i = 0
+	l = lines[i]
+	while i < len(lines):
+		if (lines[i]).startswith(f"struct {struct_name}"):
+			while lines[i][0] != '}':
+				i += 1
+			i += 1
+			break
+		else:
+			f.write(lines[i])
+		i += 1
+
+	for l in lines[i:]:
+		f.write(l)
+	# for f in lines:
+	# 	if f.startswith("struct ")
+
+
+with open(header_file, "w") as f:
+	f.write("#ifndef INCLUDE_TOKENHASH_H\n#define INCLUDE_TOKENHASH_H\n\n")
+	for inc in includes:
+		f.write(f"#include <{inc}.h>\n")
+	f.write(f"\nstruct {struct_name}\n" + "{\n")
+	for name, dtype in Result.__annotations__.items():
+		# f.write(f"\t{dtype} {name};\n")
+		f.write(f"\t{dtype.decl(name)};\n")
+	f.write("};\n\n")
+	if typedef:
+		f.write(f"typedef struct {struct_name} {struct_name};\n\n")
+	f.write(f"{struct_name} * in_word_set (register const char* str, register unsigned int len);\n\n")
+	f.write("#endif /* tokenhash.h */\n")
+
+
+
+
+
+print("\n\n\nDONE\n\n\n")
 
 
 

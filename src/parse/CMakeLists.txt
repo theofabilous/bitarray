@@ -5,6 +5,8 @@ add_library(parse STATIC
 	tokenize.c
 	tokentree.c
 	stringtree.c
-	treecompile.c)
+	treecompile.c
+	tokenhash.c
+	)
 
 include_directories(/usr/local/include)

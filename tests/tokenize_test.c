@@ -1,5 +1,5 @@
 // #include "../src/binunpack.h"
-#include "tokentree.h"
+// #include "tokentree.h"
 #include "stringtree.h"
 #include "treecompile.h"
 // #include "tokenhash.h"
@@ -143,41 +143,41 @@ void string_tree_test()
 
 void verify_sizes_addrs()
 {
-	printf("Sizeof codevalue: %zu\n", sizeof(CodeValue));
-	printf("Sizeof instruction: %zu\n", sizeof(Instruction));
-	Instruction x;
-	CodeValue* ptrs_arr[] =
-	{
-		&(x.values[0]),
-		&(x.values[1]),
-		&(x.values[2])
-	};
-	CodeValue* ptrs_un[] =
-	{
-		&(x.value),
-		0,
-		0
-	};
-	CodeValue* ptrs_bin[] =
-	{
-		&(x.left), 
-		&(x.right),
-		0
-	};
-	CodeValue* ptrs_tern[] =
-	{
-		&(x._1), 
-		&(x._2), 
-		&(x._3)
-	};
-	for(int i=0; i<3; i++)
-	{
-		printf("%d: %p\n", i, ptrs_arr[i]);
-		printf("%d: %p\n", i, ptrs_un[i]);
-		printf("%d: %p\n", i, ptrs_bin[i]);
-		printf("%d: %p\n", i, ptrs_tern[i]);
-		putchar('\n');
-	}
+	// printf("Sizeof codevalue: %zu\n", sizeof(CodeValue));
+	// printf("Sizeof instruction: %zu\n", sizeof(Instruction));
+	// Instruction x;
+	// CodeValue* ptrs_arr[] =
+	// {
+	// 	&(x.values[0]),
+	// 	&(x.values[1]),
+	// 	&(x.values[2])
+	// };
+	// CodeValue* ptrs_un[] =
+	// {
+	// 	&(x.value),
+	// 	0,
+	// 	0
+	// };
+	// CodeValue* ptrs_bin[] =
+	// {
+	// 	&(x.left), 
+	// 	&(x.right),
+	// 	0
+	// };
+	// CodeValue* ptrs_tern[] =
+	// {
+	// 	&(x._1), 
+	// 	&(x._2), 
+	// 	&(x._3)
+	// };
+	// for(int i=0; i<3; i++)
+	// {
+	// 	printf("%d: %p\n", i, ptrs_arr[i]);
+	// 	printf("%d: %p\n", i, ptrs_un[i]);
+	// 	printf("%d: %p\n", i, ptrs_bin[i]);
+	// 	printf("%d: %p\n", i, ptrs_tern[i]);
+	// 	putchar('\n');
+	// }
 }
 
 
@@ -250,34 +250,75 @@ void compile_userinput()
 	}
 }
 
-// void gperf_test()
-// {
-// 	FMTS(fmts,
-// 		"+", "-", "=", "=="
-// 		);
-// 	HashToken* tok;
-// 	const char* fmt;
-// 	for(int i=0; ((fmt = fmts[i])[0]); i++)
-// 	{
-// 		tok = in_word_set(fmt, strlen(fmt));
-// 		if(tok == NULL)
-// 			printf("NULL\n");
-// 		else
-// 			printf("in: %s, out: %s\n", fmt, tok->descr);
-// 	}
-// };
+void label_test()
+{
+	/*
+
+	https://stackoverflow.com/questions/6421433/address-of-labels-msvc
+	https://docs.microsoft.com/en-us/cpp/assembler/inline/inline-assembler?view=msvc-170
+		> https://docs.microsoft.com/en-us/cpp/assembler/inline/jumping-to-labels-in-inline-assembly?view=msvc-170
+	https://stackoverflow.com/questions/36983970/labels-as-values-in-clang
+
+	*/
+	char inp[256];
+	static const void* lvl[] = {&&label0, &&label1, &&label2, &&label3, &&label4, &&label5};
+	int idx;
+
+	begin:
+	printf("What label? [ 0, 1, 2, 3, 4, 5 ]\n");
+	fgets(inp, 256, stdin);
+	inp[ strlen(inp) - 1 ] = '\0';
+	if(inp[0] == 'q')
+	{
+		printf("Quitting!\n");
+		return;
+	}
+	idx = inp[0]-'0';
+	if(idx > 5)
+	{
+		printf("idx two high! try again\n");
+		goto begin;
+	}
+	printf("idx: %d\n", idx);
+	goto *(lvl[idx]);
+
+	label0:
+	printf("LABEL0\n");
+	goto begin;
+
+	label1:
+	printf("LABEL1\n");
+	goto begin;
+
+	label2:
+	printf("LABEL2\n");
+	goto begin;
+
+	label3:
+	printf("LABEL3\n");
+	goto begin;
+
+	label4:
+	printf("LABEL4\n");
+	goto begin;
+
+	label5:
+	printf("LABEL5\n");
+	goto begin;
+}
 
 
 
 
 int main() 
 {
+	// label_test();
 	// gperf_test();
 	// compile_userinput();
 	compile_test();
 	// init_char_maps();
 	// string_tree_test();
-//	simple_tests();
+	// simple_tests();
 	// bracket_tests();
 	 // sequence_tests();
 	// condition_tests();

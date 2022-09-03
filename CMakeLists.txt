@@ -12,7 +12,7 @@ add_custom_target(makeperf ALL DEPENDS dummy)
 add_custom_command(OUTPUT dummy
         COMMAND echo Rebuilding perfect hash
         COMMAND python ../src/parse/makeperf.py
-        COMMAND gperf -L C -t -G ../src/parse/tokens.gperf --output-file=../src/parse/tokenhash.h
+        # COMMAND gperf -L C -t -G ../src/parse/tokens.gperf --output-file=../src/parse/tokenhash.h
         DEPENDS always_rebuild)
 
 add_custom_command(OUTPUT always_rebuild

@@ -26,13 +26,7 @@ typedef struct Instruction
 {
 	uint16_t spec;
 	const char* name;
-	union
-	{
-		CodeValue values[3];
-		struct { CodeValue value; 					};
-		struct { CodeValue left, 	right; 			};
-		struct { CodeValue _1, 		_2, 	_3; 	};
-	};
+	CodeValue values[3];
 } Instruction;
 
 
