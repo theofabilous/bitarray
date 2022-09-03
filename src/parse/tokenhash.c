@@ -35,7 +35,7 @@ error "gperf generated tables don't work with this execution character set. Plea
 #include "tokenhash.h"
 #line 6 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
 
-#define TOTAL_KEYWORDS 53
+#define TOTAL_KEYWORDS 56
 #define MIN_WORD_LENGTH 1
 #define MAX_WORD_LENGTH 2
 #define MIN_HASH_VALUE 1
@@ -64,8 +64,8 @@ hash (str, len)
       18, 13,  8,  3, 62, 57, 52, 47, 55, 98,
       15,  0,  5, 42, 37, 98, 32, 98, 98, 98,
       98, 98, 98, 98, 98, 98, 98, 98, 98, 98,
-      98, 98, 98, 98, 98, 98, 98, 98, 98, 98,
-      98, 40, 98, 35, 27, 98, 98, 98, 22, 98,
+      50, 98, 45, 98, 98, 98, 98, 98, 98, 98,
+      98, 40, 98, 35, 27, 35, 98, 98, 22, 98,
       98, 98, 98, 98, 98, 17, 98, 98, 98,  5,
       98, 98, 98, 98, 98, 98, 98, 12, 98, 98,
       98, 98, 98,  7, 20,  2, 98, 98, 98, 98,
@@ -101,45 +101,45 @@ static struct HashToken wordlist[] =
   {
     {""},
 #line 20 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"=", 1, 0b00000000000001, 0b00000000000001, 0b00000000000000, "ASSIGN", 2, 0},
+    {"=", 1, 0b00000000000001, 0b00000000000001, 0b00000100000100, "ASSIGN", 2, 0},
 #line 28 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"==", 70, 0b00000000000000, 0b00000000000001, 0b00000000000000, "Eq", 0, 0},
+    {"==", 70, 0b00000000000000, 0b00000000000001, 0b00000000000100, "EQUAL?", 0, 0},
 #line 67 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
     {"}", 0, 0b00000000000000, 0b00000000100000, 0b00000000000000, "Close", 0, 0},
 #line 56 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
     {"5", 0, 0b00000000000000, 0b00000000001000, 0b00000000000000, "DIGIT", 0, 0},
     {""},
 #line 24 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {">", 70, 0b00000000000001, 0b00000000000001, 0b00000000000000, "Greater", 2, 0},
+    {">", 70, 0b00000000000001, 0b00000000000001, 0b00000000000100, "GREATER_THAN?", 2, 0},
 #line 26 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {">=", 70, 0b00000000000000, 0b00000000000001, 0b00000000000000, "GreEq", 0, 0},
+    {">=", 70, 0b00000000000000, 0b00000000000001, 0b00000000000100, "GREATER_EQ?", 0, 0},
 #line 68 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
     {"{", 0, 0b00000000000000, 0b00000001000000, 0b00000000000000, "Special", 0, 0},
 #line 55 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
     {"4", 0, 0b00000000000000, 0b00000000001000, 0b00000000000000, "DIGIT", 0, 0},
     {""},
 #line 21 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"*", 10, 0b00000000000001, 0b00000000000001, 0b00000000000000, "REPEAT", 2, 3},
+    {"*", 10, 0b00000000000001, 0b00000000000001, 0b00100000000100, "LOOP", 2, 3},
 #line 34 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {">>", 60, 0b00000000000000, 0b00000000000001, 0b00000000000000, "ShiftRight", 0, 0},
+    {">>", 60, 0b00000000000000, 0b00000000000001, 0b00000000000100, "SHIFT_RIGHT", 0, 0},
 #line 42 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"u", 100, 0b00000000000000, 0b00000100000010, 0b00000000000000, "Unsigned", 0, 1},
+    {"u", 100, 0b00000000000000, 0b00000100000010, 0b10000000000100, "----", 0, 1},
 #line 54 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
     {"3", 0, 0b00000000000000, 0b00000000001000, 0b00000000000000, "DIGIT", 0, 0},
     {""},
 #line 25 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"<", 70, 0b00000000000001, 0b00000000000001, 0b00000000000000, "Smaller", 2, 0},
+    {"<", 70, 0b00000000000001, 0b00000000000001, 0b00000000000100, "LESS_THAN?", 2, 0},
 #line 27 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"<=", 70, 0b00000000000000, 0b00000000000001, 0b00000000000000, "SmEq", 0, 0},
+    {"<=", 70, 0b00000000000000, 0b00000000000001, 0b00000000000100, "LESS_EQ?", 0, 0},
 #line 43 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"i", 100, 0b00000000000000, 0b00000100000010, 0b00000000000000, "Signed", 0, 1},
+    {"i", 100, 0b00000000000000, 0b00000100000010, 0b10000000000100, "----", 0, 1},
 #line 53 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
     {"2", 0, 0b00000000000000, 0b00000000001000, 0b00000000000000, "DIGIT", 0, 0},
     {""},
 #line 35 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
     {"|", 60, 0b00000000000001, 0b00000000000001, 0b00000000000000, "BitOr", 2, 0},
 #line 22 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"**", 10, 0b00000000000000, 0b00000000000001, 0b00000000000000, "REPEAT", 0, 3},
+    {"**", 10, 0b00000000000000, 0b00000000000001, 0b00100000000100, "-----", 0, 3},
 #line 44 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
     {"b", 100, 0b00000000000000, 0b00000100000010, 0b00000000000000, "Bits", 0, 1},
 #line 52 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
@@ -150,79 +150,86 @@ static struct HashToken wordlist[] =
 #line 39 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
     {"|>", 90, 0b00000000000000, 0b00000000000001, 0b00000000000000, "MatchCase", 0, 0},
 #line 45 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"^", 80, 0b00000000000000, 0b00000100000010, 0b00000000000000, "Peek", 0, 1},
+    {"^", 80, 0b00000000000000, 0b00000100000010, 0b10000000000100, "----", 0, 1},
 #line 51 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
     {"0", 0, 0b00000000000000, 0b00000000001000, 0b00000000000000, "DIGIT", 0, 0},
     {""},
 #line 19 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"-", 40, 0b00000000000001, 0b00000000000001, 0b00000000000000, "MINUS", 2, 0},
+    {"-", 40, 0b00000000000001, 0b00000000000001, 0b00000000000100, "MINUS", 2, 0},
 #line 33 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"<<", 60, 0b00000000000000, 0b00000000000001, 0b00000000000000, "ShiftLeft", 0, 0},
+    {"<<", 60, 0b00000000000000, 0b00000000000001, 0b00000000000100, "SHIFT_LEFT", 0, 0},
 #line 46 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"B", 100, 0b00000000000000, 0b00000000000010, 0b00000000000000, "Bytes", 0, 8},
+    {"B", 100, 0b00000000000000, 0b00000000000010, 0b1000000000000010, "BYTES", 0, 8},
 #line 50 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {".", 90, 0b00000000000000, 0b00000100000100, 0b00000000000000, "BigEndian", 0, 1},
+    {".", 90, 0b00000000000000, 0b00000100000100, 0b10000000000100, "----", 0, 1},
     {""},
 #line 66 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
     {"]", 0, 0b00000000000000, 0b00000000100000, 0b00000000000000, "Close", 0, 0},
 #line 32 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"->", 10, 0b00000000000000, 0b00000000000001, 0b00000000000000, "DoWhile", 0, 5},
+    {"->", 10, 0b00000000000000, 0b00000000000001, 0b00100000000100, "LOOP_WHILE", 0, 5},
 #line 48 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"@", 100, 0b00000000000000, 0b00000000000010, 0b00000000000000, "Ref", 0, 0},
+    {"@", 100, 0b00000000000000, 0b00000000000010, 0b00000000000011, "GET_FIELD", 0, 0},
 #line 70 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
     {",", 0, 0b00000000000000, 0b00000001000000, 0b00000000000000, "Special", 0, 0},
     {""},
 #line 69 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
     {"[", 0, 0b00000000000001, 0b00000001000000, 0b00000000000000, "Special", 2, 0},
 #line 38 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"||", 57, 0b00000000000000, 0b00000000000001, 0b00000000000000, "Or", 0, 0},
+    {"||", 57, 0b00000000000000, 0b00000000000001, 0b00000000000100, "AND?", 0, 0},
 #line 41 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"?", 20, 0b00000000000000, 0b00000000000001, 0b00000000000000, "Conditional", 0, 2},
+    {"?", 20, 0b00000000000000, 0b00000000000001, 0b01000000000100, "-----", 0, 2},
 #line 18 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"+", 40, 0b00000000000000, 0b00000000000001, 0b00000000000000, "PLUS", 0, 0},
+    {"+", 40, 0b00000000000000, 0b00000000000001, 0b00000000000100, "PLUS", 0, 0},
     {""},
 #line 65 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
     {")", 0, 0b00000000000000, 0b00000000100000, 0b00000000000000, "Close", 0, 0},
 #line 31 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"<-", 10, 0b00000000000000, 0b00000000000001, 0b00000000000000, "???", 0, 0},
+    {"<-", 10, 0b00000000000000, 0b00000000000001, 0b00000000000100, "-----", 0, 0},
 #line 60 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
     {"9", 0, 0b00000000000000, 0b00000000001000, 0b00000000000000, "DIGIT", 0, 0},
 #line 23 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"%", 50, 0b00000000000000, 0b00000000000001, 0b00000000000000, "Align", 0, 0},
+    {"%", 50, 0b00000000000000, 0b00000000000001, 0b00000000000100, "ALIGN", 0, 0},
     {""},
 #line 61 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
     {"(", 0, 0b00000000000001, 0b00000000010000, 0b00000000000000, "ParensOpen", 2, 0},
 #line 37 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"&&", 57, 0b00000000000000, 0b00000000000001, 0b00000000000000, "And", 0, 0},
+    {"&&", 57, 0b00000000000000, 0b00000000000001, 0b00000000000100, "OR?", 0, 0},
 #line 59 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
     {"8", 0, 0b00000000000000, 0b00000000001000, 0b00000000000000, "DIGIT", 0, 0},
 #line 47 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"$", 100, 0b00000000000000, 0b00000000000010, 0b00000000000000, "Env", 0, 0},
+    {"$", 100, 0b00000000000000, 0b00000000000010, 0b00000000000011, "GET_ENV", 0, 0},
     {""},
 #line 40 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {":", 55, 0b00000000000001, 0b00000000000001, 0b00000000000000, "If_Else", 2, 0},
+    {":", 55, 0b00000000000001, 0b00000000000001, 0b100000000000100, "-----", 2, 0},
 #line 30 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {":=", 89, 0b00000000000000, 0b00000000000001, 0b00000000000000, "WalrusAssign", 0, 0},
+    {":=", 89, 0b00000000000000, 0b00000000000001, 0b00000000000100, "WALRUS_ASSIGN", 0, 0},
 #line 58 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
     {"7", 0, 0b00000000000000, 0b00000000001000, 0b00000000000000, "DIGIT", 0, 0},
     {""}, {""},
 #line 49 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"!", 100, 0b00000000000001, 0b00000000000010, 0b00000000000000, "Skip", 2, 0},
+    {"!", 100, 0b00000000000001, 0b00000000000010, 0b00000100000010, "SKIP", 2, 0},
 #line 29 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"!=", 70, 0b00000000000000, 0b00000000000001, 0b00000000000000, "NEq", 0, 0},
+    {"!=", 70, 0b00000000000000, 0b00000000000001, 0b00000000000100, "NOT_EQUAL?", 0, 0},
 #line 57 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
     {"6", 0, 0b00000000000000, 0b00000000001000, 0b00000000000000, "DIGIT", 0, 0},
     {""}, {""}, {""},
 #line 63 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
     {"m!", 0, 0b00000000000000, 0b00000000000000, 0b00000000000000, "Match", 0, 6},
-    {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
+    {""}, {""}, {""}, {""},
+#line 71 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+    {"__", 0, 0b00000000000000, 0b00000000000000, 0b00000000000011, "RAW_VALUE", 0, 0},
+    {""}, {""}, {""}, {""},
 #line 64 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"[]", 0, 0b00000000000000, 0b00000000000000, 0b00000000000000, "ReadArray", 0, 4},
+    {"[]", 0, 0b00000000000000, 0b00000000000000, 0b00100000000100, "READ_ARRAY", 0, 4},
+    {""}, {""}, {""}, {""},
+#line 72 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+    {"_R", 0, 0b00000000000000, 0b00000000000000, 0b00000000000100, "READ", 0, 0},
+    {""}, {""}, {""}, {""},
+#line 73 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+    {"_P", 0, 0b00000000000000, 0b00000000000000, 0b00000000000100, "PEEK", 0, 0},
     {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
-    {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
-    {""},
 #line 62 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"()", 0, 0b00000000000000, 0b00000000010000, 0b00000000000000, "ParensOpen", 0, 7}
+    {"()", 0, 0b00000000000000, 0b00000000010000, 0b1000000000000010, "-()-", 0, 7}
   };
 
 struct HashToken *

@@ -128,7 +128,6 @@ class Result:
 					s+=f"{delimiter} "
 		return s
 
-		# return f"{self.name}, {self.precedence}, {self.tokenize_flags}, {self.tree_flags}, {self.compile_flags}, \"{self.descr}\""
 
 make_flags(TokenizeFlags)
 make_flags(TreeFlags)
@@ -138,71 +137,8 @@ make_flags(TreeFlags)
 BitOpPrecedence = 60
 CompPrecedence = 70
 LogicalAndOrPrecedence = 57
-
-binops = [
-	("+", 40, "PLUS"),
-	("-", 40, "MINUS"),
-	("=", 1, "ASSIGN"),
-	("*", 10, "REPEAT"),
-	("**", 10, "REPEAT"),
-	("%", 50, "Align"),
-	(">", 	CompPrecedence, "Greater"),
-	("<", 	CompPrecedence, "Smaller"),
-	(">=", 	CompPrecedence, "GreEq"),
-	("<=", 	CompPrecedence, "SmEq"),
-	("==", 	CompPrecedence, "Eq"),
-	("!=", 	CompPrecedence, "NEq"),
-	(":=", 89, "WalrusAssign"),
-	("<-", 10, "???"),
-	("->", 10, "DoWhile"),
-	("<<", 	BitOpPrecedence, "ShiftLeft"),
-	(">>", 	BitOpPrecedence, "ShiftRight"),
-	("|", 	BitOpPrecedence, "BitOr"),
-	("&", 	BitOpPrecedence, "BitAnd"),
-	("&&", LogicalAndOrPrecedence, "And"),
-	("||", LogicalAndOrPrecedence, "Or"),
-	("|>", 90, "MatchCase"),
-	(":", 55, "If_Else"),
-	("?", 20, "Conditional")
-]
-
-def binopify(binops):
-	for tok, prec, desc in binops:
-		yield Result(tok, prec, 0, TreeFlags.BinOp, 0, desc, 0)
-
-
 ReadPrecedence = 100
 
-preops = [
-	("u", ReadPrecedence, "Unsigned"),
-	("i", ReadPrecedence, "Signed"),
-	("b", ReadPrecedence, "Bits"),
-	("^", 80, "Peek"),
-	("B", 100, "Bytes"),
-	("$", 100, "Env"),
-	("@", 100, "Ref"),
-	("!", 100, "Skip")
-]
-
-postops = [
-	(".", 90, "BigEndian"),
-]
-
-def preopify(preops):
-	for tok, prec, desc in preops:
-		yield Result(tok, prec, 0, TreeFlags.PreOp, 0, desc, 0 )
-
-def postopify(postops):
-	for tok, prec, desc in postops:
-		yield Result(tok, prec, 0, TreeFlags.PostOp, 0, desc, 0 )
-
-# tokens = {
-# 	v.name: v for v in ( 
-# 		list(binopify(binops)) +
-# 		list(preopify(preops)) +
-# 		list(postopify(postops))
-# 		)
-# }
 
 READ_COLLAPSE_1 = 1
 BOOL_CHECK_2 = 2
@@ -256,10 +192,6 @@ _postops = [
 	(".", 90,				0, TreeFlags.PostOp, 0, "BigEndian", 0, READ_COLLAPSE_1)
 ]
 
-# tokens = {
-# 	v.name: v for v in
-# 	map(lambda t: Result(*t), (_binops + _preops + _postops))
-# }
 
 tokens = {
 	v[0]: Result(*v) for v in
@@ -285,6 +217,64 @@ for e in "{[,":
 for e in "^bui.":
 	tokens[e].tree_flags |= TreeFlags.Read
 
+
+REQUIRE_SIMPLE =	1 << 0
+UNARY_SPEC =		1 << 1
+BINARY_SPEC =		1 << 2
+TERNARY_SPEC =		1 << 3
+NO_RETURN =		 	1 << 8
+MOD_SPECIAL =		1 << 10
+LOOP_SPECIAL =		1 << 11
+BOOL_CHECK =		1 << 12
+READ_COLLAPSE =		1 << 13
+ACCESS_SPECIAL =	1 << 14
+OTHER_SPECIAL =		1 << 15
+
+old_compile = {
+	"$": 	("GET_ENV",			UNARY_SPEC 	| REQUIRE_SIMPLE),
+	"@": 	("GET_FIELD",		UNARY_SPEC 	| REQUIRE_SIMPLE),
+	"__": 	("RAW_VALUE", 		UNARY_SPEC 	| REQUIRE_SIMPLE),
+	"()": 	("-()-",			UNARY_SPEC 	| OTHER_SPECIAL),
+	"!": 	("SKIP",			UNARY_SPEC 	| NO_RETURN),
+	"B":	("BYTES",			UNARY_SPEC 	| OTHER_SPECIAL),
+	"u": 	("----",			BINARY_SPEC | READ_COLLAPSE),
+	"i": 	("----",			BINARY_SPEC | READ_COLLAPSE),
+	".": 	("----",			BINARY_SPEC | READ_COLLAPSE),
+	"^": 	("----",			BINARY_SPEC | READ_COLLAPSE),
+	"_R": 	("READ",			BINARY_SPEC),
+	"_P": 	("PEEK",			BINARY_SPEC),
+	"=": 	("ASSIGN",			BINARY_SPEC | NO_RETURN),
+	":=": 	("WALRUS_ASSIGN",	BINARY_SPEC),
+	"==": 	("EQUAL?", 			BINARY_SPEC),
+	"!=": 	("NOT_EQUAL?",		BINARY_SPEC),
+	">": 	("GREATER_THAN?",	BINARY_SPEC),
+	"<": 	("LESS_THAN?",		BINARY_SPEC),
+	">=": 	("GREATER_EQ?",		BINARY_SPEC),
+	"<=": 	("LESS_EQ?",		BINARY_SPEC),
+	"&&": 	("OR?",				BINARY_SPEC),
+	"||": 	("AND?",			BINARY_SPEC),
+	":": 	("-----",			BINARY_SPEC | ACCESS_SPECIAL),
+	"->": 	("LOOP_WHILE",		BINARY_SPEC | LOOP_SPECIAL),
+	"<-": 	("-----",			BINARY_SPEC),
+	"[]": 	("READ_ARRAY",		BINARY_SPEC | LOOP_SPECIAL),
+	"+": 	("PLUS",			BINARY_SPEC),
+	"-": 	("MINUS",			BINARY_SPEC),
+	"*": 	("LOOP", 			BINARY_SPEC | LOOP_SPECIAL),
+	"**": 	("-----", 			BINARY_SPEC | LOOP_SPECIAL),
+	"?": 	("-----",			BINARY_SPEC | BOOL_CHECK),
+	"<<": 	("SHIFT_LEFT",		BINARY_SPEC),
+	">>": 	("SHIFT_RIGHT",		BINARY_SPEC),
+	"%": 	("ALIGN",			BINARY_SPEC)
+}
+
+for tok, (opcode_name, flags) in old_compile.items():
+	if tok in tokens:
+		tokens[tok].descr = opcode_name
+		tokens[tok].compile_flags = flags
+	else:
+		tokens[tok] = Result(tok, 0, 0, 0, flags, opcode_name, 0, 0)
+
+
 for k, v in tokens.items():
 	length = len(k)
 	currlen = length
@@ -294,10 +284,6 @@ for k, v in tokens.items():
 			tokens[substr].max_search_size = max(length, tokens[substr].max_search_size)
 		currlen -= 1
 
-# print(tokens)
-# exit()
-
-
 
 token_output = path.realpath("../src/parse/tokens.gperf")
 header_file = path.realpath("../src/parse/tokenhash.h")
@@ -306,15 +292,11 @@ struct_name = "HashToken"
 
 with open(token_output, "w") as f:
 	f.write(f"%delimiters={delimiter}\n")
-	# if includes or typedef:
 	f.write("%{\n")
 	f.write('\n#include "tokenhash.h"\n')
-	# if typedef:
-	# 	f.write(f"typedef struct {struct_name} {struct_name};\n")
 	f.write("%}\n")
 	f.write(f"struct {struct_name}\n" + "{\n")
 	for name, dtype in Result.__annotations__.items():
-		# f.write(f"\t{dtype} {name};\n")
 		f.write(f"\t{dtype.decl(name)};\n")
 	f.write("};\n%%\n")
 	for tok in tokens.values():
@@ -322,7 +304,6 @@ with open(token_output, "w") as f:
 
 gperf_path = shutil.which("gperf")
 
-# gperf -L C -t -G ../src/parse/tokens.gperf --output-file=../src/parse/tokenhash.h
 subprocess.run([
 	gperf_path, "-L", "C", 
 	"-t", 
@@ -348,8 +329,6 @@ with open(c_file, 'w') as f:
 
 	for l in lines[i:]:
 		f.write(l)
-	# for f in lines:
-	# 	if f.startswith("struct ")
 
 
 with open(header_file, "w") as f:
@@ -358,7 +337,6 @@ with open(header_file, "w") as f:
 		f.write(f"#include <{inc}.h>\n")
 	f.write(f"\nstruct {struct_name}\n" + "{\n")
 	for name, dtype in Result.__annotations__.items():
-		# f.write(f"\t{dtype} {name};\n")
 		f.write(f"\t{dtype.decl(name)};\n")
 	f.write("};\n\n")
 	if typedef:
