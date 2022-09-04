@@ -1,6 +1,7 @@
 #ifndef INCLUDE_TOKENIZE_H
 #define INCLUDE_TOKENIZE_H
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -53,6 +54,9 @@ FLAG8(STR_TOKEN, 1);
 FLAG8(INT_TOKEN, 2);
 FLAG8(HEX_TOKEN, 3);
 FLAG8(BIN_TOKEN, 4);
+FLAG8(RAW_TOKEN, 5);
+
+static const uint8_t INTEGRAL_TOKEN = RAW_TOKEN | INT_TOKEN | HEX_TOKEN | BIN_TOKEN;
 
 static inline bool token_is_valid(Token* tok)
 {
@@ -62,6 +66,11 @@ static inline bool token_is_valid(Token* tok)
 static inline bool token_is_int(Token* tok)
 {
 	return tok->flags & INT_TOKEN;
+}
+
+static inline bool token_is_integral(Token* tok)
+{
+	return tok->flags & INTEGRAL_TOKEN;
 }
 
 static inline bool token_is_char(Token* tok)
@@ -231,6 +240,7 @@ list_register_bracket_open(
 	// list->brackets[list->blen+1] = (BracketPair) {.copen='\0', .cclose='\0'};
 	// Token tok = {.flags = CHAR_TOKEN, .c= '('};
 	Token tok;
+	reset_token(&tok);
 	set_token_char(&tok, c);
 	if(!list_append(list, &tok))
 		return NULL;

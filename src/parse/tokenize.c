@@ -120,7 +120,8 @@ void tokenize(const char* str,
 				case ':':
 				case '!':
 				case '=':
-					if(*(str+1) == '=')
+					if(*(str+1) == '='
+						|| *(str+1) == '>')
 						mode=2;
 					else
 						mode=SET_CHAR_MODE;
@@ -138,9 +139,10 @@ void tokenize(const char* str,
 						break;
 					}
 					tok.str[mode] = '\0';
-					tok.flags |= STR_TOKEN;
+					tok.flags |= STR_TOKEN | RAW_TOKEN;
 					list_append(list, &tok);
 					str+=(mode);
+					reset_token(&tok);
 					goto bracket_close;
 				case '[':
 				case '(':
@@ -163,7 +165,8 @@ void tokenize(const char* str,
 						break;
 					}
 				case '*':
-					if(*(str+1) == '*')
+					if(*(str+1) == '*'
+						|| *(str+1) == '>')
 					{
 						mode=2;
 						break;

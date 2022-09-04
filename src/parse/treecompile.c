@@ -2,7 +2,6 @@
 #include <string.h>
 
 #include "treecompile.h"
-// #include "stringtree.h"
 #include "common.h"
 
 #define CHARS2(a, b) \
@@ -26,7 +25,8 @@
 #endif
 
 
-typedef HashToken* SearchResult;
+// #define WHILE_LOOP_USE_IFN_JUMP
+
 
 FLAG16(REQUIRE_SIMPLE, 	0);
 FLAG16(UNARY_SPEC, 		1);
@@ -56,118 +56,6 @@ enum CodeValueType
 	RefType = 2
 };
 
-// typedef struct StringSpec
-// {
-// 	const char* key;
-// 	const char* value;
-// 	uint16_t flags;
-// } StringSpec;
-
-// #define NULL_SPEC ((StringSpec) {.key = "", .value = "", .flags = 0})
-
-// const StringSpec SPECMAP[] =
-// {
-// 	{"$", 	"GET_ENV",				UNARY_SPEC 	| REQUIRE_SIMPLE},
-// 	{"@", 	"GET_FIELD",			UNARY_SPEC 	| REQUIRE_SIMPLE},
-// 	{"{}", 	"RAW_VALUE", 			UNARY_SPEC 	| REQUIRE_SIMPLE},
-// 	{"()", 	"-()-",					UNARY_SPEC 	| OTHER_SPECIAL},
-// 	{"!", 	"SKIP",					UNARY_SPEC 	| NO_RETURN},
-// 	{"B",	"BYTES",				UNARY_SPEC 	| OTHER_SPECIAL},
-// 	{"u", 	"----",					BINARY_SPEC | READ_COLLAPSE},
-// 	{"i", 	"----",					BINARY_SPEC | READ_COLLAPSE},
-// 	{".", 	"----",					BINARY_SPEC | READ_COLLAPSE},
-// 	{"^", 	"----",					BINARY_SPEC | READ_COLLAPSE},
-// 	{"_R", 	"READ",					BINARY_SPEC},
-// 	{"_P", 	"PEEK",					BINARY_SPEC},
-// 	{"=", 	"ASSIGN",				BINARY_SPEC | NO_RETURN},
-// 	{":=", 	"WALRUS_ASSIGN",		BINARY_SPEC},
-// 	{"==", 	"EQUAL?", 				BINARY_SPEC},
-// 	{"!=",	"NOT_EQUAL?",			BINARY_SPEC},
-// 	{">",	"GREATER_THAN?",		BINARY_SPEC},
-// 	{"<",	"LESS_THAN?",			BINARY_SPEC},
-// 	{">=",	"GREATER_EQ?",			BINARY_SPEC},
-// 	{"<=",	"LESS_EQ?",				BINARY_SPEC},
-// 	{"&&", 	"OR?",					BINARY_SPEC},
-// 	{"||", 	"AND?",					BINARY_SPEC},
-// 	{":", 	"-----",				BINARY_SPEC | ACCESS_SPECIAL},
-// 	{"->", 	"LOOP_WHILE",			BINARY_SPEC | LOOP_SPECIAL},
-// 	{"<-", 	"-----",				BINARY_SPEC},
-// 	{"[]", 	"READ_ARRAY",			BINARY_SPEC | LOOP_SPECIAL},
-// 	{"+",	"PLUS",					BINARY_SPEC},
-// 	{"-", 	"MINUS",				BINARY_SPEC},
-// 	{"*", 	"LOOP", 				BINARY_SPEC | LOOP_SPECIAL},
-// 	{"**", 	"-----", 				BINARY_SPEC | LOOP_SPECIAL},
-// 	{"?", 	"-----",				BINARY_SPEC | BOOL_CHECK},
-// 	{"<<", 	"SHIFT_LEFT",			BINARY_SPEC},
-// 	{">>", 	"SHIFT_RIGHT",			BINARY_SPEC},
-// 	{"%", 	"ALIGN",				BINARY_SPEC},
-
-// 	{"0!", 	"-0{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"1!", 	"-1{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"2!", 	"-2{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"3!", 	"-3{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"4!", 	"-4{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"5!", 	"-5{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"6!", 	"-6{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"7!", 	"-7{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"8!", 	"-8{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"9!", 	"-9{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"a!", 	"-a{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"A!", 	"-A{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"b!", 	"-b{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"B!", 	"-B{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"c!", 	"-c{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"C!", 	"-C{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"d!", 	"-d{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"D!", 	"-D{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"e!", 	"-e{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"E!", 	"-E{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"f!", 	"-f{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"F!", 	"-F{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"g!", 	"-g{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"G!", 	"-G{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"h!", 	"-h{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"H!", 	"-H{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"i!", 	"-i{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"I!", 	"-I{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"j!", 	"-j{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"J!", 	"-J{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"k!", 	"-k{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"K!", 	"-K{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"l!", 	"-l{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"L!", 	"-L{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"m!", 	"-m{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"M!", 	"-M{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"n!", 	"-n{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"N!", 	"-N{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"o!", 	"-o{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"O!", 	"-O{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"p!", 	"-p{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"P!", 	"-P{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"q!", 	"-q{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"Q!", 	"-Q{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"r!", 	"-r{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"R!", 	"-R{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"s!", 	"-s{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"S!", 	"-S{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"t!", 	"-t{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"T!", 	"-T{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"u!", 	"-u{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"U!", 	"-U{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"v!", 	"-v{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"V!", 	"-V{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"w!", 	"-w{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"W!", 	"-W{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"x!", 	"-x{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"X!", 	"-X{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"y!", 	"-y{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"Y!", 	"-Y{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"z!", 	"-z{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-// 	{"Z!", 	"-Z{}-",	UNARY_SPEC 	| OTHER_SPECIAL | MOD_SPECIAL},
-
-// 	NULL_SPEC
-// };
-
 // #define GET_RES_FLAGS(res) ((res).flags)
 // #define GET_RES_STR(res) ((res).str_val)
 // #define CHECK_RES_VALID(res) ((res).valid)
@@ -176,10 +64,6 @@ enum CodeValueType
 #define GET_RES_STR(res) ((res)->descr)
 #define CHECK_RES_VALID(res) ((res) != NULL)
 
-// static inline bool is_null_spec(StringSpec spec)
-// { return spec.key[0] == '\0'; }
-
-// static StringTree strmap = { .init = false };
 
 void init_codelist(CodeList* list)
 {
@@ -242,44 +126,17 @@ static inline bool codelist_swap(CodeList* list, int i, int j)
 }
 
 
-// bool init_stringtables()
-// {
-// 	if(strmap.init)
-// 		return true;
-// 	bool ok;
-// 	init_stringtree(&strmap, NULL, 0);
-// 	StringSpec spec = NULL_SPEC;
-// 	for(int i=0; !( is_null_spec(SPECMAP[i]) ); i++)
-// 	{
-// 		spec = SPECMAP[i];
-// 		// ok = stringtree_add_str_str(&strmap, spec.key, spec.flags, spec.value);
-// 		ok = stringtree_add_str_raw(&strmap, spec.key, spec.flags, (void*) spec.value);
-// 		if(!ok)
-// 		{
-// 			printf("Error! @ %s\n", spec.key);
-// 			return false;
-// 			// exit(1);
-// 		}
-// 	}
-// 	return true;
-// }
-
-// FLAG16(CODE_REF, 0);
-// FLAG16(CODE_STR, 1);
-// FLAG16(CODE_I32, 2);
-
 #define MAKESTR(v) ((CodeValue) {.type = StrType, .str_value=(v)})
 #define MAKEGET(v) ((CodeValue) {.type = GetType, .i32_value=(v)})
 #define MAKEREF(v) ((CodeValue) {.type = RefType, .i32_value=(v)})
 #define MAKEJMP(v) ((CodeValue) {.type = RefType, .i32_value=(v)})
 
 
-
 static inline bool
 check_requires(
 	Tree* tree,
 	uint8_t flags,
-	SearchResult res
+	HashToken* res
 	)
 {
 	DLOG(__func__, __LINE__);
@@ -293,19 +150,49 @@ check_requires(
 }
 
 
+static inline int
+compile_many_tree(
+	Tree* tree,
+	CodeList* list,
+	uint8_t flags,
+	HashToken* res
+	)
+{
+	DLOG(__func__, __LINE__);
+	if(tree->num_children < 0)
+		return TREE_INVALID;
+	int ret2 = list->len, ret1 = codelist_append(list,
+		(Instruction)
+		{
+			.spec = BINARY_SPEC,
+			.name = "DO_ALL",
+			.values = { MAKEREF(ret2+1) }
+		}
+	);
+	if(ret1 < 0) return ret1;
+	for(int i=0; i<tree->num_children; i++)
+	{
+		if( (tree->children[i] == NULL) ||
+			((ret2 = _compile_tokentree(tree->children[i], list)) < 0)
+			 )
+			return ret2;
+	}
+	codelist_get(list, ret1)->values[1] = MAKEREF(ret2);
+	return ret2;
+}
+
+
 
 static inline int 
 compile_binary_tree(
 	Tree* tree, 
 	CodeList* list, 
 	uint8_t flags,
-	SearchResult res
+	HashToken* res
 	)
 {
 	DLOG(__func__, __LINE__);
 	int ret1, ret2;
-	if(!CHECK_RES_VALID(res))
-		return NOT_FOUND;
 	if(flags & TREE_BISIMPLE)
 		return codelist_append(list,
 			((Instruction)
@@ -345,8 +232,6 @@ compile_binary_tree(
 				{
 					.spec 	= GET_RES_FLAGS(res) | BINARY_SPEC,
 					.name 	= GET_RES_STR(res),
-					// .left 	= MAKEGET(ret1),
-					// .right 	= MAKESTR(tree->right->str)
 					.values = {MAKEGET(ret1), MAKESTR(tree->right->str)}
 				}
 			)
@@ -380,11 +265,10 @@ compile_unary_tree(
 	Tree* tree, 
 	CodeList* list, 
 	uint8_t flags,
-	SearchResult res
+	HashToken* res
 	)
 {
 	DLOG(__func__, __LINE__);
-	// printf("Compiling unary tree! %s\n", tree->str);
 	int ret=-1;
 	if(flags & TREE_SIMPLE)
 	{
@@ -398,7 +282,6 @@ compile_unary_tree(
 				{
 					.spec=GET_RES_FLAGS(res) | UNARY_SPEC,
 					.name=GET_RES_STR(res),
-					// .value=MAKESTR(tree->left->str)
 					.values = {MAKESTR(tree->left->str)}
 				}
 			)
@@ -419,7 +302,6 @@ compile_unary_tree(
 				{
 					.spec 	= GET_RES_FLAGS(res) | UNARY_SPEC,
 					.name 	= GET_RES_STR(res),
-					// .value 	= MAKEGET(ret)
 					.values = {MAKEGET(ret)}
 				}
 			)
@@ -432,9 +314,10 @@ compile_special_tree(
 	Tree* tree,
 	CodeList* list,
 	uint8_t flags,
-	SearchResult res
+	HashToken* res
 	)
 {
+	/* GNU extension */
 	static void* gotos[] = {
 		&&DO_NOTHING_0,
 		&&READ_COLLAPSE_1,
@@ -448,12 +331,7 @@ compile_special_tree(
 	};
 
 	Tree* new_tree = tree;
-	// HashToken* tok = NULL;
 	int ret1 = -1, ret2 = -1, temp = 0;
-	// if( (tok = in_word_set(tree->str, strlen(tree->str))) 
-	// 	== NULL )
-	// 	return NOT_FOUND;
-	// goto *(gotos[tok->compile_idx]);
 	goto *(gotos[res->compile_idx]);
 
 	DO_NOTHING_0:
@@ -501,7 +379,10 @@ compile_special_tree(
 		new_tree->right = tree;
 		
 		if(!(code_tree->str[0]))
+		{
+			// if()
 			return TREE_INVALID;
+		}
 		ret2 = _compile_tokentree(new_tree, list);
 		return ret2;
 	}
@@ -653,29 +534,55 @@ compile_special_tree(
 		ret1 = list->len;
 		ret2 = _compile_tokentree(tree->right, list);
 		if(ret2 < 0) return ret2;
+
+		#ifndef WHILE_LOOP_USE_IFN_JUMP
+			ret2 = codelist_append(list,
+				(Instruction)
+				{
+					.spec = UNARY_SPEC,
+					.name = "NOT",
+					.values = { MAKEGET(ret2) }
+				}
+			);
+		#endif
+
 		temp = codelist_append(list,
 			(Instruction)
 			{ 
 				.spec = BINARY_SPEC | NO_RETURN, 
-				.name = "IFN_JUMP",
-				// .left = MAKEGET(ret2)
+
+				#ifdef WHILE_LOOP_USE_IFN_JUMP
+					.name = "IFN_JUMP",
+				#else
+					.name = "IF_JUMP",
+				#endif
 				.values = { MAKEGET(ret2) }
 			}
 		);
 		if(temp < 0) return ret2;
 		ret2 = _compile_tokentree(tree->left, list);
 		if(ret2 < 0) return ret2;
+		if(!(codelist_get(list, ret2)->spec & NO_RETURN))
+		{
+			ret2 = codelist_append(list, 
+				(Instruction)
+				{
+					.spec = UNARY_SPEC,
+					.name = "YIELD",
+					.values = { MAKEGET(ret2) }
+				}
+			);
+			if(ret2 < 0) return ret2;
+		}
 		ret2 = codelist_append(list,
 			(Instruction)
 			{
 				.spec = UNARY_SPEC | NO_RETURN,
 				.name = "JUMP",
-				// .left = MAKEREF(ret1)
 				.values = { MAKEREF(ret1) }
 			}
 		);
 		if(ret2 < 0) return ret2;
-		// codelist_get(list, temp)->right = MAKEREF(ret2 + 1);
 		codelist_get(list, temp)->values[1] = MAKEREF(ret2 + 1);
 		return ret2;
 	}
@@ -753,7 +660,7 @@ compile_special_tree(
 int _compile_tokentree(Tree* tree, CodeList* list)
 {
 	DLOG(__func__, __LINE__);
-	SearchResult res;
+	HashToken* res;
 	int ret1=-1, ret2=-1;
 	uint8_t flags = get_tree_details(tree);
 	if(flags & TREE_ATOMIC)
@@ -794,10 +701,14 @@ int _compile_tokentree(Tree* tree, CodeList* list)
 	}
 	if(flags & TREE_UNARY)
 		return compile_unary_tree(tree, list, flags, res);
+	else if(flags & TREE_BINARY)
+	{
+		// BITASSERT((flags & TREE_BINARY));
+		return compile_binary_tree(tree, list, flags, res);
+	}
 	else
 	{
-		BITASSERT((flags & TREE_BINARY));
-		return compile_binary_tree(tree, list, flags, res);
+		return compile_many_tree(tree, list, flags, res);
 	}
 }
 
@@ -819,6 +730,16 @@ CodeList compile_tokentree(Tree* tree)
 			.name="RETURN",
 			// .value = MAKEGET(idx)
 			.values = {MAKEGET(idx)}
+		};
+		idx = codelist_append(&list, ret);
+	}
+	else if(idx >= 0)
+	{
+		Instruction ret = {
+			.spec=UNARY_SPEC,
+			.name="END",
+			// .value = MAKEGET(idx)
+			.values = {MAKESTR("0")}
 		};
 		idx = codelist_append(&list, ret);
 	}

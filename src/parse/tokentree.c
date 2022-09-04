@@ -140,6 +140,287 @@ void print_tree(Tree *tree, bool end)
 	putchar('\n');
 }
 
+// Tree* _new_token_tree(int *i, 
+// 	const char* parent,
+// 	TokenList* list,
+// 	int loglevel,
+// 	int j,
+// 	bool parens_node)
+// {
+// 	Tree* curr = alloc_binary_tree(), *temp = NULL;
+// 	if(curr == NULL)
+// 		return curr;
+// 	char *cptr;
+// 	while(*i<100 && *i < list_len(list))
+// 	{
+// 		cptr = list_get_str(list, *i);
+// 		if(loglevel > Inspect)
+// 		{
+// 			printf("--> %s\n", cptr);
+// 			printf("i: %d, j: %d\n", *i, j);
+// 			if(parent)
+// 			{
+// 				printf("parent: %s\n", parent);
+// 			}		
+// 		}
+// 		if(loglevel >= Full)
+// 		{
+// 			printf("\n. . . . CURR TREE . . . . .\n");
+// 			print_tree(curr, true);
+// 			  printf(". . . . . . . . . . . . . .\n\n");
+// 		}
+// 		if(isalnum(*cptr) && (*(cptr+1) == '{'))
+// 		{
+// 			if(!list_incr_br(list))
+// 				return curr;
+// 			(*i)++;
+// 			curr->str[0] = *cptr;
+// 			curr->str[1] = '!';
+// 			curr->str[2] = '\0';
+// 			int jj = list_get_curr_br(list)->close;
+// 			if(*cptr == 'm' || *cptr == 'l')
+// 			{
+// 				Tree* tree_buff[100];
+// 				int ii, num_children = 0;
+// 				for(;*i <= jj && *i < list_len(list) && num_children < 20; num_children++)
+// 				{
+// 					ii = *i;
+// 					while(list_get_str(list, ii)[0] != ',' && ii < jj)
+// 						ii++;
+// 					temp = new_token_tree(
+// 								i, 
+// 								cptr, 
+// 								list, 
+// 								loglevel, 
+// 								ii, 
+// 								parens_node
+// 								);
+// 					tree_buff[num_children] = temp;
+// 					if(ii == jj)
+// 					{
+// 						num_children++;
+// 						break;
+// 					}
+// 					else
+// 						(*i)++;
+// 				}
+// 				if(	*i != jj 
+// 					|| !( tree_set_many(curr, num_children, tree_buff) )
+// 				  )
+// 				{
+// 					for(; num_children > 0; num_children--)
+// 						free(tree_buff[num_children-1]);
+// 					curr->flags = 0;
+// 				}
+// 				// printf("LISTR %s\n", list_get_str(list, *i));
+// 				++(*i);
+// 				printf("LISTR %s\n", list_get_str(list, *i));
+// 				if(parent[0])
+// 					return curr;
+// 				temp->flags = 0;
+// 				j = 0;
+// 				printf("HERE!\n");
+// 				print_tree(curr, false);
+// 				continue;
+// 			}
+// 			if(*i == j)
+// 				curr->left = NULL;
+// 			else
+// 				curr->left = new_token_tree(
+// 					i,
+// 					cptr,
+// 					list,
+// 					loglevel,
+// 					j,
+// 					parens_node);
+// 			curr->right = NULL;
+// 			continue;
+// 		}
+// 		switch(
+// 			get_token_flags(cptr) & HIDE_READ
+// 			)
+// 		{
+// 			case TOKEN_DIGIT:
+// 				printf("Digit\n");
+// 				list_copy_into(list, *i, curr->str);
+// 				curr->flags = 1;
+// 				(*i)++;
+// 				break;
+// 			case TOKEN_SPECIAL:
+// 				// printf("Special\n");
+// 				switch(*cptr)
+// 				{
+// 					case ',':
+// 						if(*i == j)
+// 							return curr;
+// 						else
+// 						{
+// 							printf("Hmmmmmm\n");
+// 							return curr;
+// 						}
+// 					case '[':
+// 						if(has_precedence_str(cptr, parent))
+// 						{
+// 							if(loglevel >= Debug)
+// 								printf("'%s' has precendence over '%s', returning\n", cptr, parent);
+// 							return curr;
+// 						}
+// 						if(!list_incr_br(list))
+// 							return curr;
+// 						temp = (Tree*) malloc(sizeof(Tree));
+// 						temp->str[0] = '[';
+// 						temp->str[1] = ']';
+// 						temp->str[2] = '\0';
+// 						// temp->flags = 0;
+// 						temp->left = curr;
+// 						++(*i);
+// 						temp->right = new_token_tree(i, 
+// 							cptr, 
+// 							list,
+// 							loglevel,
+// 							list_get_curr_br(list)->close,
+// 							parens_node
+// 						);
+// 						curr = temp;
+// 						break;
+// 					case '{':
+// 						++(*i);
+// 						if(!list_incr_br(list))
+// 							return curr;
+// 						curr->str[0] = '{';
+// 						curr->str[1] = '}';
+// 						curr->str[2] = '\0';
+// 						// cptr = list_get_str(list, *i);
+// 						temp = (Tree*) malloc(sizeof(Tree));
+// 						temp->left = NULL;
+// 						temp->right = NULL;
+// 						temp->flags = 1;
+// 						cptr = list_get_str(list, *i);
+// 						// printf("cptr: %s\n", cptr);
+// 						list_copy_into(list, *i, temp->str);
+// 						++(*i);
+// 						cptr = list_get_str(list, *i);
+// 						if(cptr[0] != '}')
+// 						{
+// 							printf("Expected matching '}', got '%s'\n", cptr);
+// 							free(temp);
+// 							return curr;
+// 						}
+// 						curr->left = temp;
+// 						curr->right = NULL;
+// 						j = list_get_curr_br(list)->close;
+// 						// printf("J=%d\n", j);
+// 						// print_tree(curr, false);
+// 						++(*i);
+// 						break;
+// 					default:
+// 						printf("Unrecognized token: %s\n", cptr);
+// 						++(*i);
+// 				}
+// 				break;
+// 			case TOKEN_OPEN:
+// 			// printf("Open\n");
+// 				if(!list_incr_br(list))
+// 					return curr;
+// 				++(*i);
+// 				temp = new_token_tree(i, 
+// 						cptr, 
+// 						list,
+// 						loglevel,
+// 						list_get_curr_br(list)->close,
+// 						parens_node);
+// 				// temp->flags = 0;
+// 				if(parens_node ||
+// 						(  
+// 						((get_token_flags(parent) & TOKEN_READ) != 0) &&
+// 						((get_token_flags(temp->str) & TOKEN_READ) != 0)
+// 						)
+// 					)
+// 				{
+// 					curr->str[0] = *cptr;
+// 					curr->str[1] = get_matching_brace(*cptr);
+// 					curr->str[2] = '\0';
+// 					curr->left = temp;
+// 					curr->right = NULL;
+// 				}
+// 				else
+// 				{
+// 					free(curr);
+// 					curr = temp;
+// 				}
+// 				break;
+// 			case TOKEN_CLOSE:
+// 			// printf("Close\n");
+// 				if(*i == j)
+// 					return curr;
+// 				else
+// 					++(*i);
+// 				break;
+// 			case TOKEN_PREOP:
+// 			// printf("Preop\n");
+// 				preop:
+
+// 				list_copy_into(list, *i, curr->str);
+// 				// printf("THE STR: %s\n", curr->str);
+// 				++(*i);
+// 				curr->left = new_token_tree(i, 
+// 					cptr, 
+// 					list, 
+// 					loglevel,
+// 					j,
+// 					parens_node);
+// 				// printf("\n\n\nCOKC AND HVAhuw\n\n\n");
+// 				// print_tree(curr->left, false);
+// 				curr->right = NULL;
+// 				break;
+// 			case TOKEN_POSTOP:
+// 			// printf("Post\n");
+// 				if(has_precedence_str(cptr, parent))
+// 				{
+// 					if(loglevel >= Debug)
+// 						printf("'%s' has precendence over '%s', returning\n", cptr, parent);
+// 					return curr;
+// 				}
+// 				postop_skip_check:
+// 				temp = (Tree*) malloc(sizeof(Tree));
+// 				// temp->flags = 0;
+// 				list_copy_into(list, *i, temp->str);
+// 				temp->left = curr;
+// 				curr = temp;
+// 				++(*i);
+// 				break;
+// 			case TOKEN_BINOP:
+// 				binop:
+// 				// printf("Bin\n");
+// 				if(has_precedence_str(cptr, parent))
+// 				{
+// 					if(loglevel >= Debug)
+// 						printf("'%s' has precendence over '%s', returning\n", cptr, parent);
+// 					// print_tree(curr, false);
+// 					return curr;
+// 				}
+// 				binop_skip_check:
+// 				temp = (Tree*) malloc(sizeof(Tree));
+// 				list_copy_into(list, *i, temp->str);
+// 				temp->left = curr;
+// 				// temp->flags = 0;
+// 				curr = temp;
+// 				++(*i);
+// 				curr->right = new_token_tree(i, 
+// 					cptr, 
+// 					list, 
+// 					loglevel,
+// 					j,
+// 					parens_node);
+// 				break;
+// 			default:
+// 				printf("Unrecognized token: '%s'\n", cptr);
+// 				++(*i);
+// 		}
+// 	}
+// 	return curr;
+// }
+
 Tree* new_token_tree(int *i, 
 	const char* parent,
 	TokenList* list,
@@ -151,25 +432,47 @@ Tree* new_token_tree(int *i,
 	if(curr == NULL)
 		return curr;
 	char *cptr;
+	Token* tok;
+	HashToken* res;
+	static void* gotos[] = 
+	{
+		&&TREE_DEFAULT_0,
+		&&TREE_ALLOW_COMMAS_1,
+		&&TREE_COMMA_2,
+		&&TREE_SQUARE_BRACKET_3,
+		&&TREE_CURLY_BRACKET_4,
+		&&TREE_PARENS_OPEN_5,
+		&&TREE_PARENS_CLOSE_6,
+		&&TREE_PREOP_7,
+		&&TREE_POSTOP_8,
+		&&TREE_BINOP_9
+	};
 	while(*i<100 && *i < list_len(list))
 	{
-		cptr = list_get_str(list, *i);
-		if(loglevel > Inspect)
+		// cptr = list_get_str(list, *i);
+		
+		cptr = (tok = &(list->tokens[*i]))->str;
+		if(token_is_integral(tok))
 		{
-			printf("--> %s\n", cptr);
-			printf("i: %d, j: %d\n", *i, j);
-			if(parent)
-			{
-				printf("parent: %s\n", parent);
-			}		
+			// printf("Integral! %s\n", cptr);
+			list_copy_into(list, *i, curr->str);
+			curr->flags = 1;
+			(*i)++;
+			continue;
 		}
-		if(loglevel >= Full)
+
+		res = in_word_set(cptr, strlen(cptr));
+		if(res != NULL)
 		{
-			printf("\n. . . . CURR TREE . . . . .\n");
-			print_tree(curr, true);
-			  printf(". . . . . . . . . . . . . .\n\n");
+			goto *(gotos[res->tree_idx]);
 		}
-		if(isalnum(*cptr) && (*(cptr+1) == '{'))
+
+		TREE_DEFAULT_0:
+		printf("Unrecognized token: '%s'\n", cptr);
+		++(*i);
+		continue;
+
+		TREE_ALLOW_COMMAS_1:
 		{
 			if(!list_incr_br(list))
 				return curr;
@@ -178,244 +481,196 @@ Tree* new_token_tree(int *i,
 			curr->str[1] = '!';
 			curr->str[2] = '\0';
 			int jj = list_get_curr_br(list)->close;
-			if(*cptr == 'm' || *cptr == 'l')
+			Tree* tree_buff[100];
+			int ii, num_children = 0;
+			for(;*i <= jj && *i < list_len(list) && num_children < 20; num_children++)
 			{
-				Tree* tree_buff[100];
-				int ii, num_children = 0;
-				for(;*i <= jj && *i < list_len(list) && num_children < 20; num_children++)
+				ii = *i;
+				while(list_get_str(list, ii)[0] != ',' && ii < jj)
+					ii++;
+				temp = new_token_tree(
+							i, 
+							cptr, 
+							list, 
+							loglevel, 
+							ii, 
+							parens_node
+							);
+				tree_buff[num_children] = temp;
+				if(ii == jj)
 				{
-					ii = *i;
-					while(list_get_str(list, ii)[0] != ',' && ii < jj)
-						ii++;
-					temp = new_token_tree(
-								i, 
-								cptr, 
-								list, 
-								loglevel, 
-								ii, 
-								parens_node
-								);
-					tree_buff[num_children] = temp;
-					if(ii == jj)
-					{
-						num_children++;
-						break;
-					}
-					else
-						(*i)++;
+					num_children++;
+					break;
 				}
-				if(	*i != jj 
-					|| !( tree_set_many(curr, num_children, tree_buff) )
-				  )
-				{
-					for(; num_children > 0; num_children--)
-						free(tree_buff[num_children-1]);
-					curr->flags = 0;
-				}
-				// printf("LISTR %s\n", list_get_str(list, *i));
-				++(*i);
-				// printf("LISTR %s\n", list_get_str(list, *i));
-				// if(parent[0])
-				// 	return curr;
-				// temp->flags = 0;
-				// j = 0;
-				// printf("HERE!\n");
-				// print_tree(curr, false);
-				continue;
+				else
+					(*i)++;
 			}
-			if(*i == j)
-				curr->left = NULL;
-			else
-				curr->left = new_token_tree(
-					i,
-					cptr,
+			if(	*i != jj 
+				|| !( tree_set_many(curr, num_children, tree_buff) )
+			  )
+			{
+				for(; num_children > 0; num_children--)
+					free(tree_buff[num_children-1]);
+				curr->flags = 0;
+			}
+			++(*i);
+			continue;
+		}
+
+		TREE_COMMA_2:
+		{
+			if(*i == j) return curr;
+			else return curr; /* to do */
+		}
+
+		TREE_SQUARE_BRACKET_3:
+		{
+			if(has_precedence_str(cptr, parent))
+			{
+				if(loglevel >= Debug)
+					printf("'%s' has precendence over '%s', returning\n", cptr, parent);
+				return curr;
+			}
+			if(!list_incr_br(list))
+				return curr;
+			temp = (Tree*) malloc(sizeof(Tree));
+			temp->str[0] = '[';
+			temp->str[1] = ']';
+			temp->str[2] = '\0';
+			// temp->flags = 0;
+			temp->left = curr;
+			++(*i);
+			temp->right = new_token_tree(i, 
+				cptr, 
+				list,
+				loglevel,
+				list_get_curr_br(list)->close,
+				parens_node
+			);
+			curr = temp;
+			continue;
+		}
+
+		TREE_CURLY_BRACKET_4:
+		{
+			++(*i);
+			if(!list_incr_br(list))
+				return curr;
+			curr->str[0] = '{';
+			curr->str[1] = '}';
+			curr->str[2] = '\0';
+			temp = (Tree*) malloc(sizeof(Tree));
+			temp->left = NULL;
+			temp->right = NULL;
+			temp->flags = 1;
+			cptr = list_get_str(list, *i);
+			list_copy_into(list, *i, temp->str);
+			++(*i);
+			cptr = list_get_str(list, *i);
+			if(cptr[0] != '}')
+			{
+				printf("Expected matching '}', got '%s'\n", cptr);
+				free(temp);
+				return curr;
+			}
+			curr->left = temp;
+			curr->right = NULL;
+			j = list_get_curr_br(list)->close;
+			++(*i);
+			continue;
+		}
+
+		TREE_PARENS_OPEN_5:
+		{
+			if(!list_incr_br(list))
+				return curr;
+			++(*i);
+			temp = new_token_tree(i, 
+					cptr, 
 					list,
 					loglevel,
-					j,
+					list_get_curr_br(list)->close,
 					parens_node);
+			if(parens_node ||
+					(  
+					((get_token_flags(parent) & TOKEN_READ) != 0) &&
+					((get_token_flags(temp->str) & TOKEN_READ) != 0)
+					)
+				)
+			{
+				curr->str[0] = *cptr;
+				curr->str[1] = get_matching_brace(*cptr);
+				curr->str[2] = '\0';
+				curr->left = temp;
+				curr->right = NULL;
+			}
+			else
+			{
+				free(curr);
+				curr = temp;
+			}
+			continue;
+		}
+
+		TREE_PARENS_CLOSE_6:
+		{		
+			if(*i == j)
+				return curr;
+			else
+				++(*i);
+			continue;
+		}
+
+		TREE_PREOP_7:
+		{
+			list_copy_into(list, *i, curr->str);
+			++(*i);
+			curr->left = new_token_tree(i, 
+				cptr, 
+				list, 
+				loglevel,
+				j,
+				parens_node);
 			curr->right = NULL;
 			continue;
 		}
-		switch(
-			get_token_flags(cptr) & HIDE_READ
-			)
-		{
-			case TOKEN_DIGIT:
-				// printf("Digit\n");
-				list_copy_into(list, *i, curr->str);
-				curr->flags = 1;
-				(*i)++;
-				break;
-			case TOKEN_SPECIAL:
-				// printf("Special\n");
-				switch(*cptr)
-				{
-					case ',':
-						if(*i == j)
-							return curr;
-						else
-						{
-							printf("Hmmmmmm\n");
-							return curr;
-						}
-					case '[':
-						if(has_precedence_str(cptr, parent))
-						{
-							if(loglevel >= Debug)
-								printf("'%s' has precendence over '%s', returning\n", cptr, parent);
-							return curr;
-						}
-						if(!list_incr_br(list))
-							return curr;
-						temp = (Tree*) malloc(sizeof(Tree));
-						temp->str[0] = '[';
-						temp->str[1] = ']';
-						temp->str[2] = '\0';
-						// temp->flags = 0;
-						temp->left = curr;
-						++(*i);
-						temp->right = new_token_tree(i, 
-							cptr, 
-							list,
-							loglevel,
-							list_get_curr_br(list)->close,
-							parens_node
-						);
-						curr = temp;
-						break;
-					case '{':
-						++(*i);
-						if(!list_incr_br(list))
-							return curr;
-						curr->str[0] = '{';
-						curr->str[1] = '}';
-						curr->str[2] = '\0';
-						// cptr = list_get_str(list, *i);
-						temp = (Tree*) malloc(sizeof(Tree));
-						temp->left = NULL;
-						temp->right = NULL;
-						temp->flags = 1;
-						cptr = list_get_str(list, *i);
-						// printf("cptr: %s\n", cptr);
-						list_copy_into(list, *i, temp->str);
-						++(*i);
-						cptr = list_get_str(list, *i);
-						if(cptr[0] != '}')
-						{
-							printf("Expected matching '}', got '%s'\n", cptr);
-							free(temp);
-							return curr;
-						}
-						curr->left = temp;
-						curr->right = NULL;
-						j = list_get_curr_br(list)->close;
-						// printf("J=%d\n", j);
-						// print_tree(curr, false);
-						++(*i);
-						break;
-					default:
-						printf("Unrecognized token: %s\n", cptr);
-						++(*i);
-				}
-				break;
-			case TOKEN_OPEN:
-			// printf("Open\n");
-				if(!list_incr_br(list))
-					return curr;
-				++(*i);
-				temp = new_token_tree(i, 
-						cptr, 
-						list,
-						loglevel,
-						list_get_curr_br(list)->close,
-						parens_node);
-				// temp->flags = 0;
-				if(parens_node ||
-						(  
-						((get_token_flags(parent) & TOKEN_READ) != 0) &&
-						((get_token_flags(temp->str) & TOKEN_READ) != 0)
-						)
-					)
-				{
-					curr->str[0] = *cptr;
-					curr->str[1] = get_matching_brace(*cptr);
-					curr->str[2] = '\0';
-					curr->left = temp;
-					curr->right = NULL;
-				}
-				else
-				{
-					free(curr);
-					curr = temp;
-				}
-				break;
-			case TOKEN_CLOSE:
-			// printf("Close\n");
-				if(*i == j)
-					return curr;
-				else
-					++(*i);
-				break;
-			case TOKEN_PREOP:
-			// printf("Preop\n");
-				preop:
 
-				list_copy_into(list, *i, curr->str);
-				// printf("THE STR: %s\n", curr->str);
-				++(*i);
-				curr->left = new_token_tree(i, 
-					cptr, 
-					list, 
-					loglevel,
-					j,
-					parens_node);
-				// printf("\n\n\nCOKC AND HVAhuw\n\n\n");
-				// print_tree(curr->left, false);
-				curr->right = NULL;
-				break;
-			case TOKEN_POSTOP:
-			// printf("Post\n");
-				if(has_precedence_str(cptr, parent))
-				{
-					if(loglevel >= Debug)
-						printf("'%s' has precendence over '%s', returning\n", cptr, parent);
-					return curr;
-				}
-				postop_skip_check:
-				temp = (Tree*) malloc(sizeof(Tree));
-				// temp->flags = 0;
-				list_copy_into(list, *i, temp->str);
-				temp->left = curr;
-				curr = temp;
-				++(*i);
-				break;
-			case TOKEN_BINOP:
-				binop:
-				// printf("Bin\n");
-				if(has_precedence_str(cptr, parent))
-				{
-					if(loglevel >= Debug)
-						printf("'%s' has precendence over '%s', returning\n", cptr, parent);
-					// print_tree(curr, false);
-					return curr;
-				}
-				binop_skip_check:
-				temp = (Tree*) malloc(sizeof(Tree));
-				list_copy_into(list, *i, temp->str);
-				temp->left = curr;
-				// temp->flags = 0;
-				curr = temp;
-				++(*i);
-				curr->right = new_token_tree(i, 
-					cptr, 
-					list, 
-					loglevel,
-					j,
-					parens_node);
-				break;
-			default:
-				printf("Unrecognized token: '%s'\n", cptr);
-				++(*i);
+		TREE_POSTOP_8:
+		{
+			if(has_precedence_str(cptr, parent))
+			{
+				if(loglevel >= Debug)
+					printf("'%s' has precendence over '%s', returning\n", cptr, parent);
+				return curr;
+			}
+			temp = (Tree*) malloc(sizeof(Tree));
+			list_copy_into(list, *i, temp->str);
+			temp->left = curr;
+			curr = temp;
+			++(*i);
+			continue;
+		}
+
+		TREE_BINOP_9:
+		{
+			if(has_precedence_str(cptr, parent))
+			{
+				if(loglevel >= Debug)
+					printf("'%s' has precendence over '%s', returning\n", cptr, parent);
+				return curr;
+			}
+			temp = (Tree*) malloc(sizeof(Tree));
+			list_copy_into(list, *i, temp->str);
+			temp->left = curr;
+			curr = temp;
+			++(*i);
+			curr->right = new_token_tree(i, 
+				cptr, 
+				list, 
+				loglevel,
+				j,
+				parens_node);
+			continue;
 		}
 	}
 	return curr;
@@ -477,6 +732,8 @@ void debug_tokenize(TokenList* list, int loglevel)
 			open, close, br->copen, br->cclose, list_get_str(list, open), list_get_str(list, close));
 	}
 }
+
+
 
 void debug_single_spec(char str[], int loglevel, bool end, bool parens_node)
 {

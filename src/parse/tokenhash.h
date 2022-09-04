@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <stdbool.h>
 
 struct HashToken
 {
@@ -13,7 +14,9 @@ struct HashToken
 	uint16_t compile_flags;
 	const char* descr;
 	uint8_t max_search_size;
+	uint8_t tree_idx;
 	uint8_t compile_idx;
+	bool is_instr;
 };
 
 typedef struct HashToken HashToken;
