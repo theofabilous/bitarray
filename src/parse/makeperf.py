@@ -36,7 +36,6 @@ class Tokenize:
 	ParensClose = 4
 	BracketLiteral = 5
 	TokenDigit = 6
-	ParensOpenSpecial = 7
 
 
 
@@ -193,7 +192,8 @@ _binops = [
 	("*", 40, 0, TreeFlags.BinOp, 0, "MULTIPLY", 0, TREE_BINOP_9, 0, False),
 	("**", 10, 0, TreeFlags.BinOp, 0, "REPEAT", 0, TREE_BINOP_9, REPEAT_LOOP_3, False),
 	("*>", 10, 0, TreeFlags.BinOp, 0, "REPEAT", 0, TREE_BINOP_9, REPEAT_LOOP_3, False),
-	("%", 50, 0, TreeFlags.BinOp, 0, "Align", 0, TREE_BINOP_9, 0, False),
+	("%", 40, 0, TreeFlags.BinOp, 0, "Modulo", 0, TREE_BINOP_9, 0, False),
+	("%%", 50, 0, TreeFlags.BinOp, 0, "Align", 0, TREE_BINOP_9, 0, False),
 	(">", 	CompPrecedence, 0, TreeFlags.BinOp, 0, "Greater", 0, TREE_BINOP_9, 0, False),
 	("<", 	CompPrecedence, 0, TreeFlags.BinOp, 0, "Smaller", 0, TREE_BINOP_9, 0, False),
 	(">=", 	CompPrecedence, 0, TreeFlags.BinOp, 0, "GreEq", 0, TREE_BINOP_9, 0, False),
@@ -247,7 +247,7 @@ tokens['m!'] = Result('m!', 0, Tokenize.NotAllowed, 0, 0, "Match", 0, 0, M_CURLY
 tokens['[]'] = Result('[]', 0, Tokenize.NotAllowed, 0, 0, "ReadArray", 0, 0, SQUARE_BRACKET_4, False)
 
 for e in ('m{', 'l{'):
-	tokens[e] = Result(e, 0, Tokenize.ParensOpenSpecial, TreeFlags.Open, 0, "", 0, TREE_ALLOW_COMMAS_1, 0, False)
+	tokens[e] = Result(e, 0, Tokenize.ParensOpen, TreeFlags.Open, 0, "", 0, TREE_ALLOW_COMMAS_1, 0, False)
 
 for e in ('0x', '0b'):
 	tokens[e] = Result(e, 0, Tokenize.IntegralPrefix, 0, 0, "", 0, 0, 0, False)
@@ -317,7 +317,8 @@ old_compile = {
 	"?": 	(None,			BINARY_SPEC | BOOL_CHECK),
 	"<<": 	("SHIFT_LEFT",		BINARY_SPEC),
 	">>": 	("SHIFT_RIGHT",		BINARY_SPEC),
-	"%": 	("ALIGN",			BINARY_SPEC)
+	"%": 	("MODULO",			BINARY_SPEC),
+	"%%": 	("ALIGN",			BINARY_SPEC)
 }
 
 

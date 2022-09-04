@@ -2,9 +2,6 @@
 
 #include "tokentree.h"
 #include "chartable.h"
-#include "stringtree.h"
-
-static StringTree strmap = { .init = false };
 
 typedef struct TokenSpec
 {

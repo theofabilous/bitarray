@@ -64,7 +64,6 @@ FLAG16(ParensOpen, 3);
 FLAG16(ParensClose, 4);
 FLAG16(BracketLiteral, 5);
 FLAG16(TokenDigit, 6);
-FLAG16(ParensOpenSpecial, 7);
 
 static const uint8_t INTEGRAL_TOKEN = RAW_TOKEN | INT_TOKEN | HEX_TOKEN | BIN_TOKEN;
 

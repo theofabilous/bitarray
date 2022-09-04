@@ -1,6 +1,5 @@
 // #include "../src/binunpack.h"
 // #include "tokentree.h"
-#include "stringtree.h"
 #include "treecompile.h"
 // #include "tokenhash.h"
 #include <stdio.h>
@@ -90,96 +89,6 @@ void new_operators_tests()
 }
 
 
-void string_tree_test()
-{
-	bool ok;
-	StringTree tree;
-	SearchResult res;
-	init_stringtree(&tree, NULL, 0);
-	const char* strs[10] =
-	{
-		">", "<", "<<", ">>", "<>", "><", "-", "--",
-		"<-", "->"
-	};
-	for(int i=0; i<10; i++)
-	{
-		ok = stringtree_add_str_u64(&tree, strs[i], 0, 0);
-		if(!ok)
-			printf("Error adding str!\n");
-	}
-	// ok = stringtree_add_str(&tree, "->", 1, 10);
-	// if(!ok) printf("Error\n");
-	// ok = stringtree_add_str(&tree, "--", 2, 11);
-	// if(!ok) printf("Error\n");
-	// ok = stringtree_add_str(&tree, "<>", 3, 13);
-	// if(!ok) printf("Error\n");
-	printf("Starting!\n");
-	int i;
-	size_t errs=0, succeeds=0;
-	for(i=0; i<1000000; i++)
-	{
-		for(int j=0; j<10; j++)
-		{
-			res = stringtree_find_str(&tree, strs[j]);
-			if(res.valid)
-				succeeds++;
-			else
-				errs++;
-		}
-		res = stringtree_find_str(&tree, ">-");
-		if(res.valid)
-			succeeds++;
-		else
-			errs++;
-		res = stringtree_find_str(&tree, ">-");
-		if(res.valid)
-			succeeds++;
-		else
-			errs++;
-	}
-	printf("Done! i=%d, errs=%zu, succeeds=%zu\n", i, errs, succeeds);
-}
-
-
-void verify_sizes_addrs()
-{
-	// printf("Sizeof codevalue: %zu\n", sizeof(CodeValue));
-	// printf("Sizeof instruction: %zu\n", sizeof(Instruction));
-	// Instruction x;
-	// CodeValue* ptrs_arr[] =
-	// {
-	// 	&(x.values[0]),
-	// 	&(x.values[1]),
-	// 	&(x.values[2])
-	// };
-	// CodeValue* ptrs_un[] =
-	// {
-	// 	&(x.value),
-	// 	0,
-	// 	0
-	// };
-	// CodeValue* ptrs_bin[] =
-	// {
-	// 	&(x.left), 
-	// 	&(x.right),
-	// 	0
-	// };
-	// CodeValue* ptrs_tern[] =
-	// {
-	// 	&(x._1), 
-	// 	&(x._2), 
-	// 	&(x._3)
-	// };
-	// for(int i=0; i<3; i++)
-	// {
-	// 	printf("%d: %p\n", i, ptrs_arr[i]);
-	// 	printf("%d: %p\n", i, ptrs_un[i]);
-	// 	printf("%d: %p\n", i, ptrs_bin[i]);
-	// 	printf("%d: %p\n", i, ptrs_tern[i]);
-	// 	putchar('\n');
-	// }
-}
-
 
 void compile_test()
 {
@@ -187,7 +96,8 @@ void compile_test()
 	FMTS(fmts,
 		"u(31+1)->$1=={00dc}",
 		"(u(31)*5) || u32 *> 10",
-		"$1=u32=>m{0x0B,0b0101, 52, 52, u32}"
+		"$1=u32=>m{0x0B,0b0101, 52, 52, u32}",
+		"$25=u(i31%%2)%5"
 		// "u32+r{u31+5}",
 		// "i33+5{u31}-{000dc}>>7",
 		// "0b1001+0x00AF"
