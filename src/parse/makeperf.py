@@ -28,8 +28,18 @@ typedef = True
 delimiter = ","
 
 
-class TokenizeFlags:
+class Tokenize:
 	CheckNext = 0
+	NotAllowed = 1
+	IntegralPrefix = 2
+	ParensOpen = 3
+	ParensClose = 4
+	BracketLiteral = 5
+	TokenDigit = 6
+	ParensOpenSpecial = 7
+
+
+
 
 class TreeFlags:
 	BinOp = 0
@@ -145,7 +155,7 @@ class Result:
 		return s
 
 
-make_flags(TokenizeFlags)
+make_flags(Tokenize)
 make_flags(TreeFlags)
 # make_fla
 # print_flags(TreeFlags)
@@ -229,26 +239,32 @@ tokens = {
 
 
 for i in range(10):
-	tokens[str(i)] = Result(str(i), 0, 0, TreeFlags.Digit, 0, "DIGIT", 0, 0, 0, False)
+	tokens[str(i)] = Result(str(i), 0, Tokenize.TokenDigit, TreeFlags.Digit, 0, "DIGIT", 0, 0, 0, False)
 
-tokens['('] = Result('(', 0, 0, TreeFlags.Open, 0, "ParensOpen", 0, TREE_PARENS_OPEN_5, 0, False)
-tokens['()'] = Result('()', 0, 0, TreeFlags.Open, 0, "ParensOpen", 0, 0, PARENS_OPEN_7, False)
-tokens['m!'] = Result('m!', 0, 0, 0, 0, "Match", 0, 0, M_CURLY_BRACE_6, False)
-tokens['[]'] = Result('[]', 0, 0, 0, 0, "ReadArray", 0, 0, SQUARE_BRACKET_4, False)
+tokens['('] = Result('(', 0, Tokenize.ParensOpen, TreeFlags.Open, 0, "ParensOpen", 0, TREE_PARENS_OPEN_5, 0, False)
+tokens['()'] = Result('()', 0, Tokenize.NotAllowed, TreeFlags.Open, 0, "ParensOpen", 0, 0, PARENS_OPEN_7, False)
+tokens['m!'] = Result('m!', 0, Tokenize.NotAllowed, 0, 0, "Match", 0, 0, M_CURLY_BRACE_6, False)
+tokens['[]'] = Result('[]', 0, Tokenize.NotAllowed, 0, 0, "ReadArray", 0, 0, SQUARE_BRACKET_4, False)
 
 for e in ('m{', 'l{'):
-	tokens[e] = Result(e, 0, 0, TreeFlags.Open, 0, "", 0, TREE_ALLOW_COMMAS_1, 0, False)
+	tokens[e] = Result(e, 0, Tokenize.ParensOpenSpecial, TreeFlags.Open, 0, "", 0, TREE_ALLOW_COMMAS_1, 0, False)
+
+for e in ('0x', '0b'):
+	tokens[e] = Result(e, 0, Tokenize.IntegralPrefix, 0, 0, "", 0, 0, 0, False)
 
 for e in ")]}":
-	tokens[e] = Result(e, 0, 0, TreeFlags.Close, 0, "Close", 0, TREE_PARENS_CLOSE_6, 0, False)
+	tokens[e] = Result(e, 0, Tokenize.ParensClose, TreeFlags.Close, 0, "Close", 0, TREE_PARENS_CLOSE_6, 0, False)
 
-for e in "{[,":
-	tokens[e] = Result(e, 0, 0, TreeFlags.Special, 0, "Special", 0, 0, 0, False)
-# tokens['{'] = Result('{', 0, 0, 0, 0, "", 0, TREE_SQUARE_BRACKET_3, 0, False)
-# tokens[]
-tokens['{'].tree_idx = TREE_CURLY_BRACKET_4
-tokens['['].tree_idx = TREE_SQUARE_BRACKET_3
-tokens[','].tree_idx = TREE_COMMA_2
+# for e in "{[,":
+# 	tokens[e] = Result(e, 0, 0, TreeFlags.Special, 0, "Special", 0, 0, 0, False)
+
+# tokens['{'].tree_idx = TREE_CURLY_BRACKET_4
+# tokens['['].tree_idx = TREE_SQUARE_BRACKET_3
+# tokens[','].tree_idx = TREE_COMMA_2
+
+tokens['{'] = Result('{', 0, Tokenize.BracketLiteral, TreeFlags.Special, 0, "Special", 0, TREE_CURLY_BRACKET_4, 0, False)
+tokens['['] = Result('[', 0, Tokenize.ParensOpen, TreeFlags.Special, 0, "Special", 0, TREE_SQUARE_BRACKET_3, 0, False)
+tokens[','] = Result(',', 0, 0, TreeFlags.Special, 0, "Special", 0, TREE_COMMA_2, 0, False)
 
 for e in "^bui.":
 	tokens[e].tree_flags |= TreeFlags.Read
@@ -287,8 +303,8 @@ old_compile = {
 	"<": 	("LESS_THAN?",		BINARY_SPEC),
 	">=": 	("GREATER_EQ?",		BINARY_SPEC),
 	"<=": 	("LESS_EQ?",		BINARY_SPEC),
-	"&&": 	("OR?",				BINARY_SPEC),
-	"||": 	("AND?",			BINARY_SPEC),
+	"&&": 	("AND?",				BINARY_SPEC),
+	"||": 	("OR?",			BINARY_SPEC),
 	":": 	(None,			BINARY_SPEC | ACCESS_SPECIAL),
 	"->": 	("LOOP_WHILE",		BINARY_SPEC | LOOP_SPECIAL),
 	"<-": 	(None,			BINARY_SPEC),
@@ -314,7 +330,7 @@ for tok, (opcode_name, flags) in old_compile.items():
 		tokens[tok].compile_flags = flags
 		tokens[tok].is_instr = is_instr
 	else:
-		tokens[tok] = Result(tok, 0, 0, 0, flags, opcode_name, 0, 0, 0, is_instr)
+		tokens[tok] = Result(tok, 0, Tokenize.NotAllowed, 0, flags, opcode_name, 0, 0, 0, is_instr)
 
 for i in range(ord('a'), 1+ord('z')):
 	if (tok := chr(i)+'!') not in tokens:
@@ -324,14 +340,40 @@ for i in range(ord('a'), 1+ord('z')):
 		tokens[tok] = Result(tok, 0, 0, 0, 
 			UNARY_SPEC | OTHER_SPECIAL | MOD_SPECIAL, f"-{chr(i).upper()}!-", 0, 0, 0, False)
 
+to_add = []
 for k, v in tokens.items():
 	length = len(k)
 	currlen = length
-	while currlen > 1:
-		if (substr := k[:currlen-1]) in tokens:
-			tokens[substr].tokenize_flags |= TokenizeFlags.CheckNext
-			tokens[substr].max_search_size = max(length, tokens[substr].max_search_size)
+
+	while (currlen > 1) and not (v.tokenize_flags & Tokenize.NotAllowed):
+		substr = k[:currlen-1]
+		
+		# if (substr in tokens) \
+		# 	and (not (currtok.tokenize_flags & Tokenize.NotAllowed)):
+		# 	currtok.tokenize_flags |= Tokenize.CheckNext
+		# 	currtok.max_search_size = max(length, currtok.max_search_size)
+		
+		# if not (currtok.tokenize_flags & Tokenize.NotAllowed):
+		# 	if substr in tokens:
+		# 		currtok = tokens[substr]
+		# 		currtok.tokenize_flags |= Tokenize.CheckNext
+		# 		currtok.max_search_size = max(length, currtok.max_search_size)
+		# 	else:
+		# 		tokens[substr] = Result(
+		# 			substr, 0, Tokenize.NotAllowed, 0, 0, "Special", 0, 0, 0, False
+		# 			)
+		if substr in tokens:
+			currtok = tokens[substr]
+			currtok.tokenize_flags |= Tokenize.CheckNext
+			currtok.max_search_size = max(length, currtok.max_search_size)
+		else:
+			to_add.append(Result(
+				substr, 0, Tokenize.NotAllowed, 0, 0, "", length, 0, 0, False
+				))
 		currlen -= 1
+
+for e in to_add:
+	tokens[e.name] = e
 
 
 token_output = path.realpath("../src/parse/tokens.gperf")

@@ -32,7 +32,7 @@ static inline BracketPair* stack_pop(Stack* stack)
 static const int SKIP_MODE = -10;
 static const int SET_CHAR_MODE = 1;
 // static const SET_STR_
-void tokenize(const char* str, 
+void _tokenize(const char* str, 
 	TokenList* list, 
 	Stack* stack)
 {
@@ -129,6 +129,7 @@ void tokenize(const char* str,
 				case '{':
 					stack_push(stack, list_register_bracket_open(list, *str));
 					str++;
+					
 					reset_token(&tok);
 					for(mode=0; str[mode] && (str[mode] != '}') && (mode<TOKEN_BUFFSIZE); mode++)
 						tok.str[mode] = str[mode];
@@ -219,3 +220,157 @@ void tokenize(const char* str,
 		list_append(list, &tok);
 	}
 }
+
+
+
+void tokenize(const char* str,
+	TokenList* list,
+	Stack *stack)
+{
+	list_init(list);
+	stack_init(stack);
+	Token tok;
+	int incr;
+	int mode = 0;
+	uint8_t i = 0;
+	BracketPair* bpair = NULL;
+	HashToken* res = NULL, *temp = NULL;
+	char curr[64] = { '\0', '\0', '\0', '\0' };
+
+	while(*str && list_len(list) < 100)
+	{
+		i = 0;
+		temp = NULL;
+		reset_token(&tok);
+		curr[0] = *str;
+		curr[1] = '\0';
+		if( (res = in_word_set(curr, 1)) == NULL )
+		{
+			switch(*str)
+			{
+				case ' ':
+					str++;
+					continue;
+				default:
+					list_init(list);
+					printf("Unable to parse: %s\n", str);
+					return;
+			}
+		}
+		for(i=1; i<res->max_search_size && str[i]; i++)
+			curr[i] = str[i];
+
+
+		curr[i] = '\0';
+		// printf("\nMax search: %hhu, i: %hhu, str: %s\n", 
+		// 	res->max_search_size, i, curr);
+
+		while(i > 1 && (temp == NULL))
+		{
+			temp = in_word_set(curr, i);
+			if(temp == NULL)
+			{
+				// printf("\t(%hhu) NULL: %s\n", i, curr);
+				curr[i] = '\0';
+				i--;
+			}
+			else
+			{
+				// printf("\t(%hhu) NONNULL: %s\n", i, temp->name);
+				res = temp;
+			}
+		}
+		// printf("Got: %s, i=%hhu\n\n", res->name, i);
+
+		if(res->tokenize_flags & IntegralPrefix)
+		{
+			if(curr[2] != '\0' || curr[0] != '0')
+			{
+				printf("Invalid integral prefix! %s\n", curr);
+				list_init(list);
+				return;
+			}
+			switch(curr[1])
+			{
+				case 'x':
+					incr = set_token_hex(&tok, str);
+					break;
+				case 'b':
+					incr = set_token_bin(&tok, str);
+					break;
+				default:
+					incr = -1;
+			}
+			if(incr < 0)
+			{
+				printf("Could not parse formatted integral! %s\n", curr);
+				list_init(list);
+				return;
+			}
+			str += incr;
+			list_append(list, & tok);
+		}
+		else if(res->tokenize_flags & TokenDigit)
+		{
+			incr = set_token_int(&tok, str);
+			if(incr < 0)
+			{
+				list_init(list);
+				return;
+			}
+			str += incr;
+			list_append(list, &tok);
+		}
+		else if(res->tokenize_flags & ParensOpen)
+		{
+			stack_push(stack, list_register_bracket_open(list, *str));
+			str++;
+		}
+		else if(res->tokenize_flags & ParensOpenSpecial)
+		{
+			stack_push(stack, 
+				list_register_bracket_open_str(
+					list, str, '{', i)
+			);
+			str += i;
+		}
+		else if(res->tokenize_flags & BracketLiteral)
+		{
+			stack_push(stack, list_register_bracket_open(list, *str));
+			str++;
+			reset_token(&tok);
+			for(i=0; str[i] && (str[i] != '}') && (i<TOKEN_BUFFSIZE); i++)
+				tok.str[i] = str[i];
+			if(str[i] != '}')
+			{
+				printf("Expected matching '}' when tokenizing, not found\n");
+				list_init(list);
+				return;
+			}
+			tok.str[i] = '\0';
+			tok.flags |= STR_TOKEN | RAW_TOKEN;
+			list_append(list, &tok);
+			str+=(i);
+		}
+		else if(res->tokenize_flags & ParensClose)
+		{
+			bpair = stack_pop(stack);
+			bpair->cclose = *str;
+			bpair->close = list_len(list);
+			set_token_char(&tok, *str);
+			str++;
+			list_append(list, &tok);
+		}
+		else
+		{
+			set_token_strn(&tok, str, i);
+			str += i;
+			list_append(list, &tok);
+		}
+	}
+
+}
+
+
+
+

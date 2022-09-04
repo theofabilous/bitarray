@@ -482,6 +482,19 @@ compile_special_tree(
 		if(ret1 < 0) return ret1;
 		ret2 = _compile_tokentree(tree->left, list);
 		if(ret2 < 0) return ret2;
+
+		if(!(codelist_get(list, ret2)->spec & NO_RETURN))
+		{
+			ret2 = codelist_append(list, 
+				(Instruction)
+				{
+					.spec = UNARY_SPEC | NO_RETURN,
+					.name = "YIELD",
+					.values = { MAKEGET(ret2) }
+				}
+			);
+			if(ret2 < 0) return ret2;
+		}
 		// if(ret2 == ins._1.i32_value)
 		if(ret2 == ins.values[0].i32_value)
 		{
@@ -567,7 +580,7 @@ compile_special_tree(
 			ret2 = codelist_append(list, 
 				(Instruction)
 				{
-					.spec = UNARY_SPEC,
+					.spec = UNARY_SPEC | NO_RETURN,
 					.name = "YIELD",
 					.values = { MAKEGET(ret2) }
 				}

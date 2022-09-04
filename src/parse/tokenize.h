@@ -8,6 +8,7 @@
 #include <stdbool.h>
 
 #include "common.h"
+#include "tokenhash.h"
 
 #ifndef TOKEN_BUFFSIZE
 	#define TOKEN_BUFFSIZE 25
@@ -55,6 +56,15 @@ FLAG8(INT_TOKEN, 2);
 FLAG8(HEX_TOKEN, 3);
 FLAG8(BIN_TOKEN, 4);
 FLAG8(RAW_TOKEN, 5);
+
+FLAG16(CheckNext, 0);
+FLAG16(NotAllowed, 1);
+FLAG16(IntegralPrefix, 2);
+FLAG16(ParensOpen, 3);
+FLAG16(ParensClose, 4);
+FLAG16(BracketLiteral, 5);
+FLAG16(TokenDigit, 6);
+FLAG16(ParensOpenSpecial, 7);
 
 static const uint8_t INTEGRAL_TOKEN = RAW_TOKEN | INT_TOKEN | HEX_TOKEN | BIN_TOKEN;
 
@@ -258,6 +268,7 @@ list_register_bracket_open_str(
 	// list->brackets[list->blen+1] = (BracketPair) {.copen='\0', .cclose='\0'};
 	// Token tok = {.flags = CHAR_TOKEN, .c= '('};
 	Token tok;
+	reset_token(&tok);
 	set_token_strn(&tok, s, size);
 	if(!list_append(list, &tok))
 		return NULL;
