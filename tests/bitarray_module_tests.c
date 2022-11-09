@@ -5,6 +5,7 @@ IMPORT_BITARRAY_MODULE_AS(Bits);
 
 void slice_test()
 {
+	printf("--- slice_test() ---\n");
 	BitArray *obj = new_BitArray(0);
 	Bits.append(obj, 0b11111111000110010);
 	Bits.print_bits(obj, 0, -1);
@@ -15,6 +16,7 @@ void slice_test()
 
 void map_test()
 {
+	printf("--- map_test() ---\n");
 	BitArray arr;
 	init_BitArray(&arr, 0);
 	Bits.print_bits(&arr, 0, -1);
@@ -81,6 +83,7 @@ void map_test()
 
 void unpack_test()
 {
+	printf("--- unpack_test() ---\n");
 	const char* header_path = "../resources/mp2_test_.avi";
 	BitBuffer* buff = new_BitBuffer_from_file(header_path, false);
 	BField receiver[18];
@@ -124,6 +127,7 @@ void unpack_test()
 
 void mmap_test()
 {
+	printf("--- mmap_test() ---\n");
 	const char* header_path = "../resources/avi_header.avi";
 	char fourcc[5];
 	BitBuffer* buff = new_BitBuffer_from_file(header_path, false);

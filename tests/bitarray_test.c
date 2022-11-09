@@ -1,4 +1,5 @@
 #include "../src/bitarray.h"
+// #include ''
 IMPORT_BITARRAY_MODULE_AS(Bits);
 
 
@@ -17,7 +18,7 @@ void for_each_test(bool bit)
 		counter += 1;
 }
 
-size_t transform_test(bool bit)
+bool transform_test(bool bit)
 {
 	if(bit)
 		return 0;
@@ -144,6 +145,9 @@ void new_tests(BitArray* bits)
 
 int main()
 {
+	size_t n = 0b110011;
+	size_t w = _bit_width(n);
+	printf("width: %zu\n", w);
 	BitArray *bits = new_BitArray(12);
 	run_manipulation_tests(bits);
 	gen_iter_test(bits);

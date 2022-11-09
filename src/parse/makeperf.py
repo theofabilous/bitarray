@@ -255,13 +255,6 @@ for e in ('0x', '0b'):
 for e in ")]}":
 	tokens[e] = Result(e, 0, Tokenize.ParensClose, TreeFlags.Close, 0, "Close", 0, TREE_PARENS_CLOSE_6, 0, False)
 
-# for e in "{[,":
-# 	tokens[e] = Result(e, 0, 0, TreeFlags.Special, 0, "Special", 0, 0, 0, False)
-
-# tokens['{'].tree_idx = TREE_CURLY_BRACKET_4
-# tokens['['].tree_idx = TREE_SQUARE_BRACKET_3
-# tokens[','].tree_idx = TREE_COMMA_2
-
 tokens['{'] = Result('{', 0, Tokenize.BracketLiteral, TreeFlags.Special, 0, "Special", 0, TREE_CURLY_BRACKET_4, 0, False)
 tokens['['] = Result('[', 0, Tokenize.ParensOpen, TreeFlags.Special, 0, "Special", 0, TREE_SQUARE_BRACKET_3, 0, False)
 tokens[','] = Result(',', 0, 0, TreeFlags.Special, 0, "Special", 0, TREE_COMMA_2, 0, False)
@@ -318,7 +311,9 @@ old_compile = {
 	"<<": 	("SHIFT_LEFT",		BINARY_SPEC),
 	">>": 	("SHIFT_RIGHT",		BINARY_SPEC),
 	"%": 	("MODULO",			BINARY_SPEC),
-	"%%": 	("ALIGN",			BINARY_SPEC)
+	"%%": 	("ALIGN",			BINARY_SPEC),
+	"=>":	("MATCH_WITH",		BINARY_SPEC)
+	# "m!":	("--",				OTHER_SPECIAL)
 }
 
 
@@ -348,21 +343,6 @@ for k, v in tokens.items():
 
 	while (currlen > 1) and not (v.tokenize_flags & Tokenize.NotAllowed):
 		substr = k[:currlen-1]
-		
-		# if (substr in tokens) \
-		# 	and (not (currtok.tokenize_flags & Tokenize.NotAllowed)):
-		# 	currtok.tokenize_flags |= Tokenize.CheckNext
-		# 	currtok.max_search_size = max(length, currtok.max_search_size)
-		
-		# if not (currtok.tokenize_flags & Tokenize.NotAllowed):
-		# 	if substr in tokens:
-		# 		currtok = tokens[substr]
-		# 		currtok.tokenize_flags |= Tokenize.CheckNext
-		# 		currtok.max_search_size = max(length, currtok.max_search_size)
-		# 	else:
-		# 		tokens[substr] = Result(
-		# 			substr, 0, Tokenize.NotAllowed, 0, 0, "Special", 0, 0, 0, False
-		# 			)
 		if substr in tokens:
 			currtok = tokens[substr]
 			currtok.tokenize_flags |= Tokenize.CheckNext
@@ -376,10 +356,12 @@ for k, v in tokens.items():
 for e in to_add:
 	tokens[e.name] = e
 
+# working_dir = "../src/parse/"
+working_dir = ""
 
-token_output = path.realpath("../src/parse/tokens.gperf")
-header_file = path.realpath("../src/parse/tokenhash.h")
-c_file = path.realpath("../src/parse/tokenhash.c")
+token_output = path.realpath(f"{working_dir}tokens.gperf")
+header_file = path.realpath(f"{working_dir}tokenhash.h")
+c_file = path.realpath(f"{working_dir}tokenhash.c")
 struct_name = "HashToken"
 
 with open(token_output, "w") as f:
@@ -438,19 +420,7 @@ with open(header_file, "w") as f:
 
 
 
-
-
-print("\n\n\nDONE\n\n\n")
-
-
-
-
-
-
-
-
-
-
+# print("\n\n\nDONE\n\n\n")
 
 
 

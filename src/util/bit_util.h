@@ -8,53 +8,87 @@
 #include <limits.h>
 #include <stdint.h>
 
-#define bit_cast_voidify(t, x) *((t*)((void *)(&x)))
-#define bit_cast(t, x) *((t *)&x)
+#ifdef _MSC_VER
+    #define bitarray_force_inline __forceinline
+#elif defined(__GNUC__)
+	#define bitarray_force_inline __attribute__((always_inline)) static inline
+#elif (defined (__APPLE__) && defined (__MACH__))
+	#define bitarray_force_inline static inline
+#else
+	#define bitarray_force_inline inline
+#endif
+
+// #define bit_cast_voidify(t, x) *((t*)((void *)(&x)))
+// #define bit_cast(t, x) *((t *)&x)
 
 extern const uint8_t LEFT_MOST_MASKS[9];
 
 extern const uint8_t RIGHT_MOST_MASKS[9];
 
-static inline size_t _byte_part(size_t n)
+
+
+bitarray_force_inline
+// static inline
+size_t 
+_byte_part(size_t n)
 {
 	return n >> 3;
 }
 
-static inline uint8_t _bit_part(size_t n)
+bitarray_force_inline
+// static inline
+uint8_t 
+_bit_part(size_t n)
 {
 	return n & 0b111;
 }
 
-static inline uint8_t get_lr_mask(uint8_t i, uint8_t j)
+bitarray_force_inline
+// static inline
+uint8_t
+get_lr_mask(uint8_t i, uint8_t j)
 {
 	return LEFT_MOST_MASKS[i] | RIGHT_MOST_MASKS[j];
 }
 
-static inline size_t 
+// size_t 
+// _bit_width(size_t num)
+// {
+// 	if(num > (size_t) INT_MAX)
+// 	{
+// 		size_t sum = 0;
+// 		size_t curr;
+// 		for(;num>=(size_t) INT_MAX; num>>=16)
+// 			sum+=16;
+// 		return sum + _bit_width(num);
+// 	}
+// 	else if(num)
+// 		return 1 + (size_t) floor(log2(num));
+// 	else
+// 		return 0;
+// }
+
+bitarray_force_inline
+size_t
 _bit_width(size_t num)
 {
-	if(num > (size_t) INT_MAX)
-	{
-		size_t sum = 0;
-		size_t curr;
-		for(;num>=(size_t) INT_MAX; num>>=16)
-			sum+=16;
-		return sum + _bit_width(num);
-	}
-	else if(num)
-		return 1 + (size_t) floor(log2(num));
-	else
-		return 0;
+	size_t w = (num != 0);
+	while(num >>= 1)
+		w++;
+	return w;
 }
 
-static inline size_t 
+bitarray_force_inline
+// static inline
+size_t 
 _byte_size(size_t bitsize)
 {
-	size_t num_bytes = bitsize >> 3;
-	if(bitsize & 0b111)
-		return num_bytes+1;
-	else
-		return num_bytes;
+	// size_t num_bytes = bitsize >> 3;
+	// if(bitsize & 0b111)
+	// 	return num_bytes+1;
+	// else
+	// 	return num_bytes;
+	return (size_t) ( (bitsize >> 3) + (0 != (bitsize & 0b111)) );
 }
 
 char* bit_repr(size_t num);

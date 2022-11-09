@@ -264,6 +264,7 @@ parse_slice(BField* dst, BitBuffer* buff, FrameCtx *ctx)
             }
         }
     } while(mb_index != ctx->vsize/16);
+	return true;
 }
 
 

@@ -165,7 +165,7 @@ compile_many_tree(
 		(Instruction)
 		{
 			.spec = BINARY_SPEC,
-			.name = "DO_ALL",
+			.name = "__DO_ALL__",
 			.values = { MAKEREF(ret2+1) }
 		}
 	);
@@ -199,8 +199,6 @@ compile_binary_tree(
 				{
 					.spec 	= GET_RES_FLAGS(res) | BINARY_SPEC,
 					.name 	= GET_RES_STR(res),
-					// .left 	= MAKESTR(tree->left->str),
-					// .right 	= MAKESTR(tree->right->str)
 					.values = {MAKESTR(tree->left->str), MAKESTR(tree->right->str)}
 				}
 			)
@@ -215,8 +213,6 @@ compile_binary_tree(
 				{
 					.spec 	= GET_RES_FLAGS(res) | BINARY_SPEC,
 					.name 	= GET_RES_STR(res),
-					// .left 	= MAKESTR(tree->left->str),
-					// .right 	= MAKEGET(ret1)
 					.values = {MAKESTR(tree->left->str), MAKEGET(ret1)}
 				}
 			)
@@ -250,8 +246,6 @@ compile_binary_tree(
 				{
 					.spec 	= GET_RES_FLAGS(res) | BINARY_SPEC,
 					.name 	= GET_RES_STR(res),
-					// .left 	= MAKEGET(ret1),
-					// .right 	= MAKEGET(ret2)
 					.values = {MAKEGET(ret1), MAKEGET(ret2)}
 				}
 			)
@@ -357,6 +351,7 @@ compile_special_tree(
 		{
 			switch(( c = tree->str[0] ))
 			{
+				case 'b':
 				case 'u':
 				case 'i':
 					code_tree->str[0] = c;
@@ -398,7 +393,6 @@ compile_special_tree(
 			{
 				.spec = BINARY_SPEC | NO_RETURN,
 				.name = "IF_JUMP",
-				// .left = MAKEGET(ret1)
 				.values = { MAKEGET(ret1) }
 			}
 		);
@@ -419,11 +413,9 @@ compile_special_tree(
 				{
 					.spec = BINARY_SPEC,
 					.name = "SET_REGISTER",
-					// .right = MAKEGET(ret2)
 					.values = { {}, MAKEGET(ret2) }
 				});
 			if(temp < 0) return temp;
-			// codelist_get(list, ret1)->right = MAKEREF(ret2+2);
 			codelist_get(list, ret1)->values[1] = MAKEREF(ret2+2);
 			ret1 = codelist_append(list, 
 				(Instruction)
@@ -435,8 +427,6 @@ compile_special_tree(
 			if(ret1 < 0) return ret1;
 			ret2 = _compile_tokentree(tree->right->left, list);
 			if(ret2 < 0) return ret2;
-			// codelist_get(list, temp)->left = MAKEREF(ret2);
-			// codelist_get(list, ret1)->value = MAKEREF(ret2+1);
 			codelist_get(list, temp)->values[0] = MAKEREF(ret2);
 			codelist_get(list, ret1)->values[0] = MAKEREF(ret2+1);
 			return ret2;
@@ -446,7 +436,6 @@ compile_special_tree(
 			ret2 = _compile_tokentree(tree->right, list);
 			if(ret2 < 0)
 				return ret2;
-			// codelist_get(list, ret1)->right = MAKEREF(ret2+1);
 			codelist_get(list, ret1)->values[1] = MAKEREF(ret2+1);
 			return ret2;
 		}
@@ -609,23 +598,75 @@ compile_special_tree(
 		ret1 = codelist_append(list,
 			(Instruction)
 			{
-				.spec = TERNARY_SPEC,
+				// .spec = TERNARY_SPEC,
+				.spec = UNARY_SPEC,
 				.name = "MATCH_BEGIN",
 				// ._1 = MAKEREF(first)
-				.values = {MAKEREF(first)}
+				// .values = {MAKEREF(first)}
+				.values = {}
 			}
 		);
 		if(ret1 < 0) return ret1;
-		Tree* temp;
+		Tree* temp_tree;
+		if(tree->num_children < 1
+			|| (tree->children[0] == NULL)
+			|| ((flags = get_tree_details(tree->children[0])) & TREE_UNARY)
+			)
+			return TREE_INVALID;
+		bool has_ret = ((flags & TREE_BINARY) != 0);
+		Instruction ins = 
+		{ 
+			.spec = BINARY_SPEC,
+			.name = "CASE"
+		};
 		for(int i=0; i<tree->num_children; i++)
 		{
-			temp = tree->children[i];
-			flags = get_tree_details(temp);
-			if(!(flags & TREE_BINARY) || !(flags & TREE_LEFT_ATOMIC))
+			temp_tree = tree->children[i];
+			if(temp_tree == NULL)
 				return TREE_INVALID;
-		}
+			flags = get_tree_details(temp_tree);
+			if(    ((flags & TREE_BINARY) && !has_ret)
+				|| ((flags & TREE_ATOMIC) && has_ret)   )
+				return TREE_INVALID;
+			if(!has_ret)
+				ins.values[0] = MAKESTR(temp_tree->str);
+			else if(!(flags & TREE_LEFT_ATOMIC))
+			{
+				temp = _compile_tokentree(temp_tree->left, list);
+				if(temp < 0) return temp;
+				ins.values[0] = MAKEGET(temp);
+			}
+			else
+			{
+				ins.values[0] = MAKESTR(temp_tree->left->str);
+			}
+				
+			ret2 = codelist_append(list, ins);
+			if(ret2 < 0) return ret2;
+			if(has_ret)
+			{
+				temp = _compile_tokentree(temp_tree->right, list);
+				if(temp < 0) return temp;
+				codelist_get(list, ret2)->values[1] = MAKEREF(temp+1);			
+			}
+			else
+			{
+				codelist_get(list, ret2)->values[1] = MAKEREF(ret2+1);
+			}
 
-		// ... ? i think, idk im drunk
+		}
+		ret2 = codelist_append(list,
+			(Instruction)
+			{
+				.spec = UNARY_SPEC,
+				.name = "MATCH_END",
+				.values = { MAKEREF(ret1) }
+			}
+		);
+		if(ret2 < 0) return ret2;
+		// codelist_get(list, ret1)->values[1] = MAKEREF(ret2);
+		codelist_get(list, ret1)->values[0] = MAKEREF(ret2);
+		return ret2;
 	}
 
 	// (
@@ -701,7 +742,8 @@ int _compile_tokentree(Tree* tree, CodeList* list)
 		printf("Require error! %s\n", tree->str);
 		return TREE_INVALID;
 	}
-	if(GET_RES_FLAGS(res) & REQUIRE_SPECIAL)
+	// if(GET_RES_FLAGS(res) & REQUIRE_SPECIAL)
+	if(res->compile_idx != 0)
 	{
 		ret1 = compile_special_tree(tree, list, flags, res);
 		if(ret1 >= 0)

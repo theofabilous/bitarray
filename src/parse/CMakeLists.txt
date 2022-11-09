@@ -4,7 +4,6 @@ project(parse C)
 add_library(parse STATIC
 	tokenize.c
 	tokentree.c
-	# stringtree.c
 	treecompile.c
 	tokenhash.c
 	)

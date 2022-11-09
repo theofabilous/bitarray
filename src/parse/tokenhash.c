@@ -130,7 +130,7 @@ static struct HashToken wordlist[] =
 #line 56 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
     {"0", 0, 0b00000001000001, 0b00000000001000, 0b00000000000000, "DIGIT", 2, 0, 0, false},
 #line 37 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"=>", 20, 0b00000000000000, 0b00000000000001, 0b00000000000000, "MatchWith", 0, 9, 0, false},
+    {"=>", 20, 0b00000000000000, 0b00000000000001, 0b00000000000100, "MATCH_WITH", 0, 9, 0, true},
     {""},
 #line 144 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
     {"F", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},

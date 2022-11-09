@@ -8,6 +8,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#include "util/bit_util.h"
+
 struct BitArray;
 
 extern uint8_t Map_Bits;
@@ -86,49 +88,65 @@ typedef struct VlcOutput
 	char bits[100];
 } VlcOutput;
 
-static inline void 
+// static inline
+bitarray_force_inline 
+void 
 mapnode_set_root(MapNode* node)
 {
 	node->flags |= MAPNODE_ROOT;
 }
 
-static inline bool 
+// static inline
+bitarray_force_inline
+bool 
 mapnode_is_root(MapNode* node)
 {
 	return node->flags & MAPNODE_ROOT;
 }
 
-static inline bool 
+// static inline
+bitarray_force_inline
+bool 
 mapnode_has_left(MapNode* node)
 {
 	return node->flags & MAPNODE_HAS_LEFT;
 }
 
-static inline bool 
+// static inline
+bitarray_force_inline
+bool 
 mapnode_has_right(MapNode* node)
 {
 	return node->flags & MAPNODE_HAS_RIGHT;
 }
 
-static inline bool 
+// static inline
+bitarray_force_inline
+bool 
 mapnode_is_leaf(MapNode* node)
 {
 	return !(node->flags & MAPNODE_HAS_RIGHT) && !(node->flags & MAPNODE_HAS_LEFT);
 }
 
-static inline void 
+// static inline
+bitarray_force_inline
+void 
 mapnode_set_mapped(MapNode* node)
 {
 	node->flags |= MAPNODE_MAPPED;
 }
 
-static inline bool 
+// static inline
+bitarray_force_inline
+bool 
 mapnode_is_mapped(MapNode* node)
 {
 	return node->flags & MAPNODE_MAPPED;
 }
 
-static inline void
+// static inline
+bitarray_force_inline
+void
 mapnode_set_flag(MapNode* node, uint8_t flag)
 {
 	node->flags |= flag;

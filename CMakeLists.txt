@@ -1,18 +1,27 @@
 cmake_minimum_required(VERSION 3.21)
 project(bitarray C)
 
+# set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Debug)
+
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-nullability-completeness")
 
 find_package(Curses REQUIRED)
 
+message(STATUS "COMPILER: ${CMAKE_C_COMPILER_ID}")
+
+# set(CMAKE_VERBOSE_MAKEFILE ON)
+
+
 
 add_custom_target(makeperf ALL DEPENDS dummy)
 
 add_custom_command(OUTPUT dummy
-        COMMAND echo Rebuilding perfect hash
-        COMMAND python ../src/parse/makeperf.py
-        # COMMAND gperf -L C -t -G ../src/parse/tokens.gperf --output-file=../src/parse/tokenhash.h
+        WORKING_DIRECTORY ../src/parse
+        COMMAND echo Rebuilding perfect hash...
+        COMMAND python makeperf.py
+        COMMAND echo Done rebuilding perfect hash
         DEPENDS always_rebuild)
 
 add_custom_command(OUTPUT always_rebuild
@@ -51,7 +60,7 @@ add_library(bitarray STATIC
 )
 
 target_compile_options(bitarray PUBLIC
-        -Wno-format)
+        -Wno-format -O3)
 
 add_executable(buffer_examples
         examples/buffer_examples.c

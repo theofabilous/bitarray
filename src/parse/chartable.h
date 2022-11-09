@@ -52,27 +52,17 @@ static inline uint16_t get_token_flags(const char* s)
 
 static inline char get_matching_brace(char c)
 {
-	switch(c)
-	{
-		case '(':
-			return ')';
-		case ')':
-			return '(';
-		case '[':
-			return ']';
-		case ']':
-			return '[';
-		case '{':
-			return '}';
-		case '}':
-			return '{';
-		case '<':
-			return '>';
-		case '>':
-			return '<';
-		default:
-			return '\0';
-	}
+	static char map[256] = { 
+		['('] = ')',
+		[')'] = '(',
+		['['] = ']',
+		[']'] = '[',
+		['{'] = '}',
+		['}'] = '{',
+		['<'] = '>',
+		['>'] = '<'
+	};
+	return map[c];
 }
 
 

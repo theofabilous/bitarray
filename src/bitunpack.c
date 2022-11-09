@@ -240,6 +240,7 @@ build_expr(
     uint8_t* flag_src,
     ExprCtx* ctx)
 {
+	/*quick*/
     const char* str = *str_ptr;
     int size = 0;
     char c;

@@ -14,25 +14,6 @@
 
 #define __PASS__ ((void) 0)
 
-#ifdef _MSC_VER
-    #define bitarray_force_inline __forceinline
-#elif defined(__GNUC__)
-	#define bitarray_force_inline __attribute__((always_inline))
-#elif (defined (__APPLE__) && defined (__MACH__))
-	#define bitarray_force_inline static inline
-#else
-	#define bitarray_force_inline
-#endif
-
-// https://graphics.stanford.edu/~seander/bithacks.html
-// #if defined(__builtin_ctz)
-// 	#define CNT_TRZ __builtin_ctz
-// #elif defined(_BitScanForward)
-// 	#define CNT_TRZ _BitScanForward
-// #else
-// 	// #error "No builtins found to count trailing zeros"
-// #endif
-
 #ifndef BITARRAY_SIZE_T
 #define BITARRAY_SIZE_T size_t
 #endif
@@ -48,74 +29,35 @@ typedef struct BitArray
 	uint8_t *data;
 } BitArray;
 
-typedef struct BitPacket
-{
-	uint8_t size;
-	uint8_t* data;
-} BitPacket;
 
-#define buffer_to_bitpacket(buff) { buff[0], &(buff[1]) }
-
-#define DECL_BITPACKET(bit_size, buff_size) 	\
-	typedef struct BitPacket_##bit_size 		\
-	{											\
-		uint8_t size;							\
-		uint8_t data[buff_size];				\
-	} BitPacket_##bit_size
-
-DECL_BITPACKET(8, 1);
-DECL_BITPACKET(16, 2);
-DECL_BITPACKET(24, 3);
-DECL_BITPACKET(32, 4);
-DECL_BITPACKET(40, 5);
-DECL_BITPACKET(48, 6);
-DECL_BITPACKET(56, 7);
-DECL_BITPACKET(64, 8);
-DECL_BITPACKET(128, 16);
-
-#define DEF_BIT_PACKET_INIT(s) 		\
-	BitPacket_##s					\
-	init_BitPacket_##s ()			\
-
-DEF_BIT_PACKET_INIT(8);
-DEF_BIT_PACKET_INIT(16);
-DEF_BIT_PACKET_INIT(24);
-DEF_BIT_PACKET_INIT(32);
-DEF_BIT_PACKET_INIT(40);
-DEF_BIT_PACKET_INIT(48);
-DEF_BIT_PACKET_INIT(56);
-DEF_BIT_PACKET_INIT(64);
-DEF_BIT_PACKET_INIT(128);
-
-
-typedef struct BitArrayModule
-{
-	bitarray_size_t (*size)(BitArray *self);
-	void (*set)(BitArray *self, bool bit, size_t index);
-	void (*unset)(BitArray *self, size_t i);
-	bool (*append)(BitArray *self, size_t val);
-	bool (*append_str)(BitArray *self, const char* bits);
-	uint8_t (*get)(BitArray *self, size_t i);
-	size_t (*get_slice)(BitArray *self, size_t i, size_t j);
-	void (*set_slice)(BitArray *self, size_t i, size_t j, size_t val);
-	void (*fill_slice)(BitArray *self, size_t i, size_t j, bool bit);
-	void (*set_slice_str)(BitArray *self, size_t i, size_t j, 
-						  uint8_t flags, const char* bits);
-	void (*memcpy)(BitArray* self, size_t i, size_t len, uint8_t* buffer);
-	void (*bit_strcpy)(BitArray* self, size_t i, int64_t len, char* buffer);
-	void (*print_bits)(BitArray* self, size_t i, int64_t len);
-	void (*print_bytes)(BitArray* self, size_t i, int64_t len);
-	char* (*to_str)(BitArray *self);
-	bool (*resize)(BitArray *self, size_t n);
-	bool (*reserve)(BitArray* self, bitarray_size_t new_size);
-	void (*set_allocator_size)(BitArray* self, size_t alloc_size);
-	void (*for_each)(BitArray *self, void (*f)(bool), int64_t m);
-	void (*transform)(BitArray *self, bool (*f)(bool), int64_t m);
-	void (*enumerate_each)(BitArray* self, void (*func)(bool bit, size_t index),
-						   int64_t max);
-	void (*map)(BitArray *self, BinaryMapEntry maps[], size_t n);
-	bool (*map_into)(BitArray* self, BitArray* other, BinaryMapEntry maps[], size_t n);
-} BitArrayModule;
+// typedef struct BitArrayModule
+// {
+// 	bitarray_size_t (*size)(BitArray *self);
+// 	void (*set)(BitArray *self, bool bit, size_t index);
+// 	void (*unset)(BitArray *self, size_t i);
+// 	bool (*append)(BitArray *self, size_t val);
+// 	bool (*append_str)(BitArray *self, const char* bits);
+// 	uint8_t (*get)(BitArray *self, size_t i);
+// 	size_t (*get_slice)(BitArray *self, size_t i, size_t j);
+// 	void (*set_slice)(BitArray *self, size_t i, size_t j, size_t val);
+// 	void (*fill_slice)(BitArray *self, size_t i, size_t j, bool bit);
+// 	void (*set_slice_str)(BitArray *self, size_t i, size_t j, 
+// 						  uint8_t flags, const char* bits);
+// 	void (*memcpy)(BitArray* self, size_t i, size_t len, uint8_t* buffer);
+// 	void (*bit_strcpy)(BitArray* self, size_t i, int64_t len, char* buffer);
+// 	void (*print_bits)(BitArray* self, size_t i, int64_t len);
+// 	void (*print_bytes)(BitArray* self, size_t i, int64_t len);
+// 	char* (*to_str)(BitArray *self);
+// 	bool (*resize)(BitArray *self, size_t n);
+// 	bool (*reserve)(BitArray* self, bitarray_size_t new_size);
+// 	void (*set_allocator_size)(BitArray* self, size_t alloc_size);
+// 	void (*for_each)(BitArray *self, void (*f)(bool), int64_t m);
+// 	void (*transform)(BitArray *self, bool (*f)(bool), int64_t m);
+// 	void (*enumerate_each)(BitArray* self, void (*func)(bool bit, size_t index),
+// 						   int64_t max);
+// 	void (*map)(BitArray *self, BinaryMapEntry maps[], size_t n);
+// 	bool (*map_into)(BitArray* self, BitArray* other, BinaryMapEntry maps[], size_t n);
+// } BitArrayModule;
 
 /* ---------------- CONSTANTS ---------------- */
 
@@ -250,31 +192,31 @@ bitarray_resize(
 
 void 
 bitarray_set(
-	BitArray *self,
+	BitArray * restrict self,
 	bool bit,
 	size_t i);
 
 void 
 bitarray_unset(
-	BitArray *self,
+	BitArray * restrict self,
 	size_t i);
 
 void 
 bitarray_set_byte(
-	BitArray* self,
+	BitArray* restrict self,
 	uint8_t byte,
 	size_t i);
 
 void 
 bitarray_set_slice(
-	BitArray *self, 
+	BitArray * restrict self, 
 	size_t i, 
 	size_t j, 
 	size_t val);
 
 void 
 bitarray_set_slice_str(
-	BitArray *self, 
+	BitArray * restrict self, 
 	size_t i, 
 	size_t j, 
 	uint8_t flags, 
@@ -282,19 +224,19 @@ bitarray_set_slice_str(
 
 void 
 bitarray_fill_slice(
-	BitArray *self, 
+	BitArray * restrict self, 
 	size_t i, 
 	size_t j, 
 	bool bit);
 
 bool 
 bitarray_append(
-	BitArray *self, 
+	BitArray * restrict self, 
 	size_t val);
 
 bool 
 bitarray_append_str(
-	BitArray *self, 
+	BitArray * restrict self, 
 	const char* bits);
 
 
@@ -311,49 +253,49 @@ bitarray_append_str(
 
 uint8_t 
 bitarray_get(
-	BitArray *self,
+	BitArray *restrict self,
 	size_t i);
 
 uint8_t 
 bitarray_get_byte(
-	BitArray* self, 
+	BitArray* restrict self, 
 	size_t i);
 
 size_t 
 bitarray_get_slice(
-	BitArray *self, 
+	BitArray *restrict self, 
 	size_t i, 
 	size_t j);
 
 void 
 bitarray_memcpy(
-	BitArray* self,
+	BitArray* restrict self,
 	size_t i, 
 	size_t len, 
-	uint8_t* buffer);
+	uint8_t* restrict buffer);
 
 void 
 bitarray_bit_strcpy(
-	BitArray* self, 
+	BitArray* restrict self, 
 	size_t i, 
 	int64_t len, 
-	char* buffer);
+	char* restrict buffer);
 
 void 
 bitarray_print_bits(
-	BitArray* self, 
+	BitArray* restrict self, 
 	size_t i, 
 	int64_t len);
 
 void 
 bitarray_print_bytes(
-	BitArray* self, 
+	BitArray* restrict self, 
 	size_t i, 
 	int64_t len);
 
 char* 
 bitarray_to_str(
-	BitArray *self);
+	BitArray *restrict self);
 
 /* ------------------------------------------- */
 
@@ -417,36 +359,70 @@ bitarray_check_status(
 /* ------------------------------------------- */
 
 
+#define BITARRAY_MAKEFUNC(name) typeof( bitarray_ ## name ) *(name)
 
-#define IMPORT_BITARRAY_MODULE_AS(m) \
-BitArrayModule m = { \
-	.size = &bitarray_size, \
-	.set = &bitarray_set, \
-	.unset = &bitarray_unset, \
-	.append = &bitarray_append, \
-	.append_str = &bitarray_append_str, \
-	.get = &bitarray_get, \
-	.get_slice = &bitarray_get_slice, \
-	.set_slice = &bitarray_set_slice, \
-	.fill_slice = &bitarray_fill_slice, \
-	.set_slice_str = &bitarray_set_slice_str, \
-	.memcpy = &bitarray_memcpy, \
-	.bit_strcpy = &bitarray_bit_strcpy, \
-	.print_bits = &bitarray_print_bits, \
-	.print_bytes = &bitarray_print_bytes, \
-	.to_str = &bitarray_to_str, \
-	.resize = &bitarray_resize, \
-	.reserve = &bitarray_reserve, \
-	.set_allocator_size = &bitarray_set_allocator_size, \
-	.for_each = &bitarray_for_each, \
-	.transform = &bitarray_transform, \
-	.enumerate_each = &bitarray_enumerate_each, \
-	.map = &bitarray_map, \
-	.map_into = &bitarray_map_into \
+typedef struct BitArrayModule
+{
+	BITARRAY_MAKEFUNC(size);
+	BITARRAY_MAKEFUNC(set);
+	BITARRAY_MAKEFUNC(unset);
+	BITARRAY_MAKEFUNC(append);
+	BITARRAY_MAKEFUNC(append_str);
+	BITARRAY_MAKEFUNC(get);
+	BITARRAY_MAKEFUNC(get_slice);
+	BITARRAY_MAKEFUNC(set_slice);
+	BITARRAY_MAKEFUNC(fill_slice);
+	BITARRAY_MAKEFUNC(set_slice_str);
+	BITARRAY_MAKEFUNC(memcpy);
+	BITARRAY_MAKEFUNC(bit_strcpy);
+	BITARRAY_MAKEFUNC(print_bits);
+	BITARRAY_MAKEFUNC(print_bytes);
+	BITARRAY_MAKEFUNC(to_str);
+	BITARRAY_MAKEFUNC(resize);
+	BITARRAY_MAKEFUNC(reserve);
+	BITARRAY_MAKEFUNC(set_allocator_size);
+	BITARRAY_MAKEFUNC(for_each);
+	BITARRAY_MAKEFUNC(transform);
+	BITARRAY_MAKEFUNC(enumerate_each);
+	BITARRAY_MAKEFUNC(map);
+	BITARRAY_MAKEFUNC(map_into);
+} BitArrayModule;
+
+#undef BITARRAY_MAKEFUNC
+
+
+#define BITARRAY_ASSIGNFUNC(name) .name = & (bitarray_ ## name)
+
+#define IMPORT_BITARRAY_MODULE_AS(m)			\
+static const BitArrayModule m = {				\
+	BITARRAY_ASSIGNFUNC(size),					\
+	BITARRAY_ASSIGNFUNC(set),					\
+	BITARRAY_ASSIGNFUNC(unset),					\
+	BITARRAY_ASSIGNFUNC(append),				\
+	BITARRAY_ASSIGNFUNC(append_str),			\
+	BITARRAY_ASSIGNFUNC(get),					\
+	BITARRAY_ASSIGNFUNC(get_slice),				\
+	BITARRAY_ASSIGNFUNC(set_slice),				\
+	BITARRAY_ASSIGNFUNC(fill_slice),			\
+	BITARRAY_ASSIGNFUNC(set_slice_str),			\
+	BITARRAY_ASSIGNFUNC(memcpy),				\
+	BITARRAY_ASSIGNFUNC(bit_strcpy),			\
+	BITARRAY_ASSIGNFUNC(print_bits),			\
+	BITARRAY_ASSIGNFUNC(print_bytes),			\
+	BITARRAY_ASSIGNFUNC(to_str),				\
+	BITARRAY_ASSIGNFUNC(resize),				\
+	BITARRAY_ASSIGNFUNC(reserve),				\
+	BITARRAY_ASSIGNFUNC(set_allocator_size),	\
+	BITARRAY_ASSIGNFUNC(for_each),				\
+	BITARRAY_ASSIGNFUNC(transform),				\
+	BITARRAY_ASSIGNFUNC(enumerate_each),		\
+	BITARRAY_ASSIGNFUNC(map),					\
+	BITARRAY_ASSIGNFUNC(map_into)				\
 };
 
 
-static inline void 
+bitarray_force_inline 
+void 
 _bitarray_set_extra_bytes(
 	BitArray* self, 
 	size_t extra_bytes)
@@ -455,28 +431,32 @@ _bitarray_set_extra_bytes(
 						| (BIT_ALLOC_EXTRA_MASK & extra_bytes)); 
 }
 
-static inline size_t 
+bitarray_force_inline
+size_t 
 _bitarray_get_extra_bytes(
 	BitArray* self)
 { 
 	return self->allocator & BIT_ALLOC_EXTRA_MASK;
 }
 
-static inline size_t 
+bitarray_force_inline
+size_t 
 _bitarray_get_alloc_size_bytes(
 	BitArray* self)
 { 
 	return (self->allocator & BIT_ALLOC_SIZE_MASK) >> 16; 
 }
 
-static inline size_t 
+bitarray_force_inline
+size_t 
 _bitarray_get_alloc_size_bits(
 	BitArray* self)
 { 
 	return (self->allocator & BIT_ALLOC_SIZE_MASK) >> 13; 
 }
 
-static inline void 
+bitarray_force_inline
+void 
 _bitarray_set_alloc_size_bytes(
 	BitArray* self, 
 	size_t alloc_size)
@@ -486,7 +466,8 @@ _bitarray_set_alloc_size_bytes(
 						| ((0xFFFF & alloc_size) << 16);
 }
 
-static inline void 
+bitarray_force_inline
+void 
 _bitarray_set_on(
 	BitArray *self, 
 	size_t i)
@@ -496,7 +477,8 @@ _bitarray_set_on(
 	self->data[byte_index] |= (1 << (7-bit_index));
 }
 
-static inline void 
+bitarray_force_inline
+void 
 _bitarray_set_off(
 	BitArray *self, 
 	size_t i)
@@ -506,7 +488,8 @@ _bitarray_set_off(
 	self->data[byte_index] &= ~(1 << (7-bit_index));
 }
 
-static inline bool 
+bitarray_force_inline
+bool 
 _bitarray_get(
 	BitArray *self,
 	size_t i)
@@ -515,14 +498,16 @@ _bitarray_get(
 	return (self->data[i >> 3] & (1 << r_bit_index)) >> r_bit_index;
 }
 
-static inline bitarray_size_t 
+bitarray_force_inline
+bitarray_size_t 
 _bitarray_size(
 	BitArray *self)
 {
 	return bitarray_lmask & self->size;
 }
 
-static inline bitarray_size_t 
+bitarray_force_inline
+bitarray_size_t 
 _bitarray_num_bytes(
 	BitArray *self)
 {
@@ -532,21 +517,24 @@ _bitarray_num_bytes(
 		return (_bitarray_size(self) >> 3);
 }
 
-static inline bitarray_size_t 
+bitarray_force_inline
+bitarray_size_t 
 _bitarray_real_num_bytes(
 	BitArray *self)
 {
 	return _bitarray_num_bytes(self) + _bitarray_get_extra_bytes(self);
 }
 
-static inline bitarray_size_t 
+bitarray_force_inline
+bitarray_size_t 
 _bitarray_real_num_bits(
 	BitArray *self)
 {
 	return (_bitarray_num_bytes(self) + _bitarray_get_extra_bytes(self)) << 3;
 }
 
-static inline bool 
+bitarray_force_inline
+bool 
 _bitarray_actually_needs_resize_bits(
 	BitArray *self, 
 	size_t num_bits)
@@ -554,14 +542,16 @@ _bitarray_actually_needs_resize_bits(
 	return _byte_size(num_bits) > _bitarray_real_num_bytes(self);
 }
 
-static inline bitarray_size_t 
+bitarray_force_inline
+bitarray_size_t 
 _bitarray_flags(
 	BitArray *self)
 {
 	return self->size & bitarray_umask;
 }
 
-static inline void 
+bitarray_force_inline
+void 
 _bitarray_set_size(
 	BitArray *self, 
 	bitarray_size_t size)
@@ -569,7 +559,8 @@ _bitarray_set_size(
 	self->size = (self->size & bitarray_umask) | size;
 }
 
-static inline void 
+bitarray_force_inline
+void 
 _bitarray_incr_size(
 	BitArray *self, 
 	bitarray_size_t incr)
@@ -577,7 +568,8 @@ _bitarray_incr_size(
 	_bitarray_set_size(self, _bitarray_size(self) + incr);
 }
 
-static inline void 
+bitarray_force_inline
+void 
 _bitarray_set_err(
 	BitArray* self, 
 	bitarray_size_t err)
@@ -585,7 +577,8 @@ _bitarray_set_err(
 	self->size |= err;
 }
 
-static inline bool 
+bitarray_force_inline
+bool 
 _bitarray_reserve(
 	BitArray* self, 
 	bitarray_size_t new_size)
@@ -618,7 +611,8 @@ _bitarray_reserve(
 	return true;
 }
 
-static inline void 
+bitarray_force_inline
+void 
 _bitarray_resize_quick(
 	BitArray* self, 
 	bitarray_size_t new_size)
@@ -637,7 +631,8 @@ _bitarray_resize_quick(
 	memset(&(self->data[num_bytes]), 0, extra_bytes*sizeof(uint8_t));
 }
 
-static inline bool 
+bitarray_force_inline
+bool 
 _bitarray_resize_and_reserve(
 	BitArray* self, 
 	bitarray_size_t new_size)
