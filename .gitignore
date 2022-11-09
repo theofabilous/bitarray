@@ -6,6 +6,6 @@ bitarray.sublime-workspace
 build/
 .vscode/
 misc/
-resources/
+#resources/
 python/
 debug_build/
