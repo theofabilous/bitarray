@@ -29,26 +29,23 @@ delimiter = ","
 
 
 class Tokenize:
-	CheckNext = 0
-	NotAllowed = 1
-	IntegralPrefix = 2
-	ParensOpen = 3
-	ParensClose = 4
-	BracketLiteral = 5
-	TokenDigit = 6
-
-
-
+	CheckNext       = 0
+	NotAllowed      = 1
+	IntegralPrefix  = 2
+	ParensOpen      = 3
+	ParensClose     = 4
+	BracketLiteral  = 5
+	TokenDigit      = 6
 
 class TreeFlags:
-	BinOp = 0
-	PreOp =  1
-	PostOp = 2
-	Digit = 3
-	Open = 4
-	Close = 5
-	Special = 6
-	Read = 8
+	BinOp           = 0
+	PreOp           = 1
+	PostOp          = 2
+	Digit           = 3
+	Open            = 4
+	Close           = 5
+	Special         = 6
+	Read            = 8
 	# UnOp = 9
 	
 
@@ -114,16 +111,16 @@ class carray:
 
 @dataclass(slots=True)
 class Result:
-	name: cstr()
-	precedence: u(8, False)
-	tokenize_flags: u(16)
-	tree_flags: u(16)
-	compile_flags: u(16)
-	descr: cstr()
-	max_search_size: u(8, False)
-	tree_idx: u(8, False) = 0
-	compile_idx: u(8, False) = 0
-	is_instr: cbool() = False
+	name: cstr()                        # type: ignore
+	precedence: u(8, False)             # type: ignore
+	tokenize_flags: u(16)               # type: ignore
+	tree_flags: u(16)                   # type: ignore
+	compile_flags: u(16)                # type: ignore
+	descr: cstr()                       # type: ignore
+	max_search_size: u(8, False)        # type: ignore
+	tree_idx: u(8, False) = 0           # type: ignore
+	compile_idx: u(8, False) = 0        # type: ignore
+	is_instr: cbool() = False           # type: ignore
 
 	def __str__(self):
 		s = ""
@@ -156,108 +153,98 @@ class Result:
 
 make_flags(Tokenize)
 make_flags(TreeFlags)
-# make_fla
-# print_flags(TreeFlags)
 
-BitOpPrecedence = 60
-CompPrecedence = 70
-LogicalAndOrPrecedence = 57
-ReadPrecedence = 100
+LoopPrecedence          =   10
+BitOpPrecedence         =   60
+CompPrecedence          =   70
+LogicalAndOrPrecedence  =   57
+ReadPrecedence          =   100
 
+READ_COLLAPSE_1         =   1
+BOOL_CHECK_2            =   2
+REPEAT_LOOP_3           =   3
+SQUARE_BRACKET_4        =   4
+RIGHT_ARROW_5           =   5
+M_CURLY_BRACE_6         =   6
+PARENS_OPEN_7           =   7
+B_TO_BYTES_8            =   8
 
-READ_COLLAPSE_1 = 1
-BOOL_CHECK_2 = 2
-REPEAT_LOOP_3 = 3
-SQUARE_BRACKET_4 = 4
-RIGHT_ARROW_5 = 5
-M_CURLY_BRACE_6 = 6
-PARENS_OPEN_7 = 7
-B_TO_BYTES_8 = 8
+TREE_ALLOW_COMMAS_1     =   1     # m{} or l{}
+TREE_COMMA_2            =   2     # ,
+TREE_SQUARE_BRACKET_3   =   3
+TREE_CURLY_BRACKET_4    =   4
+TREE_PARENS_OPEN_5      =   5
+TREE_PARENS_CLOSE_6     =   6
+TREE_PREOP_7            =   7
+TREE_POSTOP_8           =   8
+TREE_BINOP_9            =   9
 
-TREE_ALLOW_COMMAS_1 = 1 # m{} or l{}
-TREE_COMMA_2 = 2 #,
-TREE_SQUARE_BRACKET_3 = 3
-TREE_CURLY_BRACKET_4 = 4
-TREE_PARENS_OPEN_5 = 5
-TREE_PARENS_CLOSE_6 = 6
-TREE_PREOP_7 = 7
-TREE_POSTOP_8 = 8
-TREE_BINOP_9 = 9
-
-
+#	      precedence                   tree_flags           descr               tree_idx					    is_instr
+#	name					tokenize_flags        compile_flags      max_search_size         compile_idx
 _binops = [
-	("+", 40, 0, TreeFlags.BinOp, 0, "PLUS", 0, TREE_BINOP_9, 0, False),
-	("-", 40, 0, TreeFlags.BinOp, 0, "MINUS", 0, TREE_BINOP_9, 0, False),
-	("=", 1, 0, TreeFlags.BinOp, 0, "ASSIGN", 0, TREE_BINOP_9, 0, False),
-	("*", 40, 0, TreeFlags.BinOp, 0, "MULTIPLY", 0, TREE_BINOP_9, 0, False),
-	("**", 10, 0, TreeFlags.BinOp, 0, "REPEAT", 0, TREE_BINOP_9, REPEAT_LOOP_3, False),
-	("*>", 10, 0, TreeFlags.BinOp, 0, "REPEAT", 0, TREE_BINOP_9, REPEAT_LOOP_3, False),
-	("%", 40, 0, TreeFlags.BinOp, 0, "Modulo", 0, TREE_BINOP_9, 0, False),
-	("%%", 50, 0, TreeFlags.BinOp, 0, "Align", 0, TREE_BINOP_9, 0, False),
-	(">", 	CompPrecedence, 0, TreeFlags.BinOp, 0, "Greater", 0, TREE_BINOP_9, 0, False),
-	("<", 	CompPrecedence, 0, TreeFlags.BinOp, 0, "Smaller", 0, TREE_BINOP_9, 0, False),
-	(">=", 	CompPrecedence, 0, TreeFlags.BinOp, 0, "GreEq", 0, TREE_BINOP_9, 0, False),
-	("<=", 	CompPrecedence, 0, TreeFlags.BinOp, 0, "SmEq", 0, TREE_BINOP_9, 0, False),
-	("==", 	CompPrecedence, 0, TreeFlags.BinOp, 0, "Eq", 0, TREE_BINOP_9, 0, False),
-	("!=", 	CompPrecedence, 0, TreeFlags.BinOp, 0, "NEq", 0, TREE_BINOP_9, 0, False),
-	(":=", 89, 0, TreeFlags.BinOp, 0, "WalrusAssign", 0, TREE_BINOP_9, 0, False),
-	("<-", 10, 0, TreeFlags.BinOp, 0, "???", 0, TREE_BINOP_9, 0, False),
-	("->", 10, 0, TreeFlags.BinOp, 0, "DoWhile", 0, TREE_BINOP_9, RIGHT_ARROW_5, False),
-	("=>", 20, 0, TreeFlags.BinOp, 0, "MatchWith", 0, TREE_BINOP_9, 0, False),
-	("<<", 	BitOpPrecedence, 0, TreeFlags.BinOp, 0, "ShiftLeft", 0, TREE_BINOP_9, 0, False),
-	(">>", 	BitOpPrecedence, 0, TreeFlags.BinOp, 0, "ShiftRight", 0, TREE_BINOP_9, 0, False),
-	("|", 	BitOpPrecedence, 0, TreeFlags.BinOp, 0, "BitOr", 0, TREE_BINOP_9, 0, False),
-	("&", 	BitOpPrecedence, 0, TreeFlags.BinOp, 0, "BitAnd", 0, TREE_BINOP_9, 0, False),
-	("&&", LogicalAndOrPrecedence, 0, TreeFlags.BinOp, 0, "And", 0, TREE_BINOP_9, 0, False),
-	("||", LogicalAndOrPrecedence, 0, TreeFlags.BinOp, 0, "Or", 0, TREE_BINOP_9, 0, False),
-	("|>", 90, 0, TreeFlags.BinOp, 0, "MatchCase", 0, TREE_BINOP_9, 0, False),
-	(":", 55, 0, TreeFlags.BinOp, 0, "If_Else", 0, TREE_BINOP_9, 0, False),
-	("?", 20, 0, TreeFlags.BinOp, 0, "Conditional", TREE_BINOP_9, 0, BOOL_CHECK_2)
-]
-
+	("+"  , 40,						0, TreeFlags.BinOp, 0, "PLUS", 			0, TREE_BINOP_9, 0,					False),
+	("-"  , 40, 					0, TreeFlags.BinOp, 0, "MINUS", 		0, TREE_BINOP_9, 0, 				False),
+	("="  , 1,						0, TreeFlags.BinOp, 0, "ASSIGN", 		0, TREE_BINOP_9, 0, 				False),
+	("*"  , 40, 					0, TreeFlags.BinOp, 0, "MULTIPLY", 		0, TREE_BINOP_9, 0, 				False),
+	("**" , LoopPrecedence, 		0, TreeFlags.BinOp, 0, "REPEAT", 		0, TREE_BINOP_9, REPEAT_LOOP_3, 	False),
+	("*>" , LoopPrecedence, 		0, TreeFlags.BinOp, 0, "REPEAT", 		0, TREE_BINOP_9, REPEAT_LOOP_3, 	False),
+	("%"  , 40, 					0, TreeFlags.BinOp, 0, "Modulo", 		0, TREE_BINOP_9, 0,					False),
+	("%%" , 50, 					0, TreeFlags.BinOp, 0, "Align", 		0, TREE_BINOP_9, 0, 				False),
+	(">"  ,	CompPrecedence, 		0, TreeFlags.BinOp, 0, "Greater", 		0, TREE_BINOP_9, 0, 				False),
+	("<"  ,	CompPrecedence, 		0, TreeFlags.BinOp, 0, "Smaller", 		0, TREE_BINOP_9, 0, 				False),
+	(">=" ,	CompPrecedence, 		0, TreeFlags.BinOp, 0, "GreEq", 		0, TREE_BINOP_9, 0, 				False),
+	("<=" ,	CompPrecedence, 		0, TreeFlags.BinOp, 0, "SmEq", 			0, TREE_BINOP_9, 0, 				False),
+	("==" ,	CompPrecedence, 		0, TreeFlags.BinOp, 0, "Eq", 			0, TREE_BINOP_9, 0, 				False),
+	("!=" ,	CompPrecedence, 		0, TreeFlags.BinOp, 0, "NEq", 			0, TREE_BINOP_9, 0, 				False),
+	(":=" , 89,						0, TreeFlags.BinOp, 0, "WalrusAssign", 	0, TREE_BINOP_9, 0, 				False),
+	("<-" , LoopPrecedence, 		0, TreeFlags.BinOp, 0, "???", 			0, TREE_BINOP_9, 0, 				False),
+	("->" , LoopPrecedence, 		0, TreeFlags.BinOp, 0, "DoWhile", 		0, TREE_BINOP_9, RIGHT_ARROW_5, 	False),
+	("=>" , 20, 					0, TreeFlags.BinOp, 0, "MatchWith", 	0, TREE_BINOP_9, 0,					False),
+	("<<" ,	BitOpPrecedence,		0, TreeFlags.BinOp, 0, "ShiftLeft", 	0, TREE_BINOP_9, 0, 				False),
+	(">>" ,	BitOpPrecedence, 		0, TreeFlags.BinOp, 0, "ShiftRight", 	0, TREE_BINOP_9, 0, 				False),
+	("|"  ,	BitOpPrecedence, 		0, TreeFlags.BinOp, 0, "BitOr", 		0, TREE_BINOP_9, 0, 				False),
+	("&"  ,	BitOpPrecedence, 		0, TreeFlags.BinOp, 0, "BitAnd", 		0, TREE_BINOP_9, 0, 				False),
+	("&&" , LogicalAndOrPrecedence, 0, TreeFlags.BinOp, 0, "And", 			0, TREE_BINOP_9, 0, 				False),
+	("||" , LogicalAndOrPrecedence, 0, TreeFlags.BinOp, 0, "Or", 			0, TREE_BINOP_9, 0, 				False),
+	("|>" , 90,						0, TreeFlags.BinOp, 0, "MatchCase", 	0, TREE_BINOP_9, 0, 				False),
+	(":"  , 55, 					0, TreeFlags.BinOp, 0, "If_Else", 		0, TREE_BINOP_9, 0,					False),
+	("?",	20, 					0, TreeFlags.BinOp,	0, "Conditional",	0, TREE_BINOP_9, BOOL_CHECK_2,		False) 
+] # ("?",	20, 					0, TreeFlags.BinOp,	0, "Conditional",	TREE_BINOP_9,	 0, BOOL_CHECK_2) ]
 _preops = [
-	("u", ReadPrecedence, 	0, TreeFlags.PreOp, 0, "Unsigned", 	0, TREE_PREOP_7, READ_COLLAPSE_1, False),
-	("i", ReadPrecedence, 	0, TreeFlags.PreOp, 0, "Signed", 	0, TREE_PREOP_7, READ_COLLAPSE_1, False),
-	("b", ReadPrecedence, 	0, TreeFlags.PreOp, 0, "Bits", 		0, TREE_PREOP_7, READ_COLLAPSE_1, False),
-	("^", 80, 				0, TreeFlags.PreOp, 0, "Peek", 		0, TREE_PREOP_7, READ_COLLAPSE_1, False),
-	("B", 100, 				0, TreeFlags.PreOp, 0, "Bytes", 	0, TREE_PREOP_7, B_TO_BYTES_8, False),
-	("$", 100, 				0, TreeFlags.PreOp, 0, "Env", 		0, TREE_PREOP_7, 0, False),
-	("@", 100, 				0, TreeFlags.PreOp, 0, "Ref", 		0, TREE_PREOP_7, 0, False),
-	("!", 100, 				0, TreeFlags.PreOp, 0, "Skip", 		0, TREE_PREOP_7, 0, False)
+	("u",	ReadPrecedence,			0, TreeFlags.PreOp, 0, "Unsigned",		0, TREE_PREOP_7, READ_COLLAPSE_1,	False),
+	("i", 	ReadPrecedence, 		0, TreeFlags.PreOp, 0, "Signed", 		0, TREE_PREOP_7, READ_COLLAPSE_1, 	False),
+	("b", 	ReadPrecedence, 		0, TreeFlags.PreOp, 0, "Bits", 			0, TREE_PREOP_7, READ_COLLAPSE_1, 	False),
+	("^", 	80, 					0, TreeFlags.PreOp, 0, "Peek", 			0, TREE_PREOP_7, READ_COLLAPSE_1, 	False),
+	("B", 	100, 					0, TreeFlags.PreOp, 0, "Bytes", 		0, TREE_PREOP_7, B_TO_BYTES_8,		False),
+	("$", 	100, 					0, TreeFlags.PreOp, 0, "Env", 			0, TREE_PREOP_7, 0,					False),
+	("@", 	100, 					0, TreeFlags.PreOp, 0, "Ref", 			0, TREE_PREOP_7, 0, 				False),
+	("!", 	100, 					0, TreeFlags.PreOp, 0, "Skip", 			0, TREE_PREOP_7, 0, 				False)
 ]
-
 _postops = [
-	(".", 90,				0, TreeFlags.PostOp, 0, "BigEndian", 0, TREE_POSTOP_8, READ_COLLAPSE_1, False)
+	(".",	90,						0, TreeFlags.PostOp,0, "BigEndian",		0, TREE_POSTOP_8,READ_COLLAPSE_1,	False)
 ]
 
 
-tokens = {
-	v[0]: Result(*v) for v in
-	(_binops + _preops + _postops)
-}
-
+tokens = { v[0]: Result(*v) for v in (_binops + _preops + _postops) }
 
 
 for i in range(10):
-	tokens[str(i)] = Result(str(i), 0, Tokenize.TokenDigit, TreeFlags.Digit, 0, "DIGIT", 0, 0, 0, False)
-
-tokens['('] = Result('(', 0, Tokenize.ParensOpen, TreeFlags.Open, 0, "ParensOpen", 0, TREE_PARENS_OPEN_5, 0, False)
-tokens['()'] = Result('()', 0, Tokenize.NotAllowed, TreeFlags.Open, 0, "ParensOpen", 0, 0, PARENS_OPEN_7, False)
-tokens['m!'] = Result('m!', 0, Tokenize.NotAllowed, 0, 0, "Match", 0, 0, M_CURLY_BRACE_6, False)
-tokens['[]'] = Result('[]', 0, Tokenize.NotAllowed, 0, 0, "ReadArray", 0, 0, SQUARE_BRACKET_4, False)
-
+    si = str(i)
+    tokens[si] = \
+                Result(si,  0, Tokenize.TokenDigit,     TreeFlags.Digit,    0, "DIGIT",      0, 0,                     0,                False)
+tokens['(']  =  Result('(', 0, Tokenize.ParensOpen,     TreeFlags.Open,     0, "ParensOpen", 0, TREE_PARENS_OPEN_5,    0,                False)
+tokens['()'] =  Result('()',0, Tokenize.NotAllowed,     TreeFlags.Open,     0, "ParensOpen", 0, 0,                     PARENS_OPEN_7,    False)
+tokens['m!'] =  Result('m!',0, Tokenize.NotAllowed,     0,                  0, "Match",      0, 0,                     M_CURLY_BRACE_6,  False)
+tokens['[]'] =  Result('[]',0, Tokenize.NotAllowed,     0,                  0, "ReadArray",  0, 0,                     SQUARE_BRACKET_4, False)
 for e in ('m{', 'l{'):
-	tokens[e] = Result(e, 0, Tokenize.ParensOpen, TreeFlags.Open, 0, "", 0, TREE_ALLOW_COMMAS_1, 0, False)
-
+	tokens[e] = Result(e,   0, Tokenize.ParensOpen,     TreeFlags.Open,     0, "",           0, TREE_ALLOW_COMMAS_1,   0,                False)
 for e in ('0x', '0b'):
-	tokens[e] = Result(e, 0, Tokenize.IntegralPrefix, 0, 0, "", 0, 0, 0, False)
-
+	tokens[e] = Result(e,   0, Tokenize.IntegralPrefix, 0,                  0, "",           0, 0,                     0,                False)
 for e in ")]}":
-	tokens[e] = Result(e, 0, Tokenize.ParensClose, TreeFlags.Close, 0, "Close", 0, TREE_PARENS_CLOSE_6, 0, False)
-
-tokens['{'] = Result('{', 0, Tokenize.BracketLiteral, TreeFlags.Special, 0, "Special", 0, TREE_CURLY_BRACKET_4, 0, False)
-tokens['['] = Result('[', 0, Tokenize.ParensOpen, TreeFlags.Special, 0, "Special", 0, TREE_SQUARE_BRACKET_3, 0, False)
-tokens[','] = Result(',', 0, 0, TreeFlags.Special, 0, "Special", 0, TREE_COMMA_2, 0, False)
+	tokens[e] = Result(e,   0, Tokenize.ParensClose,    TreeFlags.Close,    0, "Close",      0, TREE_PARENS_CLOSE_6,   0,                False)
+tokens['{'] =   Result('{', 0, Tokenize.BracketLiteral, TreeFlags.Special,  0, "Special",    0, TREE_CURLY_BRACKET_4,  0,                False)
+tokens['['] =   Result('[', 0, Tokenize.ParensOpen,     TreeFlags.Special,  0, "Special",    0, TREE_SQUARE_BRACKET_3, 0,                False)
+tokens[','] =   Result(',', 0, 0,                       TreeFlags.Special,  0, "Special",    0, TREE_COMMA_2,          0,                False)
 
 for e in "^bui.":
 	tokens[e].tree_flags |= TreeFlags.Read
@@ -279,13 +266,13 @@ old_compile = {
 	"$": 	("GET_ENV",			UNARY_SPEC 	| REQUIRE_SIMPLE),
 	"@": 	("GET_FIELD",		UNARY_SPEC 	| REQUIRE_SIMPLE),
 	r"{}": 	("RAW_VALUE", 		UNARY_SPEC 	| REQUIRE_SIMPLE),
-	"()": 	(None,			UNARY_SPEC 	| OTHER_SPECIAL),
+	"()": 	(None,				UNARY_SPEC 	| OTHER_SPECIAL),
 	"!": 	("SKIP",			UNARY_SPEC 	| NO_RETURN),
 	"B":	("BYTES",			UNARY_SPEC 	| OTHER_SPECIAL),
-	"u": 	(None,			BINARY_SPEC | READ_COLLAPSE),
-	"i": 	(None,			BINARY_SPEC | READ_COLLAPSE),
-	".": 	(None,			BINARY_SPEC | READ_COLLAPSE),
-	"^": 	(None,			BINARY_SPEC | READ_COLLAPSE),
+	"u": 	(None,				BINARY_SPEC | READ_COLLAPSE),
+	"i": 	(None,				BINARY_SPEC | READ_COLLAPSE),
+	".": 	(None,				BINARY_SPEC | READ_COLLAPSE),
+	"^": 	(None,				BINARY_SPEC | READ_COLLAPSE),
 	"_R": 	("READ",			BINARY_SPEC),
 	"_P": 	("PEEK",			BINARY_SPEC),
 	"=": 	("ASSIGN",			BINARY_SPEC | NO_RETURN),
@@ -296,18 +283,18 @@ old_compile = {
 	"<": 	("LESS_THAN?",		BINARY_SPEC),
 	">=": 	("GREATER_EQ?",		BINARY_SPEC),
 	"<=": 	("LESS_EQ?",		BINARY_SPEC),
-	"&&": 	("AND?",				BINARY_SPEC),
-	"||": 	("OR?",			BINARY_SPEC),
-	":": 	(None,			BINARY_SPEC | ACCESS_SPECIAL),
+	"&&": 	("AND?",			BINARY_SPEC),
+	"||": 	("OR?",				BINARY_SPEC),
+	":": 	(None,				BINARY_SPEC | ACCESS_SPECIAL),
 	"->": 	("LOOP_WHILE",		BINARY_SPEC | LOOP_SPECIAL),
-	"<-": 	(None,			BINARY_SPEC),
+	"<-": 	(None,				BINARY_SPEC),
 	"[]": 	("READ_ARRAY",		BINARY_SPEC | LOOP_SPECIAL),
 	"+": 	("PLUS",			BINARY_SPEC),
 	"-": 	("MINUS",			BINARY_SPEC),
 	"*": 	("TIMES", 			BINARY_SPEC | LOOP_SPECIAL),
 	"**": 	("LOOP", 			BINARY_SPEC | LOOP_SPECIAL),
 	"*>": 	("LOOP", 			BINARY_SPEC | LOOP_SPECIAL),
-	"?": 	(None,			BINARY_SPEC | BOOL_CHECK),
+	"?": 	(None,				BINARY_SPEC | BOOL_CHECK),
 	"<<": 	("SHIFT_LEFT",		BINARY_SPEC),
 	">>": 	("SHIFT_RIGHT",		BINARY_SPEC),
 	"%": 	("MODULO",			BINARY_SPEC),
@@ -348,13 +335,16 @@ for k, v in tokens.items():
 			currtok.tokenize_flags |= Tokenize.CheckNext
 			currtok.max_search_size = max(length, currtok.max_search_size)
 		else:
-			to_add.append(Result(
-				substr, 0, Tokenize.NotAllowed, 0, 0, "", length, 0, 0, False
-				))
+			to_add.append(
+                Result(
+				    substr, 0, Tokenize.NotAllowed, 0, 0, "", length, 0, 0, False
+				)
+            )
 		currlen -= 1
 
 for e in to_add:
 	tokens[e.name] = e
+
 
 # working_dir = "../src/parse/"
 working_dir = ""
@@ -377,9 +367,11 @@ with open(token_output, "w") as f:
 		f.write(f"{tok}\n")
 
 gperf_path = shutil.which("gperf")
+assert gperf_path is not None
 
 subprocess.run([
-	gperf_path, "-L", "C", 
+	gperf_path, 
+    "-L", "ANSI-C", 
 	"-t", 
 	"-G", token_output, f"--output-file={c_file}"
 	])

@@ -25,13 +25,13 @@ enum LogLevel
 
 typedef struct Tree
 {
-	uint32_t flags;
+	uint8_t flags;
 	char str[50];
-	union
-	{
-		char c;
-		uint16_t val;
-	};
+	// union
+	// {
+	// 	char c;
+	// 	uint16_t val;
+	// };
 	union
 	{
 		struct Tree* left;

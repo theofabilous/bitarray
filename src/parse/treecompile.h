@@ -6,6 +6,8 @@
 
 #include "tokentree.h"
 
+#define BITARRAY_CODELIST_SIZE 200
+
 typedef struct CodeValue
 {
 	uint8_t type;
@@ -34,7 +36,7 @@ typedef struct CodeList
 {
 	uint32_t registers;
 	int64_t len;
-	Instruction items[200];
+	Instruction items[BITARRAY_CODELIST_SIZE];
 } CodeList;
 
 // void init_codelist(CodeList* list);

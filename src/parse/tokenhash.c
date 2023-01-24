@@ -1,5 +1,5 @@
-/* C code produced by gperf version 3.0.3 */
-/* Command-line: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/gperf -L C -t -G --output-file=/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokenhash.c /Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf  */
+/* ANSI-C code produced by gperf version 3.0.3 */
+/* Command-line: /Library/Developer/CommandLineTools/usr/bin/gperf -L ANSI-C -t -G --output-file=/Users/theofabi/Documents/github/bitarray/src/parse/tokenhash.c /Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf  */
 /* Computed positions: -k'1-2' */
 
 #if !((' ' == 32) && ('!' == 33) && ('"' == 34) && ('#' == 35) \
@@ -26,14 +26,14 @@
       && ('w' == 119) && ('x' == 120) && ('y' == 121) && ('z' == 122) \
       && ('{' == 123) && ('|' == 124) && ('}' == 125) && ('~' == 126))
 /* The character set is not based on ISO-646.  */
-error "gperf generated tables don't work with this execution character set. Please report a bug to <bug-gnu-gperf@gnu.org>."
+#error "gperf generated tables don't work with this execution character set. Please report a bug to <bug-gnu-gperf@gnu.org>."
 #endif
 
-#line 2 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 2 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
 
 
 #include "tokenhash.h"
-#line 6 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 6 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
 
 #define TOTAL_KEYWORDS 160
 #define MIN_WORD_LENGTH 1
@@ -50,9 +50,7 @@ inline
 #endif
 #endif
 static unsigned int
-hash (str, len)
-     register const char *str;
-     register unsigned int len;
+hash (register const char *str, register unsigned int len)
 {
   static unsigned short asso_values[] =
     {
@@ -100,389 +98,387 @@ hash (str, len)
 static struct HashToken wordlist[] =
   {
     {""},
-#line 28 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 28 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {">", 70, 0b00000000000001, 0b00000000000001, 0b00000000000100, "GREATER_THAN?", 2, 9, 0, true},
-#line 30 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 30 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {">=", 70, 0b00000000000000, 0b00000000000001, 0b00000000000100, "GREATER_EQ?", 0, 9, 0, true},
     {""},
-#line 149 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 149 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"I", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 100 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 100 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"I!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-I!-", 0, 0, 0, false},
-#line 46 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
-    {"?", 20, 0b00000000000000, 0b00000000000001, 0b01000000000100, "--?--", 9, 0, 2, false},
-#line 39 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 46 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
+    {"?", 20, 0b00000000000000, 0b00000000000001, 0b01000000000100, "--?--", 0, 9, 2, false},
+#line 39 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {">>", 60, 0b00000000000000, 0b00000000000001, 0b00000000000100, "SHIFT_RIGHT", 0, 9, 0, true},
     {""},
-#line 148 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 148 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"H", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 98 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 98 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"H!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-H!-", 0, 0, 0, false},
-#line 22 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 22 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"=", 1, 0b00000000000001, 0b00000000000001, 0b00000100000100, "ASSIGN", 2, 9, 0, true},
-#line 32 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 32 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"==", 70, 0b00000000000000, 0b00000000000001, 0b00000000000100, "EQUAL?", 0, 9, 0, true},
     {""},
-#line 146 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 146 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"G", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 96 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 96 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"G!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-G!-", 0, 0, 0, false},
-#line 56 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 56 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"0", 0, 0b00000001000001, 0b00000000001000, 0b00000000000000, "DIGIT", 2, 0, 0, false},
-#line 37 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 37 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"=>", 20, 0b00000000000000, 0b00000000000001, 0b00000000000100, "MATCH_WITH", 0, 9, 0, true},
     {""},
-#line 144 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 144 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"F", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 94 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 94 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"F!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-F!-", 0, 0, 0, false},
-#line 29 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 29 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"<", 70, 0b00000000000001, 0b00000000000001, 0b00000000000100, "LESS_THAN?", 2, 9, 0, true},
-#line 31 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 31 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"<=", 70, 0b00000000000000, 0b00000000000001, 0b00000000000100, "LESS_EQ?", 0, 9, 0, true},
     {""},
-#line 142 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 142 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"E", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 92 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 92 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"E!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-E!-", 0, 0, 0, false},
-#line 133 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 133 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"m", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 68 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 68 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"m!", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "Match", 0, 0, 6, false},
     {""},
-#line 140 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 140 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"D", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 90 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 90 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"D!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-D!-", 0, 0, 0, false},
-#line 40 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 40 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"|", 60, 0b00000000000001, 0b00000000000001, 0b00000000000000, "BitOr", 2, 9, 0, false},
-#line 38 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 38 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"<<", 60, 0b00000000000000, 0b00000000000001, 0b00000000000100, "SHIFT_LEFT", 0, 9, 0, true},
     {""},
-#line 138 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 138 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"C", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 88 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 88 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"C!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-C!-", 0, 0, 0, false},
-#line 50 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 50 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"^", 80, 0b00000000000000, 0b00000100000010, 0b10000000000100, "--^--", 0, 7, 1, false},
-#line 44 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 44 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"|>", 90, 0b00000000000000, 0b00000000000001, 0b00000000000000, "MatchCase", 0, 9, 0, false},
     {""},
-#line 51 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 51 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"B", 100, 0b00000000000001, 0b00000000000010, 0b1000000000000010, "BYTES", 2, 7, 8, true},
-#line 86 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 86 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"B!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-B!-", 0, 0, 0, false},
-#line 134 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 134 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"l", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 105 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 105 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"l!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-l!-", 0, 0, 0, false},
     {""},
-#line 136 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 136 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"A", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 84 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 84 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"A!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-A!-", 0, 0, 0, false},
-#line 176 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 176 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"y", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 129 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 129 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"y!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-y!-", 0, 0, 0, false},
     {""},
-#line 45 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 45 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {":", 55, 0b00000000000001, 0b00000000000001, 0b100000000000100, "--:--", 2, 9, 0, false},
-#line 34 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 34 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {":=", 89, 0b00000000000000, 0b00000000000001, 0b00000000000100, "WALRUS_ASSIGN", 0, 9, 0, true},
-#line 137 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 137 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"c", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 87 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 87 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"c!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-c!-", 0, 0, 0, false},
     {""}, {""},
-#line 160 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 160 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"P", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 112 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 112 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"P!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-P!-", 0, 0, 0, false},
-#line 70 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 70 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"m{", 0, 0b00000000001000, 0b00000000010000, 0b00000000000000, "", 0, 1, 0, false},
     {""}, {""},
-#line 41 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 41 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"&", 60, 0b00000000000001, 0b00000000000001, 0b00000000000000, "BitAnd", 2, 9, 0, false},
-#line 76 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 76 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"}", 0, 0b00000000010000, 0b00000000100000, 0b00000000000000, "Close", 0, 6, 0, false},
-#line 72 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 72 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"0x", 0, 0b00000000000100, 0b00000000000000, 0b00000000000000, "", 0, 0, 0, false},
     {""}, {""},
-#line 158 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 158 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"O", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 110 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 110 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"O!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-O!-", 0, 0, 0, false},
-#line 73 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 73 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"0b", 0, 0b00000000000100, 0b00000000000000, 0b00000000000000, "", 0, 0, 0, false},
     {""}, {""},
-#line 26 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 26 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"%", 40, 0b00000000000001, 0b00000000000001, 0b00000000000100, "MODULO", 2, 9, 0, true},
-#line 23 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 23 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"*", 40, 0b00000000000001, 0b00000000000001, 0b00100000000100, "TIMES", 2, 9, 0, true},
-#line 71 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 71 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"l{", 0, 0b00000000001000, 0b00000000010000, 0b00000000000000, "", 0, 1, 0, false},
     {""}, {""},
-#line 156 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 156 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"N", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 108 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 108 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"N!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-N!-", 0, 0, 0, false},
-#line 25 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 25 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"*>", 10, 0b00000000000000, 0b00000000000001, 0b00100000000100, "LOOP", 0, 9, 3, true},
     {""},
-#line 54 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 54 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"!", 100, 0b00000000000001, 0b00000000000010, 0b00000100000010, "SKIP", 2, 7, 0, true},
-#line 33 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 33 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"!=", 70, 0b00000000000000, 0b00000000000001, 0b00000000000100, "NOT_EQUAL?", 0, 9, 0, true},
-#line 166 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 166 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"S", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 118 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 118 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"S!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-S!-", 0, 0, 0, false},
     {""}, {""},
-#line 77 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 77 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"{", 0, 0b00000000100000, 0b00000001000000, 0b00000000000000, "Special", 0, 4, 0, false},
-#line 162 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 162 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"Q", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 114 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 114 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"Q!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-Q!-", 0, 0, 0, false},
     {""}, {""},
-#line 154 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 154 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"L", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 106 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 106 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"L!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-L!-", 0, 0, 0, false},
-#line 43 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 43 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"||", 57, 0b00000000000000, 0b00000000000001, 0b00000000000100, "OR?", 0, 9, 0, true},
     {""}, {""},
-#line 75 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 75 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"]", 0, 0b00000000010000, 0b00000000100000, 0b00000000000000, "Close", 0, 6, 0, false},
-#line 178 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 178 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"z", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 131 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 131 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"z!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-z!-", 0, 0, 0, false},
     {""}, {""},
-#line 53 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 53 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"@", 100, 0b00000000000000, 0b00000000000010, 0b00000000000011, "GET_FIELD", 0, 7, 0, true},
-#line 174 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 174 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"x", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 127 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 127 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"x!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-x!-", 0, 0, 0, false},
     {""}, {""},
-#line 65 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 65 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"9", 0, 0b00000001000000, 0b00000000001000, 0b00000000000000, "DIGIT", 0, 0, 0, false},
-#line 172 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 172 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"w", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 125 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 125 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"w!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-w!-", 0, 0, 0, false},
     {""}, {""},
-#line 64 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 64 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"8", 0, 0b00000001000000, 0b00000000001000, 0b00000000000000, "DIGIT", 0, 0, 0, false},
-#line 170 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 170 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"v", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 123 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 123 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"v!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-v!-", 0, 0, 0, false},
     {""}, {""},
-#line 63 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 63 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"7", 0, 0b00000001000000, 0b00000000001000, 0b00000000000000, "DIGIT", 0, 0, 0, false},
-#line 47 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 47 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"u", 100, 0b00000000000001, 0b00000100000010, 0b10000000000100, "--u--", 2, 7, 1, false},
-#line 121 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 121 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"u!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-u!-", 0, 0, 0, false},
     {""}, {""},
-#line 62 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 62 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"6", 0, 0b00000001000000, 0b00000000001000, 0b00000000000000, "DIGIT", 0, 0, 0, false},
-#line 167 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 167 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"t", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 119 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 119 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"t!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-t!-", 0, 0, 0, false},
     {""}, {""},
-#line 61 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 61 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"5", 0, 0b00000001000000, 0b00000000001000, 0b00000000000000, "DIGIT", 0, 0, 0, false},
-#line 165 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 165 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"s", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 117 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 117 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"s!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-s!-", 0, 0, 0, false},
     {""}, {""},
-#line 27 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 27 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"%%", 50, 0b00000000000000, 0b00000000000001, 0b00000000000100, "ALIGN", 0, 9, 0, true},
-#line 163 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 163 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"r", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 115 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 115 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"r!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-r!-", 0, 0, 0, false},
     {""}, {""},
-#line 60 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 60 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"4", 0, 0b00000001000000, 0b00000000001000, 0b00000000000000, "DIGIT", 0, 0, 0, false},
-#line 161 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 161 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"q", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 113 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 113 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"q!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-q!-", 0, 0, 0, false},
     {""}, {""},
-#line 59 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 59 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"3", 0, 0b00000001000000, 0b00000000001000, 0b00000000000000, "DIGIT", 0, 0, 0, false},
-#line 159 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 159 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"p", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 111 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 111 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"p!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-p!-", 0, 0, 0, false},
     {""}, {""},
-#line 58 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 58 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"2", 0, 0b00000001000000, 0b00000000001000, 0b00000000000000, "DIGIT", 0, 0, 0, false},
-#line 157 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 157 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"o", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 109 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 109 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"o!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-o!-", 0, 0, 0, false},
     {""}, {""},
-#line 57 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 57 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"1", 0, 0b00000001000000, 0b00000000001000, 0b00000000000000, "DIGIT", 0, 0, 0, false},
-#line 155 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 155 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"n", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 107 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 107 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"n!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-n!-", 0, 0, 0, false},
     {""}, {""},
-#line 79 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 79 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {",", 0, 0b00000000000000, 0b00000001000000, 0b00000000000000, "Special", 0, 2, 0, false},
-#line 152 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 152 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"k", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 103 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 103 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"k!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-k!-", 0, 0, 0, false},
     {""}, {""},
-#line 74 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 74 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {")", 0, 0b00000000010000, 0b00000000100000, 0b00000000000000, "Close", 0, 6, 0, false},
-#line 150 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 150 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"j", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 101 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 101 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"j!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-j!-", 0, 0, 0, false},
     {""}, {""},
-#line 52 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 52 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"$", 100, 0b00000000000000, 0b00000000000010, 0b00000000000011, "GET_ENV", 0, 7, 0, true},
-#line 48 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 48 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"i", 100, 0b00000000000001, 0b00000100000010, 0b10000000000100, "--i--", 2, 7, 1, false},
-#line 99 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 99 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"i!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-i!-", 0, 0, 0, false},
     {""}, {""}, {""},
-#line 147 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 147 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"h", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 97 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 97 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"h!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-h!-", 0, 0, 0, false},
     {""}, {""}, {""},
-#line 145 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 145 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"g", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 95 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 95 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"g!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-g!-", 0, 0, 0, false},
     {""}, {""}, {""},
-#line 143 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 143 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"f", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 93 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 93 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"f!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-f!-", 0, 0, 0, false},
     {""}, {""}, {""},
-#line 141 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 141 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"e", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 91 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 91 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"e!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-e!-", 0, 0, 0, false},
     {""}, {""}, {""},
-#line 139 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 139 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"d", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 89 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 89 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"d!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-d!-", 0, 0, 0, false},
     {""}, {""}, {""},
-#line 49 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 49 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"b", 100, 0b00000000000001, 0b00000100000010, 0b00000000000000, "Bits", 2, 7, 1, false},
-#line 85 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 85 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"b!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-b!-", 0, 0, 0, false},
     {""}, {""},
-#line 20 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 20 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"+", 40, 0b00000000000000, 0b00000000000001, 0b00000000000100, "PLUS", 0, 9, 0, true},
-#line 135 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 135 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"a", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 83 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 83 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"a!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-a!-", 0, 0, 0, false},
     {""}, {""},
-#line 66 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 66 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"(", 0, 0b00000000001000, 0b00000000010000, 0b00000000000000, "ParensOpen", 0, 5, 0, false},
-#line 78 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 78 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"[", 0, 0b00000000001000, 0b00000001000000, 0b00000000000000, "Special", 0, 3, 0, false},
-#line 81 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 81 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"_R", 0, 0b00000000000010, 0b00000000000000, 0b00000000000100, "READ", 0, 0, 0, true},
     {""}, {""},
-#line 153 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 153 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"K", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 104 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 104 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"K!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-K!-", 0, 0, 0, false},
-#line 82 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 82 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"_P", 0, 0b00000000000010, 0b00000000000000, 0b00000000000100, "PEEK", 0, 0, 0, true},
     {""}, {""}, {""},
-#line 179 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 179 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"Z", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 132 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 132 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"Z!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-Z!-", 0, 0, 0, false},
     {""}, {""}, {""},
-#line 177 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 177 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"Y", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 130 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 130 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"Y!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-Y!-", 0, 0, 0, false},
     {""}, {""}, {""},
-#line 175 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 175 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"X", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 128 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 128 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"X!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-X!-", 0, 0, 0, false},
     {""}, {""}, {""},
-#line 173 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 173 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"W", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 126 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 126 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"W!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-W!-", 0, 0, 0, false},
     {""}, {""}, {""},
-#line 171 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 171 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"V", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 124 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 124 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"V!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-V!-", 0, 0, 0, false},
     {""}, {""},
-#line 151 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 151 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"J", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 102 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 102 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"J!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-J!-", 0, 0, 0, false},
-#line 69 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 69 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"[]", 0, 0b00000000000010, 0b00000000000000, 0b00100000000100, "READ_ARRAY", 0, 0, 4, true},
     {""}, {""},
-#line 55 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 55 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {".", 90, 0b00000000000000, 0b00000100000100, 0b10000000000100, "--.--", 0, 8, 1, false},
-#line 169 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 169 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"U", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 122 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 122 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"U!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-U!-", 0, 0, 0, false},
     {""}, {""}, {""},
-#line 168 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 168 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"T", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 120 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 120 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"T!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-T!-", 0, 0, 0, false},
     {""}, {""},
-#line 21 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 21 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"-", 40, 0b00000000000001, 0b00000000000001, 0b00000000000100, "MINUS", 2, 9, 0, true},
-#line 164 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 164 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"R", 0, 0b00000000000010, 0b00000000000000, 0b00000000000000, "", 2, 0, 0, false},
-#line 116 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 116 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"R!", 0, 0b00000000000000, 0b00000000000000, 0b1000010000000010, "-R!-", 0, 0, 0, false},
     {""}, {""}, {""},
-#line 36 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 36 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"->", 10, 0b00000000000000, 0b00000000000001, 0b00100000000100, "LOOP_WHILE", 0, 9, 5, true},
     {""}, {""}, {""}, {""},
-#line 35 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 35 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"<-", 10, 0b00000000000000, 0b00000000000001, 0b00000000000100, "--<---", 0, 9, 0, false},
     {""}, {""}, {""}, {""},
-#line 24 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 24 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"**", 10, 0b00000000000000, 0b00000000000001, 0b00100000000100, "LOOP", 0, 9, 3, true},
     {""}, {""}, {""}, {""},
-#line 67 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 67 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"()", 0, 0b00000000000010, 0b00000000010000, 0b1000000000000010, "--()--", 0, 0, 7, false},
     {""}, {""}, {""}, {""},
-#line 80 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 80 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"{}", 0, 0b00000000000010, 0b00000000000000, 0b00000000000011, "RAW_VALUE", 0, 0, 0, true},
     {""}, {""}, {""}, {""},
-#line 42 "/Users/theofabilous/Documents/GitHub/bitarray/src/parse/tokens.gperf"
+#line 42 "/Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf"
     {"&&", 57, 0b00000000000000, 0b00000000000001, 0b00000000000100, "AND?", 0, 9, 0, true}
   };
 
 struct HashToken *
-in_word_set (str, len)
-     register const char *str;
-     register unsigned int len;
+in_word_set (register const char *str, register unsigned int len)
 {
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)
     {

@@ -69,12 +69,12 @@ void init_codelist(CodeList* list)
 {
 	list->len = 0;
 	list->registers = 0;
-	memset(list->items, 0, 200*sizeof(Instruction));
+	memset(list->items, 0, BITARRAY_CODELIST_SIZE*sizeof(Instruction));
 }
 
 static inline int codelist_append(CodeList* list, Instruction instruction)
-{
-	if(list->len >= 200)
+	{
+	if(list->len >= BITARRAY_CODELIST_SIZE)
 		return -1;
 	list->items[(list->len)] = instruction;
 	return (list->len)++;
@@ -89,7 +89,7 @@ static inline Instruction* codelist_get(CodeList* list, int i)
 
 static inline bool codelist_set(CodeList* list, Instruction instruction, int i)
 {
-	if(i >= 200)
+	if(i >= BITARRAY_CODELIST_SIZE)
 		return false;
 	if(i >= list->len)
 		list->len = i+1;
@@ -100,7 +100,7 @@ static inline bool codelist_set(CodeList* list, Instruction instruction, int i)
 
 static inline bool codelist_shift(CodeList* list, int i, int amt)
 {
-	if(list->len + amt > 200 || i >= list->len) // need another check
+	if(list->len + amt > BITARRAY_CODELIST_SIZE || i >= list->len) // need another check
 		return false;
 	for(int j=(list->len-1); j>=i; j--)
 		list->items[j+amt] = list->items[j];
@@ -109,7 +109,7 @@ static inline bool codelist_shift(CodeList* list, int i, int amt)
 
 static inline bool codelist_insert(CodeList* list, int i, Instruction instruction)
 {
-	if(i >= list->len || list->len >= 200 || !codelist_shift(list, i, 1))
+	if(i >= list->len || list->len >= BITARRAY_CODELIST_SIZE || !codelist_shift(list, i, 1))
 		return false;
 	list->items[i] = instruction;
 	return true;
@@ -449,23 +449,18 @@ compile_special_tree(
 		Instruction ins = { .spec = TERNARY_SPEC, .name = GET_RES_STR(res) };
 		if(!temp)
 		{
-			// ins._1 = MAKEREF(list->len+1);
 			ins.values[0] = MAKEREF(list->len+1);
 		}
 		if(flags & TREE_RIGHT_ATOMIC)
 		{
-			// ins._3 = MAKESTR(tree->right->str);
 			ins.values[2] = MAKESTR(tree->right->str);
 		}
 		else
 		{
 			ret1 = _compile_tokentree(tree->right, list);
 			if(ret1 < 0) return ret1;
-			// ins._3 = MAKEGET(ret1);
 			ins.values[2] = MAKEGET(ret1);
 		}
-		// if(temp)
-		// 	ins._1 = MAKEREF(list->len+1);
 		ret1 = codelist_append(list, ins);
 
 		if(ret1 < 0) return ret1;
@@ -484,16 +479,13 @@ compile_special_tree(
 			);
 			if(ret2 < 0) return ret2;
 		}
-		// if(ret2 == ins._1.i32_value)
 		if(ret2 == ins.values[0].i32_value)
 		{
 			Instruction *insp = codelist_get(list, ret1);
 			insp->spec = BINARY_SPEC;
-			// insp->right = insp->_3;
 			insp->values[1] = insp->values[2];
 			return ret2;
 		}
-		// codelist_get(list, ret1)->_2 = MAKEREF(ret2);
 		codelist_get(list, ret1)->values[1] = MAKEREF(ret2);
 		return ret2;
 	}
@@ -506,21 +498,17 @@ compile_special_tree(
 		Instruction ins = { .spec = TERNARY_SPEC, .name = GET_RES_STR(res) };
 		if(flags & TREE_RIGHT_ATOMIC)
 		{
-			// ins._3 = MAKESTR(tree->right->str);
 			ins.values[2] = MAKESTR(tree->right->str);
 		}
 		else
 		{
 			ret1 = _compile_tokentree(tree->right, list);
 			if(ret1 < 0) return ret1;
-			// ins._3 = MAKEGET(ret1);
 			ins.values[2] = MAKEGET(ret1);
 		}
 		ret1 = _compile_tokentree(tree->left, list);
 		if(ret1 < 0) return ret1;
 		Instruction *temp_ins = codelist_get(list, ret1);
-		// ins._1 = temp_ins->left;
-		// ins._2 = temp_ins->right;
 		ins.values[0] = temp_ins->values[0];
 		ins.values[1] = temp_ins->values[1];
 		if(!codelist_set(list, ins, ret1))
@@ -598,11 +586,8 @@ compile_special_tree(
 		ret1 = codelist_append(list,
 			(Instruction)
 			{
-				// .spec = TERNARY_SPEC,
 				.spec = UNARY_SPEC,
 				.name = "MATCH_BEGIN",
-				// ._1 = MAKEREF(first)
-				// .values = {MAKEREF(first)}
 				.values = {}
 			}
 		);
@@ -664,7 +649,6 @@ compile_special_tree(
 			}
 		);
 		if(ret2 < 0) return ret2;
-		// codelist_get(list, ret1)->values[1] = MAKEREF(ret2);
 		codelist_get(list, ret1)->values[0] = MAKEREF(ret2);
 		return ret2;
 	}
@@ -674,7 +658,6 @@ compile_special_tree(
 	{
 		if((flags & TREE_BINARY) || (flags & TREE_ATOMIC))
 			return TREE_INVALID;
-		// if(flags & TREE_LEFT_ATOMIC)
 		return _compile_tokentree(tree->left, list);
 	}
 
@@ -683,14 +666,12 @@ compile_special_tree(
 	{
 		if((flags & TREE_BINARY) || (flags & TREE_ATOMIC))
 			return TREE_INVALID;
-		// res = stringtree_find_str(&strmap, "<<");
 		res = in_word_set("<<", 2);
 		BITASSERT((CHECK_RES_VALID(res)));
 		Instruction ins =
 		{
 			.spec = GET_RES_FLAGS(res) | BINARY_SPEC,
 			.name = GET_RES_STR(res),
-			// .right = MAKESTR("3")
 			.values = { {}, MAKESTR("3") }
 		};
 		if(flags & TREE_LEFT_ATOMIC)
@@ -702,7 +683,6 @@ compile_special_tree(
 		{
 			ret1 = _compile_tokentree(tree->left, list);
 			if(ret1 < 0) return ret1;
-			// ins.left = MAKEGET(ret1);
 			ins.values[0] = MAKEGET(ret1);
 		}
 		return codelist_append(list, ins);
@@ -730,7 +710,6 @@ int _compile_tokentree(Tree* tree, CodeList* list)
 			)
 		);
 	}
-	// res = stringtree_find_str(&strmap, tree->str);
 	res = in_word_set(tree->str, strlen(tree->str));
 	if(!CHECK_RES_VALID(res))
 	{
@@ -742,7 +721,6 @@ int _compile_tokentree(Tree* tree, CodeList* list)
 		printf("Require error! %s\n", tree->str);
 		return TREE_INVALID;
 	}
-	// if(GET_RES_FLAGS(res) & REQUIRE_SPECIAL)
 	if(res->compile_idx != 0)
 	{
 		ret1 = compile_special_tree(tree, list, flags, res);
@@ -758,7 +736,6 @@ int _compile_tokentree(Tree* tree, CodeList* list)
 		return compile_unary_tree(tree, list, flags, res);
 	else if(flags & TREE_BINARY)
 	{
-		// BITASSERT((flags & TREE_BINARY));
 		return compile_binary_tree(tree, list, flags, res);
 	}
 	else
@@ -829,19 +806,19 @@ void print_codelist(CodeList* list)
 			switch(target.type)
 			{
 				case StrType:
-					sprintf(buffs[j], "%s", target.str_value);
+					sprintf(buffs[j], "\x1b[35m%s", target.str_value);
 					break;
 			case RefType:
-				sprintf(buffs[j], "@%d", target.i32_value);
+				sprintf(buffs[j], "\x1b[31m@%d", target.i32_value);
 				break;
 			case GetType:
-				sprintf(buffs[j], "$%d", target.i32_value);
+				sprintf(buffs[j], "\x1b[36m$%d", target.i32_value);
 				break;
 			default:
 				buffs[j][0] = '\0';
 			}
 		}
-		printf("%-10d %-15s %-10s%-10s%s\n", i, ins.name, buffs[0], buffs[1], buffs[2]);
+		printf("\x1b[33m%-13d \x1b[32m%-17s %-12s%-12s%s\x1b[0m\n", i, ins.name, buffs[0], buffs[1], buffs[2]);
 	}
 }
 

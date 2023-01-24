@@ -1,6 +1,14 @@
 #ifndef INCLUDE_COMMON_H
 #define INCLUDE_COMMON_H
 
+#if defined(__clang__)
+	#define _always_inline_ static inline __attribute__((always_inline))
+#elif defined(__GNUC__) || defined(__GNUG__)
+	#define _always_inline_ static inline __attribute__((always_inline))
+#elif defined(_MSC_VER)
+	#define _always_inline_ __forceinline
+#endif
+
 #define ZEROESx32                       \
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,    \
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0

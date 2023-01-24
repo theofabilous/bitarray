@@ -125,7 +125,7 @@ parse_mv(BField* dst, BitBuffer* buff, FrameCtx *ctx)
     {
         vlc = bitbuffer_get_vlc(buff, ctx->motion_vlcs);
         mv_y[0] = (int) vlc.entry->value;
-        if(bitbuffer_peek_bit(buff))
+		if(bitbuffer_peek_bit(buff))
 		{
 			mv_y[0] = -mv_y[0];
 			bitbuffer_overwrite_bit(buff, false);
@@ -702,7 +702,6 @@ play_parsed_video(const char *path, int num_frames_play, const char* log)
 
 	srand(time(NULL));
 
-
 	AVBitStreamFilter* bsf;
 
 	if( (bsf = av_bsf_get_by_name("noise")) == NULL )
@@ -711,15 +710,20 @@ play_parsed_video(const char *path, int num_frames_play, const char* log)
 	if( av_bsf_alloc(bsf, &bsf_ctx) < 0 )
 		goto free_all_quit_sdl;
 
-	AVCodecParameters par_in;
-
-	if( avcodec_parameters_from_context(&par_in, ctx) < 0 )
+	AVCodecParameters* par_in = avcodec_parameters_alloc();
+	if(par_in == NULL)
 	{
 		av_bsf_free(&bsf_ctx);
 		goto free_all_quit_sdl;
 	}
 
-	if ( avcodec_parameters_copy(bsf_ctx->par_in, &par_in) < 0)
+	if( avcodec_parameters_from_context(par_in, ctx) < 0 )
+	{
+		av_bsf_free(&bsf_ctx);
+		goto free_all_quit_sdl;
+	}
+
+	if ( avcodec_parameters_copy(bsf_ctx->par_in, par_in) < 0)
 		goto free_all_quit_sdl;
 
 	int __x__ = av_opt_set(bsf_ctx, "amount", "500", 
@@ -765,17 +769,17 @@ play_parsed_video(const char *path, int num_frames_play, const char* log)
 			case 'q':
 				goto finish;
 			case 'k':
-				mpeg_parse_packet(&vid, i);
-				bsf_send = av_bsf_send_packet(bsf_ctx, vid.pkt);
-				bsf_receive = av_bsf_receive_packet(bsf_ctx, noise_pkt);
-				codec_send = avcodec_send_packet(ctx, noise_pkt);
-				codec_receive = avcodec_receive_frame(ctx, picture);
-				LOG_RET(f, bsf_send);
-				LOG_RET(f, bsf_receive);
-				LOG_RET(f, codec_send);
-				LOG_RET(f, codec_receive);
-				av_packet_unref(noise_pkt);
-				break;
+				// mpeg_parse_packet(&vid, i);
+				// bsf_send = av_bsf_send_packet(bsf_ctx, vid.pkt);
+				// bsf_receive = av_bsf_receive_packet(bsf_ctx, noise_pkt);
+				// codec_send = avcodec_send_packet(ctx, noise_pkt);
+				// codec_receive = avcodec_receive_frame(ctx, picture);
+				// LOG_RET(f, bsf_send);
+				// LOG_RET(f, bsf_receive);
+				// LOG_RET(f, codec_send);
+				// LOG_RET(f, codec_receive);
+				// av_packet_unref(noise_pkt);
+				// break;
 			case 'r':
 				--i;
 				if (need_fix)
@@ -889,6 +893,7 @@ play_parsed_video(const char *path, int num_frames_play, const char* log)
 	SDL_DestroyWindow(screen);
 
 	free_all_quit_sdl:
+	avcodec_parameters_free(&par_in);
 	SDL_Quit();
 
 	free_all_img:
@@ -918,7 +923,8 @@ play_parsed_video(const char *path, int num_frames_play, const char* log)
 int main()
 {
 	char path[200];
-	const char* dir = "/Users/theofabilous/Desktop/Coding/Datamoshing/pynamo/resources/";
+	// const char* dir = "/Users/theofabilous/Desktop/Coding/Datamoshing/pynamo/resources/";
+	const char* dir = "../resources/";
 	const char* avi_slices_3 = "slicewise_3.avi";
 	const char* satan_vid = "satan_1080.avi";
 	const char* original = "mp2_test_.avi";

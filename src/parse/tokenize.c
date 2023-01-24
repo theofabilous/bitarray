@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+// #include "common.h"
 #include "tokenize.h"
 
 
@@ -29,6 +30,36 @@ static inline BracketPair* stack_pop(Stack* stack)
 }
 /* -------------------------------------------------------- */
 
+static inline uint8_t 
+find_next_token_greedy (
+	const char* str,
+	HashToken* initial_token,
+	char* buff
+)
+{
+	HashToken* result = NULL;
+	uint8_t i=1, 
+		search_size = initial_token->max_search_size;
+
+	for(; i < search_size && str[i]; i++)
+		buff[i] = str[i];
+	
+	buff[i] = '\0';
+
+	while(i>1)
+	{
+		result = in_word_set(buff, i);
+		if (result == NULL)
+			buff[i--] = '\0';
+		else
+		{
+			*initial_token = *result;
+			return i;
+		}
+	}
+
+	return i;
+}
 
 void tokenize(const char* str,
 	TokenList* list,
@@ -63,6 +94,7 @@ void tokenize(const char* str,
 					return;
 			}
 		}
+
 		for(i=1; i<res->max_search_size && str[i]; i++)
 			curr[i] = str[i];
 
@@ -76,6 +108,7 @@ void tokenize(const char* str,
 			else
 				res = temp;
 		}
+		// i = find_next_token_greedy(str, res, &(curr[0]));
 
 		if(res->tokenize_flags & IntegralPrefix)
 		{
@@ -118,9 +151,11 @@ void tokenize(const char* str,
 		}
 		else if(res->tokenize_flags & ParensOpen)
 		{
-			stack_push(stack, 
+			stack_push(
+				stack, 
 				list_register_bracket_open_str(
-					list, str, curr[i-1], i)
+					list, str, curr[i-1], i
+				)
 			);
 			str += i;
 		}

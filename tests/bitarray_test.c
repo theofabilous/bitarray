@@ -1,4 +1,5 @@
-#include "../src/bitarray.h"
+// #include "../src/bitarray.h"
+#include "bitarray.h"
 // #include ''
 IMPORT_BITARRAY_MODULE_AS(Bits);
 
@@ -60,18 +61,26 @@ void run_manipulation_tests(BitArray *bits)
 {
 	printf("* --- Running general tests... --- *\n\n");
 	display_bits(bits);
+	printf(">> Setting bits 1 & 3\n");
 	Bits.set(bits, 1, 0);
 	Bits.set(bits, 1, 3);
 	display_bits(bits);
+	printf(">> Resizing to 15...\n");
 	Bits.resize(bits, 15);
 	display_bits(bits);
+	printf(">> Resizing to 3...\n");
 	Bits.resize(bits, 3);
 	display_bits(bits);
+	printf(">> Appending 0b1000...\n");
 	Bits.append(bits, 0b1000);
+	printf(">> Appending 0b1011...\n");
 	Bits.append(bits, 0b1011);
+	printf(">> Appending 0xFF...\n");
 	Bits.append(bits, 0xFF);
+	printf(">> Expecting: 100 1000 1011 11111111\n"); 
 	display_bits(bits);
-	printf("[%d:%d] %d, ", 0, 4, Bits.get_slice(bits, 0, 4));
+	printf(">> Getting bits[0:4]\n");
+	printf("[%d:%d] %d, 0b", 0, 4, Bits.get_slice(bits, 0, 4));
 	print_bit_repr(Bits.get_slice(bits, 0, 4));
 
 	printf("\n ** FINISHED **\n\n");

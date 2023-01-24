@@ -5,6 +5,9 @@ bitarray.sublime-workspace
 .idea/
 build/
 .vscode/
+.cache/
+.DS_Store
+*.idx
 misc/
 #resources/
 python/

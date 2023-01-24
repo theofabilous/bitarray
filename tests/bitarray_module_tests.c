@@ -86,9 +86,21 @@ void unpack_test()
 	printf("--- unpack_test() ---\n");
 	const char* header_path = "../resources/mp2_test_.avi";
 	BitBuffer* buff = new_BitBuffer_from_file(header_path, false);
+	if (buff == NULL)
+	{
+		printf("Error allocaing bitbuffer!\n");
+		exit(1);
+	}
 	BField receiver[18];
 	const char* header_fmt = "c<4>, u32, c<4>*2, u32, c<4>*2, u32, u32*10, ![B16]";
 	size_t ret = bitbuffer_unpack(buff, header_fmt, receiver);
+	if (ret < 18)
+	{
+		printf("Expected output=18 but got %d\n", ret);
+		// bitreceiver_clear(receiver, 18);
+		del_BitBuffer(buff);
+		return;
+	}
 
 	printf("Ret: %zu\n", ret);
 	printf("%s, %zu, %s\n", receiver[0].buff, receiver[1].u32, receiver[2].buff);

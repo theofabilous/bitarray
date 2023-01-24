@@ -822,6 +822,9 @@ bitbuffer_unpack(
     size_t err = 0, output;
     output = _bitbuffer_unpack(self, fmt, dst, false, &err, NULL, NULL);
     if(err)
+	{
         bitbuffer_set_err(self, BITBUFFER_ILL_ERR);
+		printf("Error!\n");
+	}
     return output;
 }

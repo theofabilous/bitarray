@@ -369,7 +369,7 @@ bitarray_resize(
 
 void 
 bitarray_set(
-	BitArray * restrict self,
+	BitArray *  self,
 	bool bit, 
 	size_t i)
 {
@@ -399,7 +399,7 @@ bitarray_set(
 
 void 
 bitarray_unset(
-	BitArray * restrict self, 
+	BitArray *  self, 
 	size_t i)
 {
 	if(i >= _bitarray_size(self))
@@ -415,7 +415,7 @@ bitarray_unset(
 
 void 
 bitarray_set_byte(
-	BitArray* restrict self,
+	BitArray*  self,
 	uint8_t byte,
 	size_t i)
 {
@@ -430,7 +430,7 @@ bitarray_set_byte(
 
 void 
 bitarray_set_slice(
-	BitArray * restrict self, 
+	BitArray *  self, 
 	size_t i, 
 	size_t j, 
 	size_t val)
@@ -484,7 +484,7 @@ bitarray_set_slice(
 
 void 
 bitarray_set_slice_str(
-	BitArray * restrict self, 
+	BitArray *  self, 
 	size_t i, 
 	size_t j, 
 	uint8_t flags, 
@@ -532,7 +532,7 @@ bitarray_set_slice_str(
 
 void 
 bitarray_fill_slice(
-	BitArray * restrict self, 
+	BitArray *  self, 
 	size_t i, 
 	size_t j, 
 	bool bit)
@@ -580,7 +580,7 @@ bitarray_fill_slice(
 
 bool 
 bitarray_append(
-	BitArray * restrict self, 
+	BitArray *  self, 
 	size_t val)
 {
 	size_t w = _bit_width(val);
@@ -624,7 +624,7 @@ bitarray_append(
 
 bool 
 bitarray_append_str(
-	BitArray * restrict self, 
+	BitArray *  self, 
 	const char* bits)
 {
 	size_t bit_w = strlen(bits);
@@ -656,7 +656,7 @@ bitarray_append_str(
 
 uint8_t 
 bitarray_get(
-	BitArray * restrict self, 
+	BitArray *  self, 
 	size_t i)
 {
 	if(i >= _bitarray_size(self))
@@ -670,7 +670,7 @@ bitarray_get(
 
 uint8_t 
 bitarray_get_byte(
-	BitArray* restrict self,
+	BitArray*  self,
 	size_t i)
 {
 	if(i >= (_bitarray_size(self) >> 3))
@@ -683,7 +683,7 @@ bitarray_get_byte(
 
 size_t 
 bitarray_get_slice(
-	BitArray * restrict self, 
+	BitArray *  self, 
 	size_t i, 
 	size_t j)
 {
@@ -691,7 +691,8 @@ bitarray_get_slice(
 	{
 		size_t val = 0;
 		for(size_t mask=1; i<j; i++, mask <<= 1)
-			if(_bitarray_get(self, i++)) // probably shouldn't be i++ but just i
+			// if(_bitarray_get(self, i++)) // probably shouldn't be i++ but just i
+			if(_bitarray_get(self, i)) // probably shouldn't be i++ but just i
 				val |= mask;
 		return val;
 	}
@@ -704,10 +705,10 @@ bitarray_get_slice(
 
 void 
 bitarray_memcpy(
-	BitArray* restrict self, 
+	BitArray*  self, 
 	size_t i, 
 	size_t len, 
-	uint8_t* restrict buffer)
+	uint8_t*  buffer)
 {
 	if(i >= (_bitarray_size(self) >> 3) || (i+len) >= (_bitarray_size(self) >> 3))
 	{
@@ -719,10 +720,10 @@ bitarray_memcpy(
 
 void 
 bitarray_bit_strcpy(
-	BitArray* restrict self, 
+	BitArray*  self, 
 	size_t i, 
 	int64_t len, 
-	char* restrict buffer)
+	char*  buffer)
 {
 	len = (len < 0) ? (_bitarray_size(self)+1+len) : len;
 	if(i >= _bitarray_size(self) || (i+len-1) >= _bitarray_size(self) >> 3)
@@ -742,7 +743,7 @@ bitarray_bit_strcpy(
 
 void 
 bitarray_print_bits(
-	BitArray* restrict self, 
+	BitArray*  self, 
 	size_t i, 
 	int64_t len)
 {
@@ -755,7 +756,7 @@ bitarray_print_bits(
 
 void 
 bitarray_print_bytes(
-	BitArray* restrict self, 
+	BitArray*  self, 
 	size_t i, 
 	int64_t len)
 {
@@ -772,7 +773,7 @@ bitarray_print_bytes(
 
 char* 
 bitarray_to_str(
-	BitArray * restrict self)
+	BitArray *  self)
 {
 	char* repr = (char *) calloc((_bitarray_size(self))+3, sizeof(char));
 	if(repr == NULL)
@@ -981,8 +982,10 @@ bitarray_map_into(
 		}
 		else
 		{
-			bitarray_append_str(other, 
-				bitarray_get(self, r) ? "1" : "0");
+			bitarray_append_str(
+				other, 
+				bitarray_get(self, r) ? "1" : "0"
+			);
 			acc_indx = 0;
 			ctx.index = ++r;
 			nav->curr = nav->root;

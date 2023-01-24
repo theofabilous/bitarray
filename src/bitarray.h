@@ -192,31 +192,31 @@ bitarray_resize(
 
 void 
 bitarray_set(
-	BitArray * restrict self,
+	BitArray *  self,
 	bool bit,
 	size_t i);
 
 void 
 bitarray_unset(
-	BitArray * restrict self,
+	BitArray *  self,
 	size_t i);
 
 void 
 bitarray_set_byte(
-	BitArray* restrict self,
+	BitArray*  self,
 	uint8_t byte,
 	size_t i);
 
 void 
 bitarray_set_slice(
-	BitArray * restrict self, 
+	BitArray *  self, 
 	size_t i, 
 	size_t j, 
 	size_t val);
 
 void 
 bitarray_set_slice_str(
-	BitArray * restrict self, 
+	BitArray *  self, 
 	size_t i, 
 	size_t j, 
 	uint8_t flags, 
@@ -224,19 +224,19 @@ bitarray_set_slice_str(
 
 void 
 bitarray_fill_slice(
-	BitArray * restrict self, 
+	BitArray *  self, 
 	size_t i, 
 	size_t j, 
 	bool bit);
 
 bool 
 bitarray_append(
-	BitArray * restrict self, 
+	BitArray *  self, 
 	size_t val);
 
 bool 
 bitarray_append_str(
-	BitArray * restrict self, 
+	BitArray *  self, 
 	const char* bits);
 
 
@@ -253,49 +253,49 @@ bitarray_append_str(
 
 uint8_t 
 bitarray_get(
-	BitArray *restrict self,
+	BitArray * self,
 	size_t i);
 
 uint8_t 
 bitarray_get_byte(
-	BitArray* restrict self, 
+	BitArray*  self, 
 	size_t i);
 
 size_t 
 bitarray_get_slice(
-	BitArray *restrict self, 
+	BitArray * self, 
 	size_t i, 
 	size_t j);
 
 void 
 bitarray_memcpy(
-	BitArray* restrict self,
+	BitArray*  self,
 	size_t i, 
 	size_t len, 
-	uint8_t* restrict buffer);
+	uint8_t*  buffer);
 
 void 
 bitarray_bit_strcpy(
-	BitArray* restrict self, 
+	BitArray*  self, 
 	size_t i, 
 	int64_t len, 
-	char* restrict buffer);
+	char*  buffer);
 
 void 
 bitarray_print_bits(
-	BitArray* restrict self, 
+	BitArray*  self, 
 	size_t i, 
 	int64_t len);
 
 void 
 bitarray_print_bytes(
-	BitArray* restrict self, 
+	BitArray*  self, 
 	size_t i, 
 	int64_t len);
 
 char* 
 bitarray_to_str(
-	BitArray *restrict self);
+	BitArray * self);
 
 /* ------------------------------------------- */
 
