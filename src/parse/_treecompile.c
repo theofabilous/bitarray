@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -21,6 +22,8 @@ FLAG16(OTHER_SPECIAL, 	15);
 
 static const uint16_t REQUIRE_SPECIAL = LOOP_SPECIAL | READ_COLLAPSE | BOOL_CHECK | OTHER_SPECIAL;
 
+#define BIT_PROG_ALWAYS_PUSH 0
+
 #if defined(__has_builtin)
 	#if __has_builtin(__builtin_expect)
 		#define SANITY_CHECK(...) 			\
@@ -38,6 +41,8 @@ static const uint16_t REQUIRE_SPECIAL = LOOP_SPECIAL | READ_COLLAPSE | BOOL_CHEC
 #define GET_RES_STR(res) ((res)->descr)
 #define CHECK_RES_VALID(res) ((res) != NULL)
 #define RESULT_IS_SPECIAL(...) ( (__VA_ARGS__)->compile_idx != 0 ) 
+
+#define BIT_CONCAT2(x, y) 0b##x##y
 
 push_result_t
 compile_atomic_tree (
@@ -92,19 +97,7 @@ tree_get_bytecode(Tree* tree, HashToken* tok);
 ByteCode
 tree_get_arg_bytecode(Tree* tree);
 
-push_result_t
-tree_can_be_opcode_arg(Tree* tree)
-{
-	if (tree == NULL)
-		return PUSH_ERR_NULL;
 
-	if (!(tree->flags & TREE_ATOMIC))
-		return PUSH_RET_BOOL(false);
-	/* ....... */
-	/* todo */
-	/* ....... */
-	return PUSH_RET_BOOL(true);
-}
 
 #define SANITY_CHECK_TOKEN(...)						\
 	if SANITY_CHECK((__VA_ARGS__) == NULL)			\
@@ -122,6 +115,40 @@ tree_can_be_opcode_arg(Tree* tree)
 	result = (__VA_ARGS__);							\
 	if (result.error) return ret
 
+push_result_t
+tree_can_be_opcode_arg(Tree* tree)
+{
+	SANITY_CHECK_NULL(tree);
+	SANITY_CHECK_NULL(tree->str);
+
+	if (!(tree->flags & TREE_ATOMIC))
+		return PUSH_RET_BOOL(false);
+
+	const char* tree_str = tree->str;
+
+	if ( SANITY_CHECK(*tree_str == '\0') )
+		return PUSH_ERR_TREE_INVALID;
+
+	/* if it starts with 0, either the value is actually 0
+	 * (which means next char should be null char, otherwise
+	 * the formatting is illformed (or its a literal?)
+	 * otherwise its a prefix for a different base which,
+	 * for now, shall always be pushed on the stack
+	 */
+	if (*tree_str == '0')
+		return PUSH_RET_BOOL(*(tree_str+1) == '\0');
+
+	char *end = NULL;
+	unsigned long parsed_value = strtoul(tree_str, &end, 10);
+
+	if (*end != '\0')
+		return PUSH_ERR_TREE_INVALID;
+
+	if (parsed_value == 0 || parsed_value > 255 || errno == ERANGE)
+		return PUSH_RET_BOOL(false);
+
+	return PUSH_RET_VALUE((uint8_t)parsed_value);
+}
 
 push_result_t
 _compile_token_tree (
@@ -171,6 +198,9 @@ _compile_token_tree (
  * and just store that value instead of the str
  * >>> Also shouldn't forget to store num_leading_zeroes, signed, ...
  */
+/* ANOTHER NOTE:
+ *		handle byte sequences that are of size > 8 bytes
+ */
 push_result_t
 compile_atomic_tree (
 	Tree* tree,
@@ -189,6 +219,7 @@ compile_atomic_tree (
 	int base = 10;
 	bool negative = false;
 	uint8_t num_leading_zeroes = 0;
+	unsigned long long parsed_value = 0;
 
 	if (*tree_str == '-')
 	{
@@ -213,40 +244,29 @@ compile_atomic_tree (
 				base = 8;
 				break;
 			default:
-				num_leading_zeroes+=1;
+				if (*tree_str != '\0')
+					return PUSH_ERR_VALUE;
+				goto skip_parse;
+				// num_leading_zeroes+=1;
 		}
 	}
 
 	if (base != 10 && *tree_str == '\0') 
-		return PUSH_ERR_GENERIC_ERROR;
-
-	while( *(tree_str++) == '0' ) num_leading_zeroes++;
-
-	/* handle number of leading zeroes having a 
-	 * different meaning for different bases!!!!!!!! */
-
-	/* remember to maybe handle size == 0?
-	 * can either use this to save space if the const 0 is used
-	 * (with/without leading zeroes?? idk yet)
-	 * otherwise the size being zero could indicate some special flag thing
-	 */
-
-	/* this should maybe be a special instruction:
-	 * as of now, values/literals/... can be of size <= 31 bytes
-	 * so either:
-	 *  - PUSH_CONST is a special instruction whose left operand is the spec
-	 *  	(ptr, negative, size) and the right operand can span up to 31 bytes
-	 *  - have a special instruction for bigger constants
-	 *  - dedicate a smaller (in length) stack-like array in the Program struct
-	 *  	to such values, and have a special instruction that pushes such constants onto the stack
-	 *  	by indexing them
-	 *  - something else..?
-	 */
-
-	if (num_leading_zeroes > 0xFF)
 		return PUSH_ERR_VALUE;
-	
-	uint64_t parsed_value = 0;
+
+	// uint32_t max_num_zeroes = 0xFF << (base >> 2);
+	uint32_t max_num_zeroes = (0xFF+1)>>(base>>2);
+
+	while( *(tree_str++) == '0' ) 
+	{
+		num_leading_zeroes++;		
+
+		if (num_leading_zeroes >= max_num_zeroes)
+			return PUSH_ERR_VALUE;
+	}
+
+	// num_leading_zeroes *= base>>1;
+	num_leading_zeroes <<= (base>>2); /* lmao */
 
 	if (*tree_str != '\0')
 	{
@@ -257,13 +277,35 @@ compile_atomic_tree (
 			return PUSH_ERR_VALUE;
 		}
 	}
+	
+skip_parse:;
 
-	/* Instead of doing the 'check_min_byte_width' thing
-	 * and then adding each byte in accordance,
-	 * maybe we can just iterate (0xFF << i) and add the masked byte,
-	 * and stop when its zero?
-	 * this might be dick and balls in terms of byte order/endianness etc,
-	 * its a thought but need to look into it */
+	uint64_t mask = _8TH_BYTE;
+	
+	PUSH_RESULT_TRY( ret, unpack_program_push_i(prog, (ByteCode){ ByteCode_left_arg_bit }) );
+	
+	push_result_t ret2;
+	uint8_t i=8;
+	while (!(parsed_value & mask))
+	{
+		mask >>= 8;
+		i--;
+	}
+
+	if	(!mask)
+	{
+		if (num_leading_zeroes)
+		{
+			return unpack_program_push_2_u8_i (
+				prog, 
+				0b00100000, 
+				num_leading_zeroes
+			);
+		}
+		return unpack_program_push_u8_i(prog, 0);
+	}
+
+
 
 	/* .... TODO! ...... */
 	return PUSH_ERR_GENERIC_ERROR;
@@ -290,7 +332,8 @@ compile_unary_tree (
 	 * on second thought, prob should handle this is 'special_tree'
 	 *
 	 */
-	
+
+#if !BIT_PROG_ALWAYS_PUSH
 	PUSH_RESULT_TRY( ret, tree_can_be_opcode_arg(tree->left) );
 
 	if (ret.bool_v)
@@ -301,6 +344,7 @@ compile_unary_tree (
 			tree_get_arg_bytecode(tree->left)
 		);
 	}
+#endif
 	PUSH_RESULT_TRY( ret, _compile_token_tree(tree->left, prog) );
 
 	return unpack_program_push_i0 (
@@ -326,6 +370,7 @@ compile_binary_tree (
 	SANITY_CHECK_TOKEN(res);
 	SANITY_CHECK_ARITY(tree_flags, TREE_UNARY);
 
+#if !BIT_PROG_ALWAYS_PUSH
 	PUSH_RESULT_TRY( ret, tree_can_be_opcode_arg(tree->left) );
 
 	bool left_can_be_arg = ret.bool_v;
@@ -341,10 +386,12 @@ compile_binary_tree (
 			tree_get_arg_bytecode(tree->right)
 		);
 	}
+#endif
 
 	/* MAKE SURE ORDER IS RIGHT (forgor) */
 	PUSH_RESULT_TRY( ret, _compile_token_tree(tree->left, prog) );
 
+#if !BIT_PROG_ALWAYS_PUSH
 	if (ret.bool_v) /* else if right can be arg */
 	{
 		return unpack_program_push_ir1 (
@@ -353,6 +400,7 @@ compile_binary_tree (
 			tree_get_arg_bytecode(tree->right)
 		);
 	}
+#endif
 
 	PUSH_RESULT_TRY( ret, _compile_token_tree(tree->right, prog) );
 

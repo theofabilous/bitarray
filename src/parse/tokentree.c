@@ -64,17 +64,17 @@ void _print_tree(Tree* tree, int depth, bool end)
 	if(flags & TREE_ATOMIC)
 	{
 		// printf("nutzatom\n");
-		printf("%s", tree->str);
+		printf(COLOR_CYAN("%s"), tree->str);
 	}
 	else if(flags & TREE_MANY)
 	{
 		// printf("nutz\n");
 		if(tree->num_children < 1)
 		{
-			printf("%s()", tree->str);
+			printf(COLOR_GREEN("%s") "()", tree->str);
 			return;
 		}
-		printf("%s(\n", tree->str);
+		printf(COLOR_GREEN("%s") "(\n", tree->str);
 		_print_tree(tree->children[0], depth+1, end);
 		for(int i=1; i< tree->num_children; i++)
 		{
@@ -84,7 +84,7 @@ void _print_tree(Tree* tree, int depth, bool end)
 		putchar('\n');
 		print_indent_str(depth, "  ");
 		if(end)
-			printf(")%s", tree->str);
+			printf(")" COLOR_GREEN("%s"), tree->str);
 		else
 			putchar(')');
 	}
@@ -94,38 +94,40 @@ void _print_tree(Tree* tree, int depth, bool end)
 		BITASSERT((tree->right == NULL));
 		if(flags & TREE_LEFT_ATOMIC)
 		{
-			printf("%s( %s )", tree->str, tree->left->str);
+			printf(COLOR_GREEN("%s") "(" COLOR_CYAN("%s") ")", tree->str, tree->left->str);
 			if(end)
-				printf("%s", tree->str);
+				printf(COLOR_GREEN("%s"), tree->str);
 		}
 		else
 		{
-			printf("%s(\n", tree->str);
+			printf(COLOR_GREEN("%s") "(\n", tree->str);
 			_print_tree(tree->left, depth+1, end);
 			putchar('\n');
 			print_indent_str(depth, "  ");
 			if(end)
-				printf(")%s", tree->str);
+				printf(")" COLOR_GREEN("%s"), tree->str);
 			else
 				putchar(')');
 		}
 	}
 	else if(flags & TREE_BISIMPLE)
 	{
-		printf("%s( %s , %s )", tree->str, tree->left->str, tree->right->str);
+		printf(COLOR_GREEN("%s") "(" COLOR_CYAN("%s") "," COLOR_CYAN("%s") ")", 
+				tree->str, tree->left->str, tree->right->str
+		);
 		if(end)
-			printf("%s", tree->str);
+			printf(COLOR_GREEN("%s"), tree->str);
 	}
 	else if(flags & TREE_BINARY)
 	{
-		printf("%s(\n", tree->str);
+		printf(COLOR_GREEN("%s") "(\n", tree->str);
 		_print_tree(tree->left, depth+1, end);
 		printf(",\n");
 		_print_tree(tree->right, depth+1, end);
 		putchar('\n');
 		print_indent_str(depth, "  ");
 		if(end)
-			printf(")%s", tree->str);
+			printf(")" COLOR_GREEN("%s"), tree->str);
 		else
 			putchar(')');
 	}
@@ -144,6 +146,7 @@ Tree* new_token_tree(int *i,
 	int j,
 	bool parens_node)
 {
+	// loglevel = 10000;
 	Tree* curr = alloc_binary_tree(), *temp = NULL;
 	if(curr == NULL)
 		return curr;
@@ -194,7 +197,7 @@ Tree* new_token_tree(int *i,
 			// printf("Allow commas! %s\n", cptr);
 			if(!list_incr_br(list))
 			{
-				printf("Bracket error! %s\n", cptr);
+				// printf("Bracket error! %s\n", cptr);
 				return curr;
 			}
 			(*i)++;
@@ -335,10 +338,25 @@ Tree* new_token_tree(int *i,
 
 		TREE_PARENS_CLOSE_6:
 		{		
+			// if (*i == j)
+			// {
+			// 	++(*i);
+			// 	return curr;
+			// }
+			// printf(COLOR_RED("Somethings wrong! ") "%s\n", cptr);
+			// return curr;
 			if(*i == j)
+			{
+				// printf("Returning!\n");
+				// printf("Returning and Incrementing!\n");
+				// ++(*i); /* NEW */
 				return curr;
+			}
 			else
+			{
+				// printf("Incrementing\n");
 				++(*i);
+			}
 			continue;
 		}
 
