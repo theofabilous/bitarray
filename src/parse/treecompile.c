@@ -632,7 +632,7 @@ compile_special_tree(
 			{
 				temp = _compile_tokentree(temp_tree->right, list);
 				if(temp < 0) return temp;
-				codelist_get(list, ret2)->values[1] = MAKEREF(temp+1);			
+				codelist_get(list, ret2)->values[1] = MAKEREF(temp+1);
 			}
 			else
 			{

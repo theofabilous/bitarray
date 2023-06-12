@@ -117,32 +117,30 @@ target_include_directories(tokenize_test PUBLIC
 
 
 
-add_executable(binav
-        examples/binav.c
-)
-
-target_include_directories(binav
-        # PUBLIC /Applications/VLC.app/Contents/MacOS/include
-        # PUBLIC /Library/Frameworks/SDL2.framework/Versions/A/Headers/
-		PUBLIC /usr/local/include/SDL2
-)
-
-target_link_libraries(binav
-        bitarray
-        "-framework CoreFoundation"
-        "-framework Security"
-        "-framework VideoToolbox"
-        "-framework CoreMedia"
-        "-framework CoreVideo"
-        "-undefined dynamic_lookup"
-        avcodec
-        avformat
-        avfilter
-        avdevice
-        swresample
-        swscale
-        avutil
-        sdl2
-        ${CURSES_LIBRARIES}
-        "-undefined dynamic_lookup"
-)
+# add_executable(binav
+#         examples/binav.c
+# )
+#
+# target_include_directories(binav
+# 		PUBLIC /usr/local/include/SDL2
+# )
+#
+# target_link_libraries(binav
+#         bitarray
+#         "-framework CoreFoundation"
+#         "-framework Security"
+#         "-framework VideoToolbox"
+#         "-framework CoreMedia"
+#         "-framework CoreVideo"
+#         "-undefined dynamic_lookup"
+#         avcodec
+#         avformat
+#         avfilter
+#         avdevice
+#         swresample
+#         swscale
+#         avutil
+#         sdl2
+#         ${CURSES_LIBRARIES}
+#         "-undefined dynamic_lookup"
+# )

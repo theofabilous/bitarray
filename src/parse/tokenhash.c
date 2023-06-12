@@ -1,5 +1,5 @@
 /* ANSI-C code produced by gperf version 3.0.3 */
-/* Command-line: /Library/Developer/CommandLineTools/usr/bin/gperf -L ANSI-C -t -G --output-file=/Users/theofabi/Documents/github/bitarray/src/parse/tokenhash.c /Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf  */
+/* Command-line: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/gperf -L ANSI-C -t -G --output-file=/Users/theofabi/Documents/github/bitarray/src/parse/tokenhash.c /Users/theofabi/Documents/github/bitarray/src/parse/tokens.gperf  */
 /* Computed positions: -k'1-2' */
 
 #if !((' ' == 32) && ('!' == 33) && ('"' == 34) && ('#' == 35) \

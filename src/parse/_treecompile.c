@@ -44,6 +44,16 @@ static const uint16_t REQUIRE_SPECIAL = LOOP_SPECIAL | READ_COLLAPSE | BOOL_CHEC
 
 #define BIT_CONCAT2(x, y) 0b##x##y
 
+/*
+ * What if the generated code was really just
+ * an array of indices that represent goto labels?
+ * (Except for special cases like LOAD_CONST, etc.)
+ *  --> optimization: if its a special case, set its byte code to 0
+ *  and jump to the 0th label which handles special cases
+ *  (probs prevents some branch mispredictions)
+ */ 
+
+
 push_result_t
 compile_atomic_tree (
 	Tree* tree,
@@ -202,7 +212,7 @@ _compile_token_tree (
  *		handle byte sequences that are of size > 8 bytes
  */
 push_result_t
-compile_atomic_tree (
+__compile_atomic_tree (
 	Tree* tree,
 	UnpackProgram* prog,
 	uint8_t tree_flags,
@@ -297,8 +307,8 @@ skip_parse:;
 		if (num_leading_zeroes)
 		{
 			return unpack_program_push_2_u8_i (
-				prog, 
-				0b00100000, 
+				prog,
+				0b00100000,
 				num_leading_zeroes
 			);
 		}
@@ -312,6 +322,30 @@ skip_parse:;
 	/* .... TODO! ...... */
 }
 
+push_result_t
+compile_atomic_tree (
+	Tree* tree,
+	UnpackProgram* prog,
+	uint8_t tree_flags,
+	HashToken* res
+)
+{
+	push_result_t ret;
+
+	/* sanity checks */
+	const char* tree_str = tree->str;
+	int base = 10;
+	bool negative = false;
+	uint8_t num_leading_zeroes = 0;
+	unsigned long long parsed_value = 0;
+
+	if (*tree_str == '-')
+	{
+		negative = true;
+		tree_str++;
+	}
+
+}
 
 push_result_t
 compile_unary_tree (
